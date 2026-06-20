@@ -396,59 +396,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
       {/* Container wrapper */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* Supabase Connection Status Banner */}
-        <div className="w-full">
-          {isSupabaseConfigured ? (
-            <div className="bg-white rounded-2xl border border-natural-border p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="bg-emerald-500/10 text-emerald-600 p-2 rounded-xl border border-emerald-500/20 shrink-0">
-                  <Database className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider font-mono">
-                      Supabase Cloud Synchrone Actif
-                    </h4>
-                    <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
-                  </div>
-                  <p className="text-[11px] text-natural-sage mt-0.5 leading-relaxed font-semibold">
-                    Vos athlètes, sorties, et rapports sont conservés en temps réel de manière persistante sur votre instance Supabase.
-                  </p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setShowSqlSetup(!showSqlSetup)}
-                className="text-[10px] uppercase font-mono font-bold bg-natural-sage-light text-natural-olive px-3 py-1.5 rounded-lg border border-natural-border hover:bg-natural-border transition shrink-0 cursor-pointer"
-              >
-                {showSqlSetup ? "Masquer Raccourci SQL Schema" : "Afficher Script SQL Tables"}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-yellow-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="bg-yellow-100 text-yellow-700 p-2 rounded-xl border border-yellow-200 shrink-0">
-                  <Info className="w-5 h-5 text-yellow-600 animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-yellow-800 uppercase tracking-wider font-mono">
-                    ⚠️ Mode de Stockage Local Intérimaire
-                  </h4>
-                  <p className="text-[11px] text-natural-sage mt-0.5 leading-relaxed font-semibold">
-                    Pour lier l'application à vos données Supabase réelles, configurez simplement <code className="bg-natural-sage-light px-1.5 py-0.5 rounded font-mono text-natural-olive">VITE_SUPABASE_URL</code> et <code className="bg-natural-sage-light px-1.5 py-0.5 rounded font-mono text-natural-olive">VITE_SUPABASE_ANON_KEY</code> dans les paramètres secrets d'AI Studio.
-                  </p>
-                </div>
-              </div>
 
-              <button
-                onClick={handleClearDemoData}
-                className="bg-natural-olive text-white shadow-xs font-serif italic text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-natural-olive-hover transition shrink-0 cursor-pointer"
-              >
-                🗑️ Supprimer les données démo (Start Fresh)
-              </button>
-            </div>
-          )}
-        </div>
 
         {/* Database setup SQL assistance Accordion */}
         {showSqlSetup && (
