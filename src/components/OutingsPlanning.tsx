@@ -719,139 +719,275 @@ export default function OutingsPlanning({
                             Aucun participant inscrit pour l'instant. Choisissez un athlète ci-dessus pour l'ajouter manuellement !
                           </div>
                         ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-[11px] border-collapse min-w-[650px]">
-                              <thead>
-                                <tr className="border-b border-natural-border text-natural-sage font-bold font-mono tracking-wider">
-                                  <th className="py-2">Athlète</th>
-                                  <th className="py-2">Dossard</th>
-                                  <th className="py-2">Transport (Bus)</th>
-                                  <th className="py-2">Lmbata / Nuitée</th>
-                                  <th className="py-2 text-right">Prix Total</th>
-                                  <th className="py-2 text-center">Versement</th>
-                                  <th className="py-2 text-center">Action</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-natural-divider">
-                                {run.participants.map(partic => {
-                                  const hasTransport = partic.useTransport !== false;
-                                  const hasLodging = !!partic.useAccommodation;
-                                  
-                                  const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
-                                  
-                                  const rType = partic.accommodationType || 'room1';
-                                  const costLodging = !hasLodging ? 0 : (
-                                    rType === 'room1' ? (run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)) :
-                                    rType === 'room2' ? (run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)) :
-                                    rType === 'room3' ? (run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)) :
-                                    (run.accommodationPrice || 0)
-                                  );
-                                  
-                                  const stdTotal = (hasTransport ? costTransport : 0) + costLodging;
-                                  const displayPrice = partic.customPrice !== undefined ? partic.customPrice : stdTotal;
+                          <>
+                            {/* Version Ordinateur / Tablette (Gros Tableau visible sur tablettes et écrans larges) */}
+                            <div className="hidden md:block overflow-x-auto">
+                              <table className="w-full text-left text-[11px] border-collapse min-w-[650px]">
+                                <thead>
+                                  <tr className="border-b border-natural-border text-natural-sage font-bold font-mono tracking-wider">
+                                    <th className="py-2">Athlète</th>
+                                    <th className="py-2">Dossard</th>
+                                    <th className="py-2">Transport (Bus)</th>
+                                    <th className="py-2">Lmbata / Nuitée</th>
+                                    <th className="py-2 text-right">Prix Total</th>
+                                    <th className="py-2 text-center">Versement</th>
+                                    <th className="py-2 text-center">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-natural-divider">
+                                  {run.participants.map(partic => {
+                                    const hasTransport = partic.useTransport !== false;
+                                    const hasLodging = !!partic.useAccommodation;
+                                    
+                                    const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
+                                    
+                                    const rType = partic.accommodationType || 'room1';
+                                    const costLodging = !hasLodging ? 0 : (
+                                      rType === 'room1' ? (run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)) :
+                                      rType === 'room2' ? (run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)) :
+                                      rType === 'room3' ? (run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)) :
+                                      (run.accommodationPrice || 0)
+                                    );
+                                    
+                                    const stdTotal = (hasTransport ? costTransport : 0) + costLodging;
+                                    const displayPrice = partic.customPrice !== undefined ? partic.customPrice : stdTotal;
 
-                                  return (
-                                    <tr key={partic.id} className="hover:bg-natural-bone/50 transition-colors">
-                                      <td className="py-2.5 font-bold text-natural-text">
-                                        <p className="text-[11px]">{partic.name}</p>
-                                        <p className="text-[9px] font-mono font-medium text-natural-sage">
-                                          {partic.phone || 'Pas de tél.'} • {partic.bloodType || 'O+'}
-                                        </p>
-                                      </td>
-                                      <td className="py-2">
+                                    return (
+                                      <tr key={partic.id} className="hover:bg-natural-bone/50 transition-colors">
+                                        <td className="py-2.5 font-bold text-natural-text">
+                                          <p className="text-[11px]">{partic.name}</p>
+                                          <p className="text-[9px] font-mono font-medium text-natural-sage">
+                                            {partic.phone || 'Pas de tél.'} • {partic.bloodType || 'O+'}
+                                          </p>
+                                        </td>
+                                        <td className="py-2">
+                                          <input
+                                            type="text"
+                                            value={partic.bibNumber || ''}
+                                            placeholder="Ex. 102"
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { bibNumber: e.target.value })}
+                                            className="w-18 font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
+                                          />
+                                        </td>
+                                        <td className="py-2">
+                                          <select
+                                            value={hasTransport ? 'yes' : 'no'}
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { useTransport: e.target.value === 'yes' })}
+                                            className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                          >
+                                            <option value="yes">🚌 Bus ({costTransport} DA)</option>
+                                            <option value="no">🚫 Solo</option>
+                                          </select>
+                                        </td>
+                                        <td className="py-2">
+                                          <div className="flex flex-col gap-1">
+                                            <select
+                                              value={hasLodging ? 'yes' : 'no'}
+                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
+                                              className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                            >
+                                              <option value="yes">🏨 Nuitée (Oui)</option>
+                                              <option value="no">🚫 Non (A/R)</option>
+                                            </select>
+                                            {hasLodging && (
+                                              <select
+                                                value={partic.accommodationType || 'room1'}
+                                                onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
+                                                className="text-[9px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-emerald-50 px-1 py-0.5"
+                                              >
+                                                <option value="room1">Ch. 1 ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
+                                                <option value="room2">Ch. 2 ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
+                                                <option value="room3">Ch. 3 ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
+                                              </select>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-2 text-right">
+                                          <div className="flex flex-col items-end gap-0.5">
+                                            <div className="flex items-center gap-1">
+                                              <input
+                                                type="number"
+                                                value={displayPrice}
+                                                onChange={(e) => onUpdateParticipant(run.id, partic.id, { customPrice: Number(e.target.value) })}
+                                                className="w-20 font-mono font-bold text-right border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
+                                              />
+                                              <span className="text-[9px] font-mono text-natural-sage">DA</span>
+                                            </div>
+                                            {partic.customPrice !== undefined && (
+                                              <button
+                                                onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
+                                                className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
+                                              >
+                                                Rétablir standard ({stdTotal} DA)
+                                              </button>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-2 text-center">
+                                          <button
+                                            onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
+                                            className={`px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                              partic.isPaid
+                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                                : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                                            }`}
+                                          >
+                                            {partic.isPaid ? '🟢 Payé' : '🔴 Non payé'}
+                                          </button>
+                                        </td>
+                                        <td className="py-2 text-center">
+                                          <button
+                                            onClick={() => {
+                                              if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
+                                                onRemoveParticipantByAdmin(run.id, partic.id);
+                                              }
+                                            }}
+                                            title="Désinscrire l'athlète"
+                                            className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Version Téléphone Mobile (Liste de Cartes ultra-optimisée avec espacements adaptés aux doigts) */}
+                            <div className="block md:hidden space-y-3">
+                              {run.participants.map(partic => {
+                                const hasTransport = partic.useTransport !== false;
+                                const hasLodging = !!partic.useAccommodation;
+                                
+                                const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
+                                
+                                const rType = partic.accommodationType || 'room1';
+                                const costLodging = !hasLodging ? 0 : (
+                                  rType === 'room1' ? (run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)) :
+                                  rType === 'room2' ? (run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)) :
+                                  rType === 'room3' ? (run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)) :
+                                  (run.accommodationPrice || 0)
+                                );
+                                
+                                const stdTotal = (hasTransport ? costTransport : 0) + costLodging;
+                                const displayPrice = partic.customPrice !== undefined ? partic.customPrice : stdTotal;
+
+                                return (
+                                  <div key={partic.id} className="p-3 bg-natural-bone/20 border border-natural-border rounded-xl space-y-2.5 relative shadow-xs">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <span className="font-bold text-[12px] text-natural-text block">{partic.name}</span>
+                                        <span className="text-[10px] font-mono text-natural-sage block">
+                                          📞 {partic.phone || 'Pas de tél.'} • 🩸 {partic.bloodType || 'O+'}
+                                        </span>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
+                                            onRemoveParticipantByAdmin(run.id, partic.id);
+                                          }
+                                        }}
+                                        className="p-1.5 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">Dossard</label>
                                         <input
                                           type="text"
                                           value={partic.bibNumber || ''}
                                           placeholder="Ex. 102"
                                           onChange={(e) => onUpdateParticipant(run.id, partic.id, { bibNumber: e.target.value })}
-                                          className="w-18 font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
+                                          className="w-full font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-2 py-1.5 text-xs focus:outline-none"
                                         />
-                                      </td>
-                                      <td className="py-2">
+                                      </div>
+                                      <div>
+                                        <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">Statut Versement</label>
+                                        <button
+                                          onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
+                                          className={`w-full py-1.5 rounded text-[11px] font-bold border transition ${
+                                            partic.isPaid
+                                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                              : 'bg-rose-50 text-rose-800 border-rose-200'
+                                          }`}
+                                        >
+                                          {partic.isPaid ? '🟢 Payé' : '🔴 Impayé'}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">Transport Bus</label>
                                         <select
                                           value={hasTransport ? 'yes' : 'no'}
                                           onChange={(e) => onUpdateParticipant(run.id, partic.id, { useTransport: e.target.value === 'yes' })}
-                                          className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                          className="w-full text-xs font-semibold border border-natural-border rounded bg-white px-2 py-1.5 cursor-pointer outline-none"
                                         >
                                           <option value="yes">🚌 Bus ({costTransport} DA)</option>
                                           <option value="no">🚫 Solo</option>
                                         </select>
-                                      </td>
-                                      <td className="py-2">
-                                        <div className="flex flex-col gap-1">
-                                          <select
-                                            value={hasLodging ? 'yes' : 'no'}
-                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
-                                            className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                      </div>
+                                      <div>
+                                        <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">Nuitée (Lmbata)</label>
+                                        <select
+                                          value={hasLodging ? 'yes' : 'no'}
+                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
+                                          className="w-full text-xs font-semibold border border-natural-border rounded bg-white px-2 py-1.5 cursor-pointer outline-none"
+                                        >
+                                          <option value="yes">🏨 Nuitée (Oui)</option>
+                                          <option value="no">🚫 Non (A/R)</option>
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    {hasLodging && (
+                                      <div className="bg-emerald-50/55 p-2 rounded-lg border border-emerald-100">
+                                        <label className="block text-[9px] font-bold text-emerald-800 uppercase font-mono mb-1">Option de Chambre :</label>
+                                        <select
+                                          value={partic.accommodationType || 'room1'}
+                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
+                                          className="w-full text-[11px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-white px-2 py-1 cursor-pointer"
+                                        >
+                                          <option value="room1">Chambre 1p ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
+                                          <option value="room2">Chambre 2p ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
+                                          <option value="room3">Chambre 3p ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
+                                        </select>
+                                      </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center bg-natural-bone/45 p-2.5 rounded-lg border border-natural-border/60">
+                                      <span className="text-[10px] uppercase font-mono font-bold text-natural-olive">Tarif Dû :</span>
+                                      <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-1">
+                                          <input
+                                            type="number"
+                                            value={displayPrice}
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { customPrice: Number(e.target.value) })}
+                                            className="w-20 font-mono font-bold text-right border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-0.5 text-xs"
+                                          />
+                                          <span className="text-[9px] font-mono text-natural-sage">DA</span>
+                                        </div>
+                                        {partic.customPrice !== undefined && (
+                                          <button
+                                            onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
+                                            className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
                                           >
-                                            <option value="yes">🏨 Nuitée (Oui)</option>
-                                            <option value="no">🚫 Non (A/R)</option>
-                                          </select>
-                                          {hasLodging && (
-                                            <select
-                                              value={partic.accommodationType || 'room1'}
-                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
-                                              className="text-[9px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-emerald-50 px-1 py-0.5"
-                                            >
-                                              <option value="room1">Ch. 1 ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
-                                              <option value="room2">Ch. 2 ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
-                                              <option value="room3">Ch. 3 ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
-                                            </select>
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="py-2 text-right">
-                                        <div className="flex flex-col items-end gap-0.5">
-                                          <div className="flex items-center gap-1">
-                                            <input
-                                              type="number"
-                                              value={displayPrice}
-                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { customPrice: Number(e.target.value) })}
-                                              className="w-20 font-mono font-bold text-right border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
-                                            />
-                                            <span className="text-[9px] font-mono text-natural-sage">DA</span>
-                                          </div>
-                                          {partic.customPrice !== undefined && (
-                                            <button
-                                              onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
-                                              className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
-                                            >
-                                              Rétablir standard ({stdTotal} DA)
-                                            </button>
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="py-2 text-center">
-                                        <button
-                                          onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
-                                          className={`px-2 py-1 rounded text-[10px] font-bold border transition ${
-                                            partic.isPaid
-                                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                                              : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                                          }`}
-                                        >
-                                          {partic.isPaid ? '🟢 Payé' : '🔴 Non payé'}
-                                        </button>
-                                      </td>
-                                      <td className="py-2 text-center">
-                                        <button
-                                          onClick={() => {
-                                            if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
-                                              onRemoveParticipantByAdmin(run.id, partic.id);
-                                            }
-                                          }}
-                                          title="Désinscrire l'athlète"
-                                          className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                                            Rétablir standard ({stdTotal} DA)
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
                         )}
 
                         {/* Outing logistical math summaries */}
