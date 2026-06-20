@@ -73,10 +73,14 @@ export default function OutingsPlanning({
 
   // Process filters
   const filteredRuns = upcomingRuns.filter(run => {
-    const matchesSearch = run.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          run.startPoint.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          run.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (run.destinationWilaya && run.destinationWilaya.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.toLowerCase().trim();
+    
+    // If no search term, all runs count as matching
+    const matchesSearch = term === '' ||
+                          run.title.toLowerCase().includes(term) ||
+                          run.startPoint.toLowerCase().includes(term) ||
+                          run.description.toLowerCase().includes(term) ||
+                          (run.destinationWilaya && run.destinationWilaya.toLowerCase().includes(term));
 
     const matchesDifficulty = difficultyFilter === 'Tous' || run.difficulty === difficultyFilter;
 
@@ -477,64 +481,17 @@ export default function OutingsPlanning({
       )}
 
       {/* Filter and Search Box */}
-      <div className="bg-white rounded-3xl p-4 border border-natural-border grid grid-cols-1 md:grid-cols-4 gap-3 shadow-xs">
+      <div className="bg-white rounded-3xl p-5 border border-natural-border shadow-sm mb-4">
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
+          <Search className="absolute left-3 top-3.5 w-5 h-5 text-natural-olive" />
           <input
             type="text"
-            placeholder="Rechercher par route, phare, wilaya..."
+            placeholder="🔍 Rechercher une sortie par nom, route, wilaya..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full text-xs pl-9 pr-3 py-2.5 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive"
+            className="w-full text-base pl-11 pr-4 py-4 bg-white border-2 border-natural-olive/20 text-natural-text rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/30 focus:border-natural-olive font-medium shadow-md transition-all placeholder:text-natural-sage"
           />
-        </div>
-
-        {/* Difficulty Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-natural-sage shrink-0" />
-          <span className="text-[11px] text-natural-olive font-bold uppercase font-mono">Difficulté :</span>
-          <select
-            value={difficultyFilter}
-            onChange={e => setDifficultyFilter(e.target.value)}
-            className="flex-1 text-xs px-2.5 py-2 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
-          >
-            <option value="Tous">Toutes</option>
-            <option value="Facile">🟢 Facile</option>
-            <option value="Moyen">🟡 Moyen</option>
-            <option value="Difficile">🔴 Difficile</option>
-          </select>
-        </div>
-
-        {/* Distance Filter */}
-        <div className="flex items-center gap-2">
-          <Layers className="w-3.5 h-3.5 text-natural-sage shrink-0" />
-          <span className="text-[11px] text-natural-olive font-bold uppercase font-mono">Distance :</span>
-          <select
-            value={distanceFilter}
-            onChange={e => setDistanceFilter(e.target.value)}
-            className="flex-1 text-xs px-2.5 py-2 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
-          >
-            <option value="Tous">Toutes distances</option>
-            <option value="court">🍂 Court (≤ 8 KM)</option>
-            <option value="moyen">👟 Moyen (8 - 15 KM)</option>
-            <option value="long">🔋 Long (&gt; 15 KM)</option>
-          </select>
-        </div>
-
-        {/* Wilaya Filter */}
-        <div className="flex items-center gap-2">
-          <Compass className="w-3.5 h-3.5 text-natural-sage shrink-0" />
-          <span className="text-[11px] text-natural-olive font-bold uppercase font-mono">Secteur :</span>
-          <select
-            value={wilayaFilter}
-            onChange={e => setWilayaFilter(e.target.value)}
-            className="flex-1 text-xs px-2.5 py-2 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
-          >
-            <option value="Tous">Tout compris</option>
-            <option value="Mostaganem">📍 Mostaganem (Local)</option>
-            <option value="Hors Wilaya">🚙 Hors Wilaya (National)</option>
-          </select>
         </div>
       </div>
 
@@ -564,33 +521,33 @@ export default function OutingsPlanning({
                   <div className="flex-1 space-y-2">
                     {/* Tags row */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded border ${getDifficultyStyles(run.difficulty)}`}>
+                      <span className={`text-xs font-bold px-3 py-1 rounded border ${getDifficultyStyles(run.difficulty)}`}>
                         {run.difficulty}
                       </span>
-                      <span className="text-[10px] text-natural-olive font-mono font-bold flex items-center gap-1.5 bg-natural-sage-light/30 px-2 py-0.5 rounded border border-natural-border/40">
-                        <Calendar className="w-3.5 h-3.5 text-natural-olive" />
+                      <span className="text-xs text-natural-olive font-bold flex items-center gap-1.5 bg-natural-sage-light/30 px-2.5 py-1 rounded border border-natural-border/40">
+                        <Calendar className="w-4 h-4 text-natural-olive" />
                         {new Date(run.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} à {run.time}
                       </span>
                       {run.isOrWilaya && (
-                        <span className="text-[10px] bg-amber-50 text-amber-800 font-mono font-black border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-xxs shrink-0">
-                          <Compass className="w-3.5 h-3.5 text-amber-700" />
+                        <span className="text-xs bg-amber-50 text-amber-800 font-extrabold border border-amber-200 px-2.5 py-1 rounded flex items-center gap-1.5 shadow-xxs shrink-0">
+                          <Compass className="w-4 h-4 text-amber-700" />
                           HORS WILAYA ({run.destinationWilaya || 'National'})
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-md md:text-lg font-serif italic font-black text-natural-olive tracking-wide">
+                    <h3 className="text-lg md:text-xl font-serif italic font-black text-natural-olive tracking-wide">
                       {run.title}
                     </h3>
 
                     {/* Meta coordinates details */}
-                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-natural-text font-medium">
+                    <div className="flex flex-wrap items-center gap-y-1.5 gap-x-5 text-sm text-natural-text font-medium">
                       <div className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-natural-olive shrink-0" />
+                        <MapPin className="w-4 h-4 text-natural-olive shrink-0" />
                         <span className="truncate max-w-[200px] md:max-w-md">{run.startPoint}</span>
                       </div>
                       <div className="flex items-center gap-1 text-natural-accent">
-                        <Gauge className="w-3.5 h-3.5 shrink-0" />
+                        <Gauge className="w-4 h-4 shrink-0" />
                         <span className="font-bold">Allure: {run.pace}</span>
                       </div>
                     </div>
@@ -599,20 +556,20 @@ export default function OutingsPlanning({
                   {/* Highlights distance badges & toggle action */}
                   <div className="flex items-center md:justify-end gap-3 md:gap-5 pt-3 md:pt-0 border-t md:border-t-0 border-natural-divider">
                     <div className="text-left md:text-right">
-                      <span className="text-[9px] text-natural-sage uppercase tracking-widest font-mono font-bold">Distance</span>
-                      <p className="font-serif italic font-black text-2xl text-natural-olive leading-none">
+                      <span className="text-xs text-natural-sage uppercase font-bold">Distance</span>
+                      <p className="font-serif italic font-black text-3xl text-natural-olive leading-none">
                         {run.distance} <span className="text-xs font-bold text-natural-sage">KM</span>
                       </p>
                       {run.elevationGain && run.elevationGain > 0 ? (
-                        <span className="text-[10px] text-natural-sage font-mono block mt-0.5 font-semibold">+{run.elevationGain}m d+</span>
+                        <span className="text-xs text-natural-sage font-bold block mt-0.5">+{run.elevationGain}m d+</span>
                       ) : null}
                     </div>
 
                     {/* Participants count bubble */}
-                    <div className="px-3 py-1.5 bg-natural-bone rounded-xl text-center border border-natural-border">
-                      <span className="text-[9px] text-natural-sage block font-mono font-bold">Abonnés</span>
-                      <span className="text-xs font-bold text-natural-olive flex items-center gap-1 justify-center">
-                        <Users className="w-3 h-3 text-natural-sage" />
+                    <div className="px-3.5 py-2 bg-natural-bone rounded-xl text-center border border-natural-border">
+                      <span className="text-xs text-natural-sage block font-bold">Abonnés</span>
+                      <span className="text-sm font-bold text-natural-olive flex items-center gap-1 justify-center">
+                        <Users className="w-3.5 h-3.5 text-natural-sage" />
                         {run.participants.length}
                         {run.maxParticipants && <span className="text-natural-sage font-normal">/{run.maxParticipants}</span>}
                       </span>
@@ -623,24 +580,24 @@ export default function OutingsPlanning({
                       id={`register-btn-${run.id}`}
                       disabled={!isUserRegistered && isFull}
                       onClick={() => onToggleRegister(run.id)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-black tracking-wide transition shrink-0 flex items-center gap-1 shadow-sm border ${
+                      className={`px-5 py-3 rounded-xl text-sm font-black tracking-wide transition shrink-0 flex items-center gap-1.5 shadow-md border cursor-pointer ${
                         isUserRegistered
-                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200"
                           : isFull
-                          ? 'bg-natural-sage-light/20 text-natural-sage cursor-not-allowed border-natural-border'
-                          : 'bg-natural-olive hover:bg-natural-olive-hover text-white border-transparent'
+                          ? "bg-natural-sage-light/20 text-natural-sage cursor-not-allowed border-natural-border"
+                          : "bg-natural-olive hover:bg-natural-olive-hover text-white border-transparent"
                       }`}
                     >
                       {isUserRegistered ? (
                         <>
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-4 h-4" />
                           Se désinscrire
                         </>
                       ) : isFull ? (
                         'Complet'
                       ) : (
                         <>
-                          <Check className="w-3.5 h-3.5 text-white bg-white/20 rounded-full" />
+                          <Check className="w-4 h-4 text-white bg-white/20 rounded-full" />
                           S'inscrire
                         </>
                       )}
@@ -652,12 +609,12 @@ export default function OutingsPlanning({
                 <div
                   id={`details-toggle-${run.id}`}
                   onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
-                  className="px-5 py-2.5 bg-natural-sage-light/10 border-t border-natural-divider rounded-b-3xl flex items-center justify-between text-xs text-natural-sage hover:bg-natural-sage-light/30 cursor-pointer transition select-none font-bold"
+                  className="px-5 py-3.5 bg-natural-sage-light/10 border-t border-natural-divider rounded-b-3xl flex items-center justify-between text-sm text-natural-sage hover:bg-natural-sage-light/30 cursor-pointer transition select-none font-bold"
                 >
-                  <p className="truncate max-w-[280px] md:max-w-md text-[11px] text-natural-sage italic font-normal">
+                  <p className="truncate max-w-[280px] md:max-w-md text-xs md:text-sm text-natural-sage font-medium italic">
                     {run.description}
                   </p>
-                  <span className="text-natural-olive text-[10px] font-bold uppercase tracking-wider flex items-center gap-0.5">
+                  <span className="text-natural-olive text-xs font-black uppercase tracking-wider flex items-center gap-0.5 shrink-0">
                     {isExpanded ? 'Masquer détails ▲' : 'Détails & Participants ▼'}
                   </span>
                 </div>

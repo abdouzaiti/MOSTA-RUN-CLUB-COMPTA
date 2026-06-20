@@ -660,7 +660,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
           <div className="flex items-center gap-2">
             <span className="font-serif italic font-bold text-natural-olive">Mosta Run Club © 2026</span>
             <span>•</span>
-            <span className="font-semibold">Bahr, Sahara w Riyah Al-Mostaganem 🇩🇿</span>
+            <span className="font-semibold">Mostaganem-DZ</span>
           </div>
         </footer>
       </div>

@@ -49,17 +49,17 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
         {/* Card Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-natural-accent flex items-center justify-center text-[10px] text-white font-serif italic font-bold">M</div>
+            <div className="w-8 h-8 rounded-full bg-natural-accent flex items-center justify-center text-sm text-white font-serif italic font-bold">M</div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-natural-sage-light font-mono font-bold leading-none">Athlete Licence</p>
-              <p className="text-xs font-bold font-serif italic text-natural-accent">MOSTA RUN CLUB</p>
+              <p className="text-xs uppercase tracking-widest text-natural-sage-light font-mono font-bold leading-none">Athlete Licence</p>
+              <p className="text-sm font-bold font-serif italic text-natural-accent">MOSTA RUN CLUB</p>
             </div>
           </div>
           {/* Algerian flag miniature */}
-          <div className="flex w-6 h-4 rounded overflow-hidden border border-white/10">
+          <div className="flex w-7 h-5 rounded overflow-hidden border border-white/10">
             <div className="w-[45%] bg-emerald-650"></div>
             <div className="w-[10%] bg-white flex items-center justify-center relative">
-              <span className="absolute text-[8px] text-red-650 leading-none">♥</span>
+              <span className="absolute text-[10px] text-red-650 leading-none">♥</span>
             </div>
             <div className="w-[45%] bg-red-650"></div>
           </div>
@@ -68,29 +68,29 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
         {/* Card Body */}
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-            <p className="text-natural-sage-light text-[10px] uppercase tracking-wider font-mono">Nom du coureur</p>
-            <p className="font-extrabold text-lg text-white font-serif italic tracking-wide truncate max-w-[200px]">
+            <p className="text-natural-sage-light text-xs uppercase tracking-wider font-mono">Nom du coureur</p>
+            <p className="font-extrabold text-xl text-white font-serif italic tracking-wide truncate max-w-[200px]">
               {currentUser.name}
             </p>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
               <div>
-                <p className="text-natural-sage-light text-[8px] uppercase font-mono">Groupe Sanguin</p>
+                <p className="text-natural-sage-light text-xs uppercase font-mono">Groupe Sanguin</p>
                 <div className="flex items-center gap-1.5 mt-0.5 text-natural-accent">
-                  <HeartPulse className="w-3.5 h-3.5 text-natural-accent" />
-                  <span className="font-mono font-bold text-xs">{currentUser.bloodType || 'O+'}</span>
+                  <HeartPulse className="w-4 h-4 text-natural-accent" />
+                  <span className="font-mono font-bold text-sm">{currentUser.bloodType || 'O+'}</span>
                 </div>
               </div>
               <div>
-                <p className="text-natural-sage-light text-[8px] uppercase font-mono">Rôle Club</p>
-                <p className="text-xs font-bold text-natural-accent mt-0.5">{currentUser.runClubRole || 'Membre'}</p>
+                <p className="text-natural-sage-light text-xs uppercase font-mono">Rôle Club</p>
+                <p className="text-sm font-bold text-natural-accent mt-0.5">{currentUser.runClubRole || 'Membre'}</p>
               </div>
             </div>
           </div>
 
           <div className="text-right flex flex-col items-end justify-between self-stretch">
             <div className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 text-right">
-              <span className="text-[9px] text-natural-sage-light block font-mono">ID ATHLETE</span>
+              <span className="text-xs text-natural-sage-light block font-mono">ID ATHLETE</span>
               <span className="font-mono text-xs font-bold text-natural-accent">#MRC-2026-{currentUser.id.split('-')[1] || '99'}</span>
             </div>
 
@@ -114,16 +114,16 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
       {/* Stats Under License */}
       <div className="grid grid-cols-3 gap-2 bg-natural-bone p-3 rounded-2xl border border-natural-border text-center">
         <div>
-          <span className="text-natural-sage text-[9px] block uppercase font-mono font-bold">Inscrit à</span>
-          <span className="text-md font-bold text-natural-olive">{registeredRuns.length} run{registeredRuns.length > 1 ? 's' : ''}</span>
+          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">Inscrit à</span>
+          <span className="text-lg font-black text-natural-olive">{registeredRuns.length} run{registeredRuns.length > 1 ? 's' : ''}</span>
         </div>
         <div className="border-x border-natural-divider">
-          <span className="text-natural-sage text-[9px] block uppercase font-mono font-bold">Terminés</span>
-          <span className="text-md font-bold text-natural-accent">{finishedRunsCount}</span>
+          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">Terminés</span>
+          <span className="text-lg font-black text-natural-accent">{finishedRunsCount}</span>
         </div>
         <div>
-          <span className="text-natural-sage text-[9px] block uppercase font-mono font-bold">Distance Prévu</span>
-          <span className="text-md font-bold text-natural-olive">{totalDistancePlanned} km</span>
+          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">Total KMs</span>
+          <span className="text-lg font-black text-natural-olive">{totalDistancePlanned} km</span>
         </div>
       </div>
 

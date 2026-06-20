@@ -100,16 +100,16 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
           {/* Active User Badging */}
           <div className="col-span-2 lg:col-span-1 p-3 bg-natural-sage-light/60 rounded-2xl border border-natural-border flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-natural-olive text-white flex items-center justify-center text-xs font-bold font-serif italic border border-natural-border shadow-sm shrink-0">
+              <div className="w-10 h-10 rounded-full bg-natural-olive text-white flex items-center justify-center text-sm font-bold font-serif italic border border-natural-border shadow-sm shrink-0">
                 {currentUser.name.split(' ').map(n => n[0]).join('')}
               </div>
               <div className="text-xs min-w-0">
-                <p className="font-bold text-natural-text truncate max-w-[100px]" title={currentUser.name}>{currentUser.name}</p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[9px] px-1 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
+                <p className="font-bold text-sm text-natural-text truncate max-w-[120px]" title={currentUser.name}>{currentUser.name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[11px] px-1.5 py-0.5 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
                     {currentUser.bloodType || 'O+'}
                   </span>
-                  <span className="text-[10px] text-natural-sage font-bold uppercase tracking-wider text-[8px] truncate">
+                  <span className="text-xs text-natural-sage font-bold uppercase tracking-wider truncate">
                     {currentUser.runClubRole || 'Membre'}
                   </span>
                 </div>
@@ -118,7 +118,7 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-[10px] font-bold font-mono px-2 py-1 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
+                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-xs font-bold font-mono px-3 py-1.5 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
                 title="Se déconnecter de votre espace"
               >
                 Sortir
@@ -127,17 +127,17 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
           </div>
 
           <div className="p-3 bg-natural-bone rounded-2xl border border-natural-border">
-            <span className="text-natural-sage text-[10px] block uppercase font-mono tracking-wider font-bold">Prochain Run</span>
+            <span className="text-natural-sage text-xs block uppercase font-bold">Prochain Run</span>
             <div className="flex items-center gap-1.5 mt-1 text-natural-olive">
               <Clock className="w-4 h-4 text-natural-olive shrink-0" />
-              <span className="font-serif italic font-bold text-xs truncate">{countdownStr}</span>
+              <span className="font-serif italic font-bold text-sm truncate">{countdownStr}</span>
             </div>
           </div>
 
           <div className="p-3 bg-natural-bone rounded-2xl border border-natural-border">
-            <span className="text-natural-sage text-[10px] block uppercase font-mono tracking-wider font-bold">Sorties Club</span>
-            <p className="text-natural-text text-xs font-semibold mt-1">
-              <span className="text-natural-olive font-serif italic font-black">{upcomingCount}</span> planifiées <span className="text-natural-border">|</span> <span className="text-natural-accent font-serif italic font-black">{completedCount}</span> tkarir
+            <span className="text-natural-sage text-xs block uppercase font-bold">Sorties Club</span>
+            <p className="text-natural-text text-sm font-semibold mt-1">
+              <span className="text-natural-olive font-serif italic font-black text-base">{upcomingCount}</span> planifiées <span className="text-natural-border">|</span> <span className="text-natural-accent font-serif italic font-black text-base">{completedCount}</span> tkarir
             </p>
           </div>
         </div>

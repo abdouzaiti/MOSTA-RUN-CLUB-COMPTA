@@ -126,32 +126,32 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
       {showAddRunnerForm && (
         <form onSubmit={handleAddRunner} className="bg-natural-bone p-5 rounded-3xl border border-natural-border space-y-4 animate-fade-in text-xs">
           <div className="border-b border-natural-divider pb-2">
-            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-xs">Abonner un nouvel athlète (Mode Rapide ⚡)</h3>
-            <p className="text-[10px] text-natural-sage font-medium">
+            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-sm">Abonner un nouvel athlète (Mode Rapide ⚡)</h3>
+            <p className="text-xs text-natural-sage font-medium">
               Saisissez uniquement son <strong>Nom complet</strong>. Un <strong>Nom d'utilisateur (Username)</strong> sera généré automatiquement et servira de <strong>Mot de passe initial</strong>. L'athlète se connectera avec et remplira lui-même l'email, téléphone et groupe sanguin à sa première connexion !
             </p>
           </div>
 
           {errorMsg && (
-            <div className="p-2.5 bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-100">
+            <div className="p-3 bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-100 text-xs">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Nom Complet *</label>
+              <label className="block text-xs font-bold text-natural-olive mb-1">Nom Complet *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={e => handleNameChange(e.target.value)}
                 placeholder="Ex. Sofiane Slimani"
-                className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
+                className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Nom d'utilisateur (Username de connexion) *</label>
+              <label className="block text-xs font-bold text-natural-olive mb-1">Nom d'utilisateur (Username de connexion) *</label>
               <input
                 type="text"
                 required
@@ -161,40 +161,40 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                   setIsCustomUsername(true);
                 }}
                 placeholder="Ex. sofiane_s"
-                className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50 font-mono"
+                className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55 font-mono"
               />
-              <span className="text-[9px] text-natural-sage font-medium block mt-0.5">
+              <span className="text-xs text-natural-sage font-medium block mt-0.5">
                 Utilisé pour se connecter rapidement (ex: @{username || 'username'}).
               </span>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Téléphone (Optionnel - Laissez vide, l'athlète le remplira)</label>
+              <label className="block text-xs font-bold text-natural-olive mb-1">Téléphone (Optionnel - Laissez vide, l'athlète le remplira)</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="Ex. Laissez vide..."
-                className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
+                className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Adresse Email (Optionnelle - Laissez vide, l'athlète la remplira)</label>
+              <label className="block text-xs font-bold text-natural-olive mb-1">Adresse Email (Optionnelle - Laissez vide, l'athlète la remplira)</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="Ex. Laissez vide..."
-                className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
+                className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Groupe Sanguin</label>
+                <label className="block text-xs font-bold text-natural-olive mb-1">Groupe Sanguin</label>
                 <select
                   value={bloodType}
                   onChange={e => setBloodType(e.target.value)}
-                  className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold"
+                  className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold"
                 >
                   <option value="A+">A+</option>
                   <option value="A-">A-</option>
@@ -207,11 +207,11 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Rôle Club</label>
+                <label className="block text-xs font-bold text-natural-olive mb-1">Rôle Club</label>
                 <select
                   value={role}
                   onChange={e => setRole(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold"
+                  className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold"
                 >
                   <option value="Membre">Abonné classique</option>
                   <option value="Coach">Coach de Course</option>
@@ -274,17 +274,17 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
               >
                 {/* Algerie Badge for Admins or Coach */}
                 {runner.runClubRole === 'Admin' && (
-                  <span className="absolute top-4 right-4 bg-natural-olive/10 text-natural-olive text-[9px] font-bold px-2 py-0.5 rounded-md border border-natural-olive/20 font-serif italic">
+                  <span className="absolute top-4 right-4 bg-natural-olive/10 text-natural-olive text-xs font-bold px-2.5 py-1 rounded-md border border-natural-olive/20 font-serif italic">
                     Administrateur
                   </span>
                 )}
                 {runner.runClubRole === 'Coach' && (
-                  <span className="absolute top-4 right-4 bg-natural-accent/15 text-natural-accent text-[9px] font-bold px-2 py-0.5 rounded-md border border-natural-accent/25 font-serif italic">
+                  <span className="absolute top-4 right-4 bg-natural-accent/15 text-natural-accent text-xs font-bold px-2.5 py-1 rounded-md border border-natural-accent/25 font-serif italic">
                     Coach de course
                   </span>
                 )}
                 {runner.runClubRole === 'Membre' && (
-                  <span className="absolute top-4 right-4 bg-natural-sage-light/40 text-natural-text text-[9px] font-bold px-2 py-0.5 rounded-md border border-natural-border font-serif italic">
+                  <span className="absolute top-4 right-4 bg-natural-sage-light/40 text-natural-text text-xs font-bold px-2.5 py-1 rounded-md border border-natural-border font-serif italic">
                     Abonné
                   </span>
                 )}
@@ -295,13 +295,13 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                     {runner.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div>
-                    <h3 className="font-serif italic font-extrabold text-natural-text text-sm tracking-wide">
-                      {runner.name} {isMe && <span className="text-[10px] text-natural-accent font-bold font-mono">(Moi)</span>}
+                    <h3 className="font-serif italic font-extrabold text-natural-text text-base tracking-wide">
+                      {runner.name} {isMe && <span className="text-xs text-natural-accent font-bold font-mono">(Moi)</span>}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                      <span className="text-[9px] text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className="text-xs text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</span>
                       {runner.username && (
-                        <span className="text-[9px] bg-natural-sage-light/50 text-natural-olive border border-natural-border/60 font-mono font-bold px-1.5 py-0.2 rounded">
+                        <span className="text-xs bg-natural-sage-light/50 text-natural-olive border border-natural-border/60 font-mono font-bold px-2 py-0.5 rounded">
                           @{runner.username}
                         </span>
                       )}
@@ -310,23 +310,23 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 </div>
 
                 {/* Technical contact attributes */}
-                <div className="mt-4 pt-3 border-t border-natural-divider space-y-2 text-xs text-natural-text">
+                <div className="mt-4 pt-4 border-t border-natural-divider space-y-2.5 text-xs text-natural-text">
                   <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-natural-sage shrink-0" />
+                    <Phone className="w-4 h-4 text-natural-sage shrink-0" />
                     {runner.phone ? (
-                      <span className="font-mono text-natural-text font-bold">{runner.phone}</span>
+                      <span className="font-mono text-natural-text font-bold text-sm">{runner.phone}</span>
                     ) : (
-                      <span className="text-[10px] text-amber-600 font-bold italic font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                      <span className="text-xs text-amber-600 font-bold italic font-mono bg-amber-50 px-2 py-1 rounded border border-amber-100">
                         Téléphone manquant ⚠️
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 truncate">
-                    <Mail className="w-3.5 h-3.5 text-natural-sage shrink-0" />
+                    <Mail className="w-4 h-4 text-natural-sage shrink-0" />
                     {runner.email ? (
-                      <span className="truncate font-semibold">{runner.email}</span>
+                      <span className="truncate font-semibold text-sm">{runner.email}</span>
                     ) : (
-                      <span className="text-[10px] text-amber-600 font-bold italic font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                      <span className="text-xs text-amber-600 font-bold italic font-mono bg-amber-50 px-2 py-1 rounded border border-amber-100">
                         Email manquant ⚠️
                       </span>
                     )}
@@ -334,21 +334,21 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 </div>
 
                 {/* Critical emergency medical badges footer */}
-                <div className="mt-4 pt-3 border-t border-natural-divider/60 flex items-center justify-between">
+                <div className="mt-4 pt-4 border-t border-natural-divider/60 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-natural-text font-bold">
-                    <HeartPulse className="w-4 h-4 shrink-0 text-natural-accent" />
-                    <span className="text-[10px] text-natural-sage font-mono">Groupe Sanguin:</span>
-                    <span className="text-xs font-mono font-bold text-natural-olive">{runner.bloodType || 'O+'}</span>
+                    <HeartPulse className="w-4.5 h-4.5 shrink-0 text-natural-accent" />
+                    <span className="text-xs text-natural-sage">Groupe Sanguin:</span>
+                    <span className="text-sm font-mono font-bold text-natural-olive">{runner.bloodType || 'O+'}</span>
                   </div>
 
                   {/* Let the user delete runners if they are not the active currentUser */}
                   {!isMe && (
                     <button
                       onClick={() => onDeleteRunner(runner.id)}
-                      className="p-1 px-2 border border-natural-border hover:border-rose-200 hover:bg-rose-50 rounded text-natural-sage hover:text-rose-600 font-mono text-[9px] flex items-center gap-1 transition cursor-pointer"
+                      className="p-1 px-2.5 border border-natural-border hover:border-rose-200 hover:bg-rose-50 rounded text-natural-text hover:text-rose-600 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
                       title="Résoudre ou suspendre"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                       Suspendre
                     </button>
                   )}
