@@ -80,7 +80,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
       email: email.trim() || '',
       bloodType: bloodType || 'O+',
       runClubRole: role,
-      password: name.trim(), // Le mot de passe initial est identique au nom complet
+      password: finalUsername, // Le mot de passe initial est identique au username de connexion
       passwordChanged: false // Forcer le changement au premier login
     });
 
@@ -126,8 +126,10 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
       {showAddRunnerForm && (
         <form onSubmit={handleAddRunner} className="bg-natural-bone p-5 rounded-3xl border border-natural-border space-y-4 animate-fade-in text-xs">
           <div className="border-b border-natural-divider pb-2">
-            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-xs">Abonner un nouvel athlète</h3>
-            <p className="text-[10px] text-natural-sage font-medium">Renseignez son profil sportif et médical de sécurité.</p>
+            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-xs">Abonner un nouvel athlète (Mode Rapide ⚡)</h3>
+            <p className="text-[10px] text-natural-sage font-medium">
+              Saisissez uniquement son <strong>Nom complet</strong>. Un <strong>Nom d'utilisateur (Username)</strong> sera généré automatiquement et servira de <strong>Mot de passe initial</strong>. L'athlète se connectera avec et remplira lui-même l'email, téléphone et groupe sanguin à sa première connexion !
+            </p>
           </div>
 
           {errorMsg && (
@@ -166,22 +168,22 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
               </span>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Téléphone (Optionnel - à remplir soi-même)</label>
+              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Téléphone (Optionnel - Laissez vide, l'athlète le remplira)</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="Ex. 0661122334"
+                placeholder="Ex. Laissez vide..."
                 className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Adresse Email (Optionnelle - à remplir soi-même)</label>
+              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Adresse Email (Optionnelle - Laissez vide, l'athlète la remplira)</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Ex. sofiane.mosta@gmail.com"
+                placeholder="Ex. Laissez vide..."
                 className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
               />
             </div>

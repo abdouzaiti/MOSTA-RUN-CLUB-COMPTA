@@ -592,35 +592,12 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
           </>
         )}
 
-        {/* Humble system credits & Actions */}
+        {/* Humble system credits */}
         <footer className="pt-8 mt-12 border-t border-natural-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-natural-sage">
           <div className="flex items-center gap-2">
             <span className="font-serif italic font-bold text-natural-olive">Mosta Run Club © 2026</span>
             <span>•</span>
             <span className="font-semibold">Bahr, Sahara w Riyah Al-Mostaganem 🇩🇿</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={() => setShowSqlSetup(!showSqlSetup)}
-              className="flex items-center gap-1 hover:text-white hover:bg-slate-800 text-slate-800 border border-slate-300 rounded-xl px-2.5 py-1.5 transition cursor-pointer font-bold font-mono text-[10px]"
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              {showSqlSetup ? "Masquer Script SQL" : "Afficher Script SQL Supabase"}
-            </button>
-            <button
-              onClick={handleClearDemoData}
-              className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-2.5 py-1.5 transition cursor-pointer font-bold"
-            >
-              🗑️ Vider données démo
-            </button>
-            <button
-              onClick={handleResetToSimulationDefaults}
-              className="flex items-center gap-1 hover:text-natural-olive transition font-mono text-[10px] bg-white border border-natural-border rounded-xl px-2.5 py-1.5 cursor-pointer font-semibold"
-            >
-              <RefreshCw className="w-3" />
-              Réinitialiser simulation presets
-            </button>
           </div>
         </footer>
       </div>
