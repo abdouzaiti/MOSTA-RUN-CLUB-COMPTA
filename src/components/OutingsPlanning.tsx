@@ -49,10 +49,14 @@ export default function OutingsPlanning({
   const [maxParticipants, setMaxParticipants] = useState<number>(30);
 
   // New states for Or Wilaya outings
-  const [isOrWilaya, setIsOrWilaya] = useState<boolean>(false);
-  const [destinationWilaya, setDestinationWilaya] = useState<string>('');
+  const [isOrWilaya, setIsOrWilaya] = useState<boolean>(true); // default to true since almost all newly planned runs with prices are Or Wilaya
+  const [destinationWilaya, setDestinationWilaya] = useState<string>('Hors Wilaya');
   const [transportPrice, setTransportPrice] = useState<number>(1500);
   const [accommodationPrice, setAccommodationPrice] = useState<number>(2500);
+  const [priceRoom1, setPriceRoom1] = useState<number>(2500);
+  const [priceRoom2, setPriceRoom2] = useState<number>(3500);
+  const [priceRoom3, setPriceRoom3] = useState<number>(4500);
+  const [showAdvancedForm, setShowAdvancedForm] = useState<boolean>(false);
 
   // Participant bib assignment editing state
   // Stores { [runId_runnerId]: string } for inline bib editing
@@ -110,7 +114,7 @@ export default function OutingsPlanning({
 
   const handleCreateRun = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !date || !time || !startPoint || !description) {
+    if (!title || !date || !time || !startPoint) {
       setFormError('S\'il vous plaît, remplissez tous les champs requis.');
       return;
     }
@@ -127,22 +131,27 @@ export default function OutingsPlanning({
       return;
     }
 
+    const runDesc = description.trim() || "Sortie de groupe officielle par Mosta Run Club ! Rejoignez-nous pour courir ensemble, partager la joie de l'effort physique et vivre une belle aventure d'équipe.";
+
     onAddRun({
       id: 'run-' + Date.now(),
       title,
       date,
       time,
-      distance: Number(distance),
-      elevationGain: Number(elevationGain),
-      pace,
-      difficulty,
+      distance: Number(distance) || 10,
+      elevationGain: Number(elevationGain) || 0,
+      pace: pace || 'Libre',
+      difficulty: difficulty || 'Moyen',
       startPoint,
-      description,
-      maxParticipants: Number(maxParticipants),
+      description: runDesc,
+      maxParticipants: Number(maxParticipants) || 100,
       isOrWilaya,
       destinationWilaya: isOrWilaya ? destinationWilaya : undefined,
       transportPrice: isOrWilaya ? Number(transportPrice) : undefined,
-      accommodationPrice: isOrWilaya ? Number(accommodationPrice) : undefined
+      accommodationPrice: isOrWilaya ? Number(accommodationPrice) : undefined,
+      priceRoom1: isOrWilaya ? Number(priceRoom1) : undefined,
+      priceRoom2: isOrWilaya ? Number(priceRoom2) : undefined,
+      priceRoom3: isOrWilaya ? Number(priceRoom3) : undefined
     });
 
     // Reset Form
@@ -150,20 +159,23 @@ export default function OutingsPlanning({
     setDate('');
     setTime('');
     setDistance(10);
-    setElevationGain(50);
+    setElevationGain(0);
     setPace('5:45 min/km');
     setDifficulty('Facile');
     setStartPoint('');
     setDescription('');
-    setMaxParticipants(30);
-    setIsOrWilaya(false);
-    setDestinationWilaya('');
+    setMaxParticipants(100);
+    setIsOrWilaya(true);
+    setDestinationWilaya('Hors Wilaya');
     setTransportPrice(1500);
     setAccommodationPrice(2500);
+    setPriceRoom1(2500);
+    setPriceRoom2(3500);
+    setPriceRoom3(4500);
     setFormError('');
     setShowForm(false);
 
-    setSuccessMsg('Nouveau run planifié avec succès ! 🏃‍♂️🎉 (Spécial Hors-Wilaya enregistré)');
+    setSuccessMsg('Nouveau run de groupe planifié avec succès ! 🏃‍♂️🎉');
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
@@ -232,198 +244,215 @@ export default function OutingsPlanning({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Titre de la sortie *</label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Ex. Sortie Cool le long des Sablettes"
-                className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Point de Départ / RDV *</label>
-              <input
-                type="text"
-                required
-                value={startPoint}
-                onChange={e => setStartPoint(e.target.value)}
-                placeholder="Ex. Rond-point de Salamandre face au port"
-                className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-4">
+            {/* Infos obligatoires demandées par l'utilisateur */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Heure de départ *</label>
-                <input
-                  type="time"
-                  required
-                   value={time}
-                  onChange={e => setTime(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Distance (km) *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="100"
-                  value={distance}
-                  onChange={e => setDistance(Number(e.target.value))}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Dénivelé positif (m)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="3000"
-                  value={elevationGain}
-                  onChange={e => setElevationGain(Number(e.target.value))}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Allure Estimée *</label>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Titre de la sortie *</label>
                 <input
                   type="text"
                   required
-                  value={pace}
-                  onChange={e => setPace(e.target.value)}
-                  placeholder="Ex. 5:45 min/km ou Libre"
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/70"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Ex. Grande Sortie Nationale MRC"
+                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Difficulté *</label>
-                <select
-                  value={difficulty}
-                  onChange={e => setDifficulty(e.target.value as any)}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text cursor-pointer"
-                >
-                  <option value="Facile">🟢 Facile (Débutants bienvenus)</option>
-                  <option value="Moyen">🟡 Moyen (Habitués du footing)</option>
-                  <option value="Difficile">🔴 Difficile (Trail montées / Rythme soutenu)</option>
-                </select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Limite Coureurs</label>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Point de Départ / RDV *</label>
                 <input
-                  type="number"
-                  min="5"
-                  max="200"
-                  value={maxParticipants}
-                  onChange={e => setMaxParticipants(Number(e.target.value))}
-                  className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                  type="text"
+                  required
+                  value={startPoint}
+                  onChange={e => setStartPoint(e.target.value)}
+                  placeholder="Ex. Rond-point de Salamandre face au port"
+                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
                 />
               </div>
-              <div className="flex items-end pb-1 text-[10px] text-natural-sage leading-relaxed font-mono font-medium">
-                * Les participants s'inscrivent directement en un clic.
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Date de départ *</label>
+                  <input
+                    type="date"
+                    required
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Heure de départ *</label>
+                  <input
+                    type="time"
+                    required
+                    value={time}
+                    onChange={e => setTime(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Wilaya de Destination</label>
+                <input
+                  type="text"
+                  value={destinationWilaya}
+                  onChange={e => setDestinationWilaya(e.target.value)}
+                  placeholder="Ex. Oran, Tipaza, Alger (Vide pour Locale)"
+                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                />
               </div>
             </div>
 
-            {/* Algerian Outside Wilaya Tour Options (Kharjat Or Wilaya) */}
-            <div className="p-4 bg-natural-sage-light/25 rounded-2xl border border-natural-border/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-natural-olive" />
-                  <span className="text-xs font-bold text-natural-olive uppercase tracking-wider">
-                    🚙 Sortie Hors Wilaya / National
-                  </span>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isOrWilaya}
-                    onChange={e => setIsOrWilaya(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-natural-sage/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-natural-olive"></div>
-                  <span className="ml-2 text-[11px] font-bold text-natural-olive uppercase tracking-wider">Activer</span>
-                </label>
-              </div>
+            {/* Tarification et budget demandés par l'utilisateur */}
+            <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-200/60 space-y-3">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Coins className="w-4.5 h-4.5 text-emerald-700 animate-pulse" />
+                🏷️ Grille Tarifaire (Transport & Lmbata / Nuitée par taille de chambre)
+              </span>
 
-              {isOrWilaya && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 animate-fade-in">
-                  <div>
-                    <label className="block text-[10px] font-mono font-semibold text-natural-olive mb-1 uppercase tracking-wider">
-                      Wilaya de Destination *
-                    </label>
-                    <input
-                      type="text"
-                      required={isOrWilaya}
-                      value={destinationWilaya}
-                      onChange={e => setDestinationWilaya(e.target.value)}
-                      placeholder="Ex. Chlef, Oran, Algiers..."
-                      className="w-full text-xs px-3 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive"
-                    />
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-emerald-800 mb-1 uppercase tracking-wider">
+                    Prix Transport (DA)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={transportPrice}
+                    onChange={e => setTransportPrice(Number(e.target.value))}
+                    className="w-full text-xs px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-emerald-800 mb-1 uppercase tracking-wider">
+                    Chambre pour 1 (DA) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={priceRoom1}
+                    onChange={e => setPriceRoom1(Number(e.target.value))}
+                    className="w-full text-xs px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-emerald-800 mb-1 uppercase tracking-wider">
+                    Chambre pour 2 (DA) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={priceRoom2}
+                    onChange={e => setPriceRoom2(Number(e.target.value))}
+                    className="w-full text-xs px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-emerald-800 mb-1 uppercase tracking-wider">
+                    Chambre pour 3 (DA) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={priceRoom3}
+                    onChange={e => setPriceRoom3(Number(e.target.value))}
+                    className="w-full text-xs px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Options avancées / sportives masquées par défaut pour simplifier au maximum */}
+            <div className="border border-natural-border rounded-2xl overflow-hidden bg-natural-bone/20">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedForm(!showAdvancedForm)}
+                className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-bold text-natural-olive hover:bg-natural-bone transition"
+              >
+                <span className="flex items-center gap-1.5 font-mono">
+                  ⚙️ Options Sportives & Description ({showAdvancedForm ? 'Masquer' : 'Afficher'})
+                </span>
+                <span className="text-[10px] text-natural-sage font-bold font-mono">
+                  {showAdvancedForm ? '▲' : '▼ (Facultatif)'}
+                </span>
+              </button>
+
+              {showAdvancedForm && (
+                <div className="p-4 border-t border-natural-border bg-white space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Distance (km)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={distance}
+                        onChange={e => setDistance(Number(e.target.value))}
+                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Dénivelé positif (m)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={elevationGain}
+                        onChange={e => setElevationGain(Number(e.target.value))}
+                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Difficulté</label>
+                      <select
+                        value={difficulty}
+                        onChange={e => setDifficulty(e.target.value as any)}
+                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl cursor-pointer text-natural-text"
+                      >
+                        <option value="Facile">🟢 Facile</option>
+                        <option value="Moyen">🟡 Moyen</option>
+                        <option value="Difficile">🔴 Difficile</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-mono font-semibold text-natural-olive mb-1 uppercase tracking-wider">
-                      Prix Transport (DA)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={transportPrice}
-                      onChange={e => setTransportPrice(Number(e.target.value))}
-                      className="w-full text-xs px-3 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive"
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Allure Estimée</label>
+                      <input
+                        type="text"
+                        value={pace}
+                        onChange={e => setPace(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Limite de coureurs</label>
+                      <input
+                        type="number"
+                        min="5"
+                        value={maxParticipants}
+                        onChange={e => setMaxParticipants(Number(e.target.value))}
+                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-[10px] font-mono font-semibold text-natural-olive mb-1 uppercase tracking-wider">
-                      Prix Nuitée / Lmbata (DA)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={accommodationPrice}
-                      onChange={e => setAccommodationPrice(Number(e.target.value))}
-                      className="w-full text-xs px-3 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive"
+                    <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Description / Recommandations</label>
+                    <textarea
+                      rows={2}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="Décrivez l'itinéraire, les points d'ombre, les éventuelles pauses ravitaillement..."
+                      className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl text-natural-text placeholder-natural-sage/70"
                     />
                   </div>
                 </div>
               )}
             </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Description du run et recommandations *</label>
-            <textarea
-              required
-              rows={3}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Décrivez l'itinéraire, les points d'ombre, les éventuelles pauses ravitaillement..."
-              className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/70"
-            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
@@ -441,7 +470,7 @@ export default function OutingsPlanning({
               type="submit"
               className="px-5 py-2.5 text-white bg-natural-olive hover:bg-natural-olive-hover font-bold rounded-xl text-xs shadow-sm transition"
             >
-              Planifier le Run
+              Planifier la Sortie 🚀
             </button>
           </div>
         </form>
@@ -709,9 +738,16 @@ export default function OutingsPlanning({
                                   const hasLodging = !!partic.useAccommodation;
                                   
                                   const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
-                                  const costLodging = run.isOrWilaya ? (run.accommodationPrice || 0) : 0;
                                   
-                                  const stdTotal = (hasTransport ? costTransport : 0) + (hasLodging ? costLodging : 0);
+                                  const rType = partic.accommodationType || 'room1';
+                                  const costLodging = !hasLodging ? 0 : (
+                                    rType === 'room1' ? (run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)) :
+                                    rType === 'room2' ? (run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)) :
+                                    rType === 'room3' ? (run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)) :
+                                    (run.accommodationPrice || 0)
+                                  );
+                                  
+                                  const stdTotal = (hasTransport ? costTransport : 0) + costLodging;
                                   const displayPrice = partic.customPrice !== undefined ? partic.customPrice : stdTotal;
 
                                   return (
@@ -742,14 +778,27 @@ export default function OutingsPlanning({
                                         </select>
                                       </td>
                                       <td className="py-2">
-                                        <select
-                                          value={hasLodging ? 'yes' : 'no'}
-                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
-                                          className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
-                                        >
-                                          <option value="yes">🏨 Nuitée ({costLodging} DA)</option>
-                                          <option value="no">🚫 Non (A/R)</option>
-                                        </select>
+                                        <div className="flex flex-col gap-1">
+                                          <select
+                                            value={hasLodging ? 'yes' : 'no'}
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
+                                            className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                          >
+                                            <option value="yes">🏨 Nuitée (Oui)</option>
+                                            <option value="no">🚫 Non (A/R)</option>
+                                          </select>
+                                          {hasLodging && (
+                                            <select
+                                              value={partic.accommodationType || 'room1'}
+                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
+                                              className="text-[9px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-emerald-50 px-1 py-0.5"
+                                            >
+                                              <option value="room1">Ch. 1 ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
+                                              <option value="room2">Ch. 2 ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
+                                              <option value="room3">Ch. 3 ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
+                                            </select>
+                                          )}
+                                        </div>
                                       </td>
                                       <td className="py-2 text-right">
                                         <div className="flex flex-col items-end gap-0.5">
@@ -834,8 +883,14 @@ export default function OutingsPlanning({
                                 const hasTransport = partic.useTransport !== false;
                                 const hasLodging = !!partic.useAccommodation;
                                 const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
-                                const costLodging = run.isOrWilaya ? (run.accommodationPrice || 0) : 0;
-                                const stdTotal = (hasTransport ? costTransport : 0) + (hasLodging ? costLodging : 0);
+                                const rType = partic.accommodationType || 'room1';
+                                const costLodging = !hasLodging ? 0 : (
+                                  rType === 'room1' ? (run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)) :
+                                  rType === 'room2' ? (run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)) :
+                                  rType === 'room3' ? (run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)) :
+                                  (run.accommodationPrice || 0)
+                                );
+                                const stdTotal = (hasTransport ? costTransport : 0) + costLodging;
                                 return sum + (partic.customPrice !== undefined ? partic.customPrice : stdTotal);
                               }, 0).toLocaleString('fr-FR')} DA
                             </span>
@@ -865,14 +920,22 @@ export default function OutingsPlanning({
                                 Logistique Sortie Nationale: {run.destinationWilaya || 'Hors Wilaya'}
                               </h4>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 text-natural-olive">
-                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200">
-                                <span className="font-mono text-[10px] block font-bold text-amber-900 uppercase">🚌 Transport Club</span>
-                                <span className="font-serif italic font-extrabold text-sm">{run.transportPrice || 0} DA / Pers</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-natural-olive">
+                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🚌 Transport Club</span>
+                                <span className="font-serif italic font-extrabold text-sm">{run.transportPrice || 0} DA</span>
                               </div>
-                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200">
-                                <span className="font-mono text-[10px] block font-bold text-amber-900 uppercase">🏨 Hébergement / Lmbata</span>
-                                <span className="font-serif italic font-extrabold text-sm">{run.accommodationPrice || 0} DA / Nuit</span>
+                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Single (1p)</span>
+                                <span className="font-serif italic font-extrabold text-sm">{run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA</span>
+                              </div>
+                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Double (2p)</span>
+                                <span className="font-serif italic font-extrabold text-sm">{run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA</span>
+                              </div>
+                              <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Triple (3p)</span>
+                                <span className="font-serif italic font-extrabold text-sm">{run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA</span>
                               </div>
                             </div>
                           </div>
@@ -945,7 +1008,13 @@ export default function OutingsPlanning({
                                         Lmbata / Nuitée
                                       </span>
                                       <span className="text-[10px] font-mono text-natural-sage font-bold">
-                                        {run.accommodationPrice ? `${run.accommodationPrice} DA` : 'Gratuit'}
+                                        {(() => {
+                                          const rType = myParticipantEntry?.accommodationType || 'room1';
+                                          if (rType === 'room1') return `${run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA`;
+                                          if (rType === 'room2') return `${run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA`;
+                                          if (rType === 'room3') return `${run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA`;
+                                          return `${run.accommodationPrice || 0} DA`;
+                                        })()}
                                       </span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1 pt-1">
@@ -972,6 +1041,22 @@ export default function OutingsPlanning({
                                         Non (A/R)
                                       </button>
                                     </div>
+
+                                    {/* Sub-select for Room type choice */}
+                                    {accommodationChoice && (
+                                      <div className="pt-2">
+                                        <label className="block text-[9px] font-mono font-bold text-natural-sage uppercase tracking-wider mb-0.5">Taille de Chambre :</label>
+                                        <select
+                                          value={myParticipantEntry?.accommodationType || 'room1'}
+                                          onChange={(e) => onUpdateParticipant(run.id, currentUser.id, { accommodationType: e.target.value as any })}
+                                          className="w-full text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none text-natural-text"
+                                        >
+                                          <option value="room1">Chambre 1 place (Single) - {run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA</option>
+                                          <option value="room2">Chambre 2 places (Double) - {run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA</option>
+                                          <option value="room3">Chambre 3 places (Triple) - {run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA</option>
+                                        </select>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 

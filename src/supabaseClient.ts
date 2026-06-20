@@ -46,8 +46,24 @@ CREATE TABLE IF NOT EXISTS runs (
   max_participants INT,
   participants JSONB DEFAULT '[]'::jsonb,
   completed BOOLEAN DEFAULT FALSE,
+  is_or_wilaya BOOLEAN DEFAULT FALSE,
+  destination_wilaya TEXT,
+  transport_price NUMERIC DEFAULT 0,
+  accommodation_price NUMERIC DEFAULT 0,
+  price_room1 NUMERIC DEFAULT 0,
+  price_room2 NUMERIC DEFAULT 0,
+  price_room3 NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si la table runs existe déjà d'une ancienne version, on lui rajoute les nouvelles colonnes :
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS is_or_wilaya BOOLEAN DEFAULT FALSE;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS destination_wilaya TEXT;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS transport_price NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS accommodation_price NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room1 NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room2 NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room3 NUMERIC DEFAULT 0;
 
 -- 3. Table des rapports de course (Reports mlih)
 CREATE TABLE IF NOT EXISTS reports (
@@ -135,7 +151,10 @@ function mapRunFromDb(dbItem: any): Run {
     isOrWilaya: dbItem.is_or_wilaya !== undefined ? Boolean(dbItem.is_or_wilaya) : undefined,
     destinationWilaya: dbItem.destination_wilaya || undefined,
     transportPrice: dbItem.transport_price ? Number(dbItem.transport_price) : undefined,
-    accommodationPrice: dbItem.accommodation_price ? Number(dbItem.accommodation_price) : undefined
+    accommodationPrice: dbItem.accommodation_price ? Number(dbItem.accommodation_price) : undefined,
+    priceRoom1: dbItem.price_room1 ? Number(dbItem.price_room1) : undefined,
+    priceRoom2: dbItem.price_room2 ? Number(dbItem.price_room2) : undefined,
+    priceRoom3: dbItem.price_room3 ? Number(dbItem.price_room3) : undefined
   };
 }
 
@@ -157,7 +176,10 @@ function mapRunToDb(item: Run): any {
     is_or_wilaya: item.isOrWilaya,
     destination_wilaya: item.destinationWilaya,
     transport_price: item.transportPrice,
-    accommodation_price: item.accommodationPrice
+    accommodation_price: item.accommodationPrice,
+    price_room1: item.priceRoom1,
+    price_room2: item.priceRoom2,
+    price_room3: item.priceRoom3
   };
 }
 

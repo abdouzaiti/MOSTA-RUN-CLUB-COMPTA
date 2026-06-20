@@ -430,8 +430,20 @@ CREATE TABLE IF NOT EXISTS runs (
   destination_wilaya TEXT,
   transport_price NUMERIC DEFAULT 0,
   accommodation_price NUMERIC DEFAULT 0,
+  price_room1 NUMERIC DEFAULT 0,
+  price_room2 NUMERIC DEFAULT 0,
+  price_room3 NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si la table runs existe déjà d'une ancienne version, on lui rajoute les nouvelles colonnes :
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS is_or_wilaya BOOLEAN DEFAULT FALSE;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS destination_wilaya TEXT;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS transport_price NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS accommodation_price NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room1 NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room2 NUMERIC DEFAULT 0;
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS price_room3 NUMERIC DEFAULT 0;
 
 -- 3. Table des rapports de course (Reports mlih)
 CREATE TABLE IF NOT EXISTS reports (

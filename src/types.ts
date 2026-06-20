@@ -16,6 +16,7 @@ export interface RunParticipant extends Runner {
   bibNumber?: string;          // Numéro de dossard tawa3hom
   useTransport?: boolean;      // Transport ma3na (Oui / Non)
   useAccommodation?: boolean;  // Lmbata / Hébergement  (Oui / Non)
+  accommodationType?: 'room1' | 'room2' | 'room3'; // Type de chambre (Chambre pour 1, 2, 3)
   isPaid?: boolean;            // Versement / payé (Oui / Non)
   customPrice?: number;        // Prix ajusté manuellement (Algerian DA)
 }
@@ -39,7 +40,10 @@ export interface Run {
   isOrWilaya?: boolean;
   destinationWilaya?: string;
   transportPrice?: number;       // Prix de transport en DA
-  accommodationPrice?: number;   // Prix de lmbata en DA
+  accommodationPrice?: number;   // Prix de lmbata standard en DA
+  priceRoom1?: number;           // Chambre pour 1 pers (DA)
+  priceRoom2?: number;           // Chambre pour 2 pers (DA)
+  priceRoom3?: number;           // Chambre pour 3 pers (DA)
 }
 
 export interface RunnerFeedback {
