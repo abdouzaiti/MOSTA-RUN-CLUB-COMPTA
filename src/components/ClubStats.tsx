@@ -7,11 +7,15 @@ interface ClubStatsProps {
   currentUser: Runner;
   onAddRunner: (newRunner: Runner) => void;
   onDeleteRunner: (id: string) => void;
+  onUpdateRunner: (updatedRunner: Runner) => void;
 }
 
-export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteRunner }: ClubStatsProps) {
+export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteRunner, onUpdateRunner }: ClubStatsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddRunnerForm, setShowAddRunnerForm] = useState(false);
+  const [editingRunnerId, setEditingRunnerId] = useState<string | null>(null);
+  
+  // State for adding/editing 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -96,6 +100,47 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
     setShowAddRunnerForm(false);
   };
 
+  const handleStartEdit = (runner: Runner) => {
+    setEditingRunnerId(runner.id);
+    setName(runner.name);
+    setUsername(runner.username || '');
+    setIsCustomUsername(true);
+    setEmail(runner.email || '');
+    setPhone(runner.phone || '');
+    setBloodType(runner.bloodType || 'O+');
+    setRole(runner.runClubRole || 'Membre');
+    setErrorMsg('');
+    setShowAddRunnerForm(false);
+  };
+
+  const handleUpdateRunner = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setErrorMsg('Veuillez indiquer au moins le Nom Complet.');
+      return;
+    }
+
+    const runnerToUpdate = runners.find(r => r.id === editingRunnerId);
+    if (!runnerToUpdate) return;
+
+    onUpdateRunner({
+      ...runnerToUpdate,
+      name: name.trim(),
+      username: username.trim().toLowerCase(),
+      phone: phone.trim(),
+      email: email.trim(),
+      bloodType: bloodType,
+      runClubRole: role
+    });
+
+    setEditingRunnerId(null);
+    setName('');
+    setUsername('');
+    setEmail('');
+    setPhone('');
+    setErrorMsg('');
+  };
+
   return (
     <div className="space-y-6">
       {/* Roster Header */}
@@ -122,14 +167,18 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
         </button>
       </div>
 
-      {/* Add Runner Form */}
-      {showAddRunnerForm && (
-        <form onSubmit={handleAddRunner} className="bg-natural-bone p-5 rounded-3xl border border-natural-border space-y-4 animate-fade-in text-xs">
+      {/* Add/Edit Runner Form */}
+      {(showAddRunnerForm || editingRunnerId) && (
+        <form onSubmit={editingRunnerId ? handleUpdateRunner : handleAddRunner} className="bg-natural-bone p-5 rounded-3xl border border-natural-border space-y-4 animate-fade-in text-xs">
           <div className="border-b border-natural-divider pb-2">
-            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-sm">Abonner un nouvel athlète (Mode Rapide ⚡)</h3>
-            <p className="text-xs text-natural-sage font-medium">
-              Saisissez uniquement son <strong>Nom complet</strong>. Un <strong>Nom d'utilisateur (Username)</strong> sera généré automatiquement et servira de <strong>Mot de passe initial</strong>. L'athlète se connectera avec et remplira lui-même l'email, téléphone et groupe sanguin à sa première connexion !
-            </p>
+            <h3 className="font-bold font-serif italic text-natural-olive uppercase tracking-wider text-sm">
+              {editingRunnerId ? `Modifier le profil de ${runners.find(r => r.id === editingRunnerId)?.name}` : 'Abonner un nouvel athlète (Mode Rapide ⚡)'}
+            </h3>
+            {!editingRunnerId && (
+              <p className="text-xs text-natural-sage font-medium">
+                Saisissez uniquement son <strong>Nom complet</strong>. Un <strong>Nom d'utilisateur (Username)</strong> sera généré automatiquement et servira de <strong>Mot de passe initial</strong>.
+              </p>
+            )}
           </div>
 
           {errorMsg && (
@@ -224,7 +273,10 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={() => setShowAddRunnerForm(false)}
+              onClick={() => {
+                setShowAddRunnerForm(false);
+                setEditingRunnerId(null);
+              }}
               className="px-3 py-1.5 text-natural-sage bg-natural-sage-light/30 hover:bg-natural-sage-light/50 rounded-xl font-bold transition cursor-pointer"
             >
               Annuler
@@ -233,7 +285,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
               type="submit"
               className="px-4 py-2 text-white bg-natural-olive hover:bg-natural-olive-hover font-bold rounded-xl shadow-xs cursor-pointer transition"
             >
-              Créer le Profil
+              {editingRunnerId ? 'Enregistrer les modifications' : 'Créer le Profil'}
             </button>
           </div>
         </form>
@@ -342,16 +394,26 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                   </div>
 
                   {/* Let the user delete runners if they are not the active currentUser */}
-                  {!isMe && (
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => onDeleteRunner(runner.id)}
-                      className="p-1 px-2.5 border border-natural-border hover:border-rose-200 hover:bg-rose-50 rounded text-natural-text hover:text-rose-600 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
-                      title="Résoudre ou suspendre"
+                      onClick={() => handleStartEdit(runner)}
+                      className="p-1 px-2.5 border border-natural-border hover:border-natural-olive/30 hover:bg-natural-olive/5 rounded text-natural-text hover:text-natural-olive text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                      title="Modifier les informations"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      Suspendre
+                      <BadgePlus className="w-3.5 h-3.5 text-natural-olive rotate-45" />
+                      Modifier
                     </button>
-                  )}
+                    {!isMe && (
+                      <button
+                        onClick={() => onDeleteRunner(runner.id)}
+                        className="p-1 px-2.5 border border-natural-border hover:border-rose-200 hover:bg-rose-50 rounded text-natural-text hover:text-rose-600 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                        title="Résoudre ou suspendre"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        Suspendre
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

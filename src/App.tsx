@@ -139,6 +139,10 @@ export default function App() {
     setActiveTab('planning');
   };
 
+  const isAdminOrCoach = (user: Runner): boolean => {
+    return user.runClubRole === 'Admin' || user.runClubRole === 'Coach';
+  };
+
   // Handle run registration (S'inscrire / Se désinscrire)
   const handleToggleRegister = async (runId: string) => {
     if (!currentUser) return;
@@ -172,6 +176,10 @@ export default function App() {
 
   // Update specific participant properties (bib assignment, transport, lodging)
   const handleUpdateParticipant = async (runId: string, runnerId: string, updates: any) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent modifier les informations des participants.");
+      return;
+    }
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
@@ -218,6 +226,10 @@ export default function App() {
 
   // Add athlete participant directly as administrator/coach
   const handleAddParticipantByAdmin = async (runId: string, runner: Runner) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent ajouter des participants.");
+      return;
+    }
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
@@ -247,6 +259,10 @@ export default function App() {
 
   // Unregister athlete participant directly as administrator/coach
   const handleRemoveParticipantByAdmin = async (runId: string, runnerId: string) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent supprimer des participants.");
+      return;
+    }
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
@@ -318,6 +334,10 @@ export default function App() {
 
   // Handle adding a runner/athlete to the club roster
   const handleAddRunner = async (newRunner: Runner) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent ajouter des athlètes.");
+      return;
+    }
     setRunners(prev => [...prev, newRunner]);
 
     if (isSupabaseConfigured) {
@@ -332,6 +352,10 @@ export default function App() {
 
   // Handle suspending a runner
   const handleDeleteRunner = async (id: string) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent supprimer des athlètes.");
+      return;
+    }
     setRunners(prev => prev.filter(r => r.id !== id));
 
     if (isSupabaseConfigured) {
@@ -341,6 +365,29 @@ export default function App() {
         console.error("Error deleting runner from Supabase:", err);
         alert("Erreur de suppression: " + err.message);
       }
+    }
+  };
+
+  // Handle updating runner information (Admin/Coach)
+  const handleUpdateRunner = async (updatedRunner: Runner) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent modifier les informations des athlètes.");
+      return;
+    }
+    setRunners(prev => prev.map(r => r.id === updatedRunner.id ? updatedRunner : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRunner(updatedRunner);
+      } catch (err: any) {
+        console.error("Error updating runner in Supabase:", err);
+        alert("Erreur de mise à jour: " + err.message);
+      }
+    }
+    
+    // If we updated the currently logged in user, sync that state too
+    if (currentUser?.id === updatedRunner.id) {
+      setCurrentUser(updatedRunner);
     }
   };
 
@@ -648,6 +695,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                     currentUser={currentUser}
                     onAddRunner={handleAddRunner}
                     onDeleteRunner={handleDeleteRunner}
+                    onUpdateRunner={handleUpdateRunner}
                   />
                 </div>
               )}
