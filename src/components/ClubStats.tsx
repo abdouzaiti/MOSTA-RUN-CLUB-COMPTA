@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Runner } from '../types';
+import { translations, Language } from '../translations';
 import { Users, Search, HeartPulse, ShieldCheck, Mail, Phone, ShieldAlert, BadgePlus, Trash2 } from 'lucide-react';
 
 interface ClubStatsProps {
@@ -8,9 +9,11 @@ interface ClubStatsProps {
   onAddRunner: (newRunner: Runner) => void;
   onDeleteRunner: (id: string) => void;
   onUpdateRunner: (updatedRunner: Runner) => void;
+  language: Language;
 }
 
-export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteRunner, onUpdateRunner }: ClubStatsProps) {
+export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteRunner, onUpdateRunner, language }: ClubStatsProps) {
+  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddRunnerForm, setShowAddRunnerForm] = useState(false);
   const [editingRunnerId, setEditingRunnerId] = useState<string | null>(null);
@@ -142,16 +145,16 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {/* Roster Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
+        <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+          <h2 className={`text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
             <Users className="w-5 h-5 text-natural-accent" />
-            Roster & Annuaire des Membres
+            {language === 'ar' ? 'قائمة ودليل الأعضاء' : language === 'en' ? 'Roster & Member Directory' : 'Roster & Annuaire des Membres'}
           </h2>
           <p className="text-xs text-natural-sage font-medium">
-            Gérez les fiches des athlètes du club et leurs contacts d'urgence.
+            {language === 'ar' ? 'قم بإدارة ملفات رياضيي النادي وجهات اتصالهم في حالات الطوارئ.' : language === 'en' ? 'Manage club athlete files and emergency contacts.' : "Gérez les fiches des athlètes du club et leurs contacts d'urgence."}
           </p>
         </div>
 
@@ -163,7 +166,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
           className="flex items-center justify-center gap-1 bg-natural-olive hover:bg-natural-olive-hover text-white px-4 py-2 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer font-serif italic"
         >
           <BadgePlus className="w-3.5 h-3.5 text-natural-accent" />
-          Ajouter un Coureur
+          {t('addRunner')}
         </button>
       </div>
 
@@ -188,8 +191,8 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-natural-olive mb-1">Nom Complet *</label>
+            <div className={language === 'ar' ? 'text-right' : ''}>
+              <label className="block text-xs font-bold text-natural-olive mb-1">{t('fullName')} *</label>
               <input
                 type="text"
                 required
@@ -199,8 +202,8 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-natural-olive mb-1">Nom d'utilisateur (Username de connexion) *</label>
+            <div className={language === 'ar' ? 'text-right' : ''}>
+              <label className="block text-xs font-bold text-natural-olive mb-1">{t('username')} *</label>
               <input
                 type="text"
                 required
@@ -212,34 +215,29 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 placeholder="Ex. sofiane_s"
                 className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55 font-mono"
               />
-              <span className="text-xs text-natural-sage font-medium block mt-0.5">
-                Utilisé pour se connecter rapidement (ex: @{username || 'username'}).
-              </span>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-natural-olive mb-1">Téléphone (Optionnel - Laissez vide, l'athlète le remplira)</label>
+            <div className={language === 'ar' ? 'text-right' : ''}>
+              <label className="block text-xs font-bold text-natural-olive mb-1">{t('phone')}</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="Ex. Laissez vide..."
                 className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-natural-olive mb-1">Adresse Email (Optionnelle - Laissez vide, l'athlète la remplira)</label>
+            <div className={language === 'ar' ? 'text-right' : ''}>
+              <label className="block text-xs font-bold text-natural-olive mb-1">{t('email')}</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Ex. Laissez vide..."
                 className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold placeholder-natural-sage/55"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-bold text-natural-olive mb-1">Groupe Sanguin</label>
+              <div className={language === 'ar' ? 'text-right' : ''}>
+                <label className="block text-xs font-bold text-natural-olive mb-1">{t('bloodType')}</label>
                 <select
                   value={bloodType}
                   onChange={e => setBloodType(e.target.value)}
@@ -255,16 +253,16 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                   <option value="O-">O-</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-natural-olive mb-1">Rôle Club</label>
+              <div className={language === 'ar' ? 'text-right' : ''}>
+                <label className="block text-xs font-bold text-natural-olive mb-1">{t('role')}</label>
                 <select
                   value={role}
                   onChange={e => setRole(e.target.value as any)}
                   className="w-full px-3 py-2.5 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text text-xs font-semibold"
                 >
-                  <option value="Membre">Abonné classique</option>
-                  <option value="Coach">Coach de Course</option>
-                  <option value="Admin">Administrateur</option>
+                  <option value="Membre">{t('member')}</option>
+                  <option value="Coach">{t('coach')}</option>
+                  <option value="Admin">{t('admin')}</option>
                 </select>
               </div>
             </div>
@@ -295,13 +293,13 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
       <div className="bg-natural-sage-light/30 p-4 rounded-2xl border border-natural-border flex flex-col md:flex-row gap-3">
         {/* Search input to roster */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
+          <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-natural-sage`} />
           <input
             type="text"
-            placeholder="Rechercher par nom, groupe sanguin, email..."
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/50 font-semibold"
+            className={`w-full text-xs ${language === 'ar' ? 'pr-9 pl-3' : 'pl-9 pr-3'} py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/50 font-semibold`}
           />
         </div>
         <div className="px-3 py-1 bg-white border border-natural-border rounded-xl flex items-center justify-center text-xs font-mono font-bold text-natural-olive whitespace-nowrap">
@@ -326,26 +324,23 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
               >
                 {/* Algerie Badge for Admins or Coach */}
                 {runner.runClubRole === 'Admin' && (
-                  <span className="absolute top-4 right-4 bg-natural-olive/10 text-natural-olive text-xs font-bold px-2.5 py-1 rounded-md border border-natural-olive/20 font-serif italic">
-                    Administrateur
+                  <span className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-natural-olive/10 text-natural-olive text-xs font-bold px-2.5 py-1 rounded-md border border-natural-olive/20 font-serif italic`}>
+                    {t('admin')}
                   </span>
                 )}
                 {runner.runClubRole === 'Coach' && (
-                  <span className="absolute top-4 right-4 bg-natural-accent/15 text-natural-accent text-xs font-bold px-2.5 py-1 rounded-md border border-natural-accent/25 font-serif italic">
-                    Coach de course
+                  <span className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-natural-accent/15 text-natural-accent text-xs font-bold px-2.5 py-1 rounded-md border border-natural-accent/25 font-serif italic`}>
+                    {t('coach')}
                   </span>
                 )}
                 {runner.runClubRole === 'Membre' && (
-                  <span className="absolute top-4 right-4 bg-natural-sage-light/40 text-natural-text text-xs font-bold px-2.5 py-1 rounded-md border border-natural-border font-serif italic">
-                    Abonné
+                  <span className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-natural-sage-light/40 text-natural-text text-xs font-bold px-2.5 py-1 rounded-md border border-natural-border font-serif italic`}>
+                    {t('member')}
                   </span>
                 )}
 
                 {/* Main Identity avatar and credentials */}
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-natural-sage-light/40 border border-natural-border text-natural-olive font-bold flex items-center justify-center font-serif italic shadow-inner">
-                    {runner.name.split(' ').map(n => n[0]).join('')}
-                  </div>
                   <div>
                     <h3 className="font-serif italic font-extrabold text-natural-text text-base tracking-wide">
                       {runner.name} {isMe && <span className="text-xs text-natural-accent font-bold font-mono">(Moi)</span>}
@@ -387,21 +382,21 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
 
                 {/* Critical emergency medical badges footer */}
                 <div className="mt-4 pt-4 border-t border-natural-divider/60 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-natural-text font-bold">
+                  <div className={`flex items-center gap-1.5 text-natural-text font-bold ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                     <HeartPulse className="w-4.5 h-4.5 shrink-0 text-natural-accent" />
-                    <span className="text-xs text-natural-sage">Groupe Sanguin:</span>
+                    <span className="text-xs text-natural-sage">{t('bloodType')}:</span>
                     <span className="text-sm font-mono font-bold text-natural-olive">{runner.bloodType || 'O+'}</span>
                   </div>
 
                   {/* Let the user delete runners if they are not the active currentUser */}
-                  <div className="flex items-center gap-1">
+                  <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                     <button
                       onClick={() => handleStartEdit(runner)}
                       className="p-1 px-2.5 border border-natural-border hover:border-natural-olive/30 hover:bg-natural-olive/5 rounded text-natural-text hover:text-natural-olive text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
                       title="Modifier les informations"
                     >
                       <BadgePlus className="w-3.5 h-3.5 text-natural-olive rotate-45" />
-                      Modifier
+                      {t('edit')}
                     </button>
                     {!isMe && (
                       <button
@@ -410,7 +405,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                         title="Résoudre ou suspendre"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                        Suspendre
+                        {t('suspend')}
                       </button>
                     )}
                   </div>

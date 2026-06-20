@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { Runner } from '../types';
-import { ShieldCheck, User, Lock, Phone, Mail, HeartPulse, Sparkles, LogIn, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, User, Lock, Phone, Mail, HeartPulse, Sparkles, LogIn, ArrowRight, Eye, EyeOff, Globe } from 'lucide-react';
+import { translations, Language } from '../translations';
 
 interface LoginScreenProps {
   runners: Runner[];
   onLoginSuccess: (user: Runner) => void;
   onUpdateRunner: (user: Runner) => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
-export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }: LoginScreenProps) {
+export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage }: LoginScreenProps) {
+  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
+  
   // Authentication states
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +34,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
     setErrorMsg('');
 
     if (!identifier.trim() || !password.trim()) {
-      setErrorMsg('Veuillez entrer vos identifiants.');
+      setErrorMsg(language === 'ar' ? 'يرجى إدخال بيانات الاعتماد الخاصة بك.' : 'Veuillez entrer vos identifiants.');
       return;
     }
 
@@ -46,7 +51,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
     );
 
     if (!foundUser) {
-      setErrorMsg("Athlète non répertorié. Demandez à Abdou Zaiti (Admin) de vous ajouter au roster !");
+      setErrorMsg(language === 'ar' ? 'العداء غير مدرج. اطلب من عبدو زايتي (المسؤول) إضافتك إلى القائمة!' : "Athlète non répertorié. Demandez à Abdou Zaiti (Admin) de vous ajouter au roster !");
       return;
     }
 
@@ -56,7 +61,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
     const isInitialMatch = !foundUser.passwordChanged && (password === foundUser.name || (foundUser.username && password === foundUser.username));
     
     if (password !== expectedPassword && !isInitialMatch) {
-      setErrorMsg("Mot de passe incorrect. Pour un nouveau compte, saisissez votre Nom Complet (ou votre nom d'utilisateur) pour activer.");
+      setErrorMsg(language === 'ar' ? 'كلمة المرور غير صحيحة. بالنسبة للحساب الجديد، أدخل اسمك الكامل (أو اسم المستخدم) للتفعيل.' : "Mot de passe incorrect. Pour un nouveau compte, saisissez votre Nom Complet (ou votre nom d'utilisateur) pour activer.");
       return;
     }
 
@@ -122,20 +127,20 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
   // View template switcher
   if (tempLoggedInUser) {
     return (
-      <div className="min-h-screen bg-natural-bg text-natural-text font-sans flex items-center justify-center p-4">
+      <div className={`min-h-screen bg-natural-bg text-natural-text font-sans flex items-center justify-center p-4 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <div className="w-full max-w-lg bg-white rounded-3xl border border-natural-border shadow-md overflow-hidden animate-fade-in">
           {/* Header */}
           <div className="p-6 bg-natural-olive/10 border-b border-natural-divider text-center space-y-2 relative">
-            <div className="absolute top-4 right-4 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1">
+            <div className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1`}>
               <Sparkles className="w-3 h-3 animate-pulse" />
-              Nouveau membre !
+              {language === 'ar' ? 'عضو جديد !' : 'Nouveau membre !'}
             </div>
             
             <h2 className="text-xl font-serif italic font-black text-natural-olive">
-              🔑 Première Connexion • Mosta Run Club
+              {language === 'ar' ? '🔑 أول تسجيل دخول • نادي مستغانم للجري' : '🔑 Première Connexion • Mosta Run Club'}
             </h2>
             <p className="text-[11px] text-natural-sage font-medium max-w-sm mx-auto leading-relaxed">
-              Salam <strong className="text-natural-text">{tempLoggedInUser.name}</strong> ! Pour activer votre compte, veuillez personnaliser votre mot de passe et remplir vos coordonnées obligatoires.
+              {language === 'ar' ? `السلام عليكم ` : 'Salam '} <strong className="text-natural-text">{tempLoggedInUser.name}</strong> ! {language === 'ar' ? 'لتفعيل حسابك، يرجى تخصيص كلمة المرور الخاصة بك وإكمال بياناتك الإلزامية.' : 'Pour activer votre compte, veuillez personnaliser votre mot de passe et remplir vos coordonnées obligatoires.'}
             </p>
           </div>
 
@@ -149,29 +154,29 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
             {/* Custom password inputs */}
             <div className="p-4 bg-amber-500/5 border border-amber-500/15 rounded-2xl space-y-3">
               <span className="font-mono text-[10px] block font-bold text-amber-800 uppercase tracking-wider">
-                🔒 Sécurisation du mot de passe
+                {language === 'ar' ? '🔒 تأمين كلمة المرور' : '🔒 Sécurisation du mot de passe'}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Nouveau mot de passe *</label>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">{language === 'ar' ? 'كلمة المرور الجديدة *' : 'Nouveau mot de passe *'}</label>
                   <input
                     type="password"
                     required
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Au moins 4 caractères..."
-                    className="w-full px-3 py-2 border border-natural-border bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold"
+                    placeholder={language === 'ar' ? 'على الأقل 4 أحرف...' : 'Au moins 4 caractères...'}
+                    className={`w-full px-3 py-2 border border-natural-border bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Confirmer le mot de passe *</label>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">{language === 'ar' ? 'تأكيد كلمة المرور *' : 'Confirmer le mot de passe *'}</label>
                   <input
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Retapez-le mot de passe..."
-                    className="w-full px-3 py-2 border border-natural-border bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold"
+                    placeholder={language === 'ar' ? 'أعد كتابة كلمة المرور...' : 'Retapez-le mot de passe...'}
+                    className={`w-full px-3 py-2 border border-natural-border bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
               </div>
@@ -240,19 +245,19 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
               </div>
             </div>
 
-            <div className="pt-4 border-t border-natural-divider flex items-center justify-between">
+            <div className={`pt-4 border-t border-natural-divider flex items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <button
                 type="button"
                 onClick={() => setTempLoggedInUser(null)}
                 className="text-natural-sage font-bold hover:underline"
               >
-                Retour
+                {language === 'ar' ? 'عودة' : language === 'en' ? 'Back' : 'Retour'}
               </button>
               <button
                 type="submit"
                 className="bg-natural-olive hover:bg-natural-olive-hover text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer font-serif italic text-xs shadow-xs"
               >
-                Finaliser et Ouvrir l'Espace Athlète
+                {language === 'ar' ? "الانتهاء وفتح مساحة العداء" : language === 'en' ? "Finalize & Open Athlete Space" : "Finaliser et Ouvrir l'Espace Athlète"}
                 <ArrowRight className="w-4 h-4 text-natural-accent" />
               </button>
             </div>
@@ -263,24 +268,30 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
   }
 
   return (
-    <div className="min-h-screen bg-natural-bg text-natural-text font-sans flex flex-col items-center justify-center p-4">
+    <div className={`min-h-screen bg-natural-bg text-natural-text font-sans flex flex-col items-center justify-center p-4 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Visual Identity Logo */}
       <div className="text-center mb-6 space-y-2">
         <span className="font-mono text-[10px] bg-natural-olive/10 border border-natural-olive/20 text-natural-olive font-black tracking-widest px-3 py-1 rounded-full uppercase">
-          🇩🇿 Club d'Athlétisme de la Corniche
+          {language === 'ar' ? '🇩🇿 نادي ألعاب القوى بالكورنيش' : '🇩🇿 Club d\'Athlétisme de la Corniche'}
         </span>
         <h1 className="text-2xl md:text-3xl font-serif italic font-black text-natural-olive tracking-wide">
           MOSTA RUN CLUB
         </h1>
         <p className="text-xs text-natural-sage font-medium max-w-xs mx-auto">
-          Planification de sorties longues, trails côtiers, logistique hors-wilaya et suivi des licenciés.
+          {language === 'ar' ? 'التخطيط للخرجات الطويلة، المسارات الساحلية، الخدمات اللوجستية خارج الولاية ومتابعة المشتركين.' : 'Planification de sorties longues, trails côtiers, logistique hors-wilaya et suivi des licenciés.'}
         </p>
       </div>
 
       <div className="w-full max-w-md bg-white rounded-3xl border border-natural-border shadow-md overflow-hidden p-6 animate-fade-in text-xs space-y-4">
+        <div className="flex justify-center gap-2 mb-4">
+          <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'ar' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>AR</button>
+          <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'fr' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>FR</button>
+          <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'en' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>EN</button>
+        </div>
+
         <div className="border-b border-natural-divider pb-3 text-center">
-          <h2 className="font-bold font-serif italic text-natural-olive text-md uppercase tracking-wider">Connexion Athlète</h2>
-          <p className="text-[10px] text-natural-sage font-bold mt-0.5 font-mono">SAISISSEZ VOS IDENTIFIANTS DU CLUB</p>
+          <h2 className="font-bold font-serif italic text-natural-olive text-md uppercase tracking-wider">{t('login')}</h2>
+          <p className="text-[10px] text-natural-sage font-bold mt-0.5 font-mono">{t('welcome')}</p>
         </div>
 
         {errorMsg && (
@@ -292,7 +303,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
             <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono uppercase tracking-wider">
-              Identifiant (Nom d'utilisateur '@', Nom Complet, Tél ou Email)
+              {t('username')}
             </label>
             <div className="relative">
               <User className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
@@ -301,7 +312,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
                 required
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                placeholder="Ex. @abdou_z, Abdou Zaiti ou 0555123456"
+                placeholder={t('searchPlaceholder')}
                 className="w-full pl-9 pr-3 py-2.5 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold font-mono"
               />
             </div>
@@ -309,7 +320,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
 
           <div>
             <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono uppercase tracking-wider">
-              Mot de passe du club
+              {t('password')}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
@@ -318,7 +329,6 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Nouveau compte ? Écrivez votre nom ou username"
                 className="w-full pl-9 pr-10 py-2.5 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold font-mono text-sm leading-normal"
               />
               <button
@@ -329,22 +339,19 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner }:
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[10px] text-natural-sage mt-1 font-semibold leading-relaxed">
-              💡 <span className="font-bold underline text-natural-olive">Conseil :</span> Si l'admin vient de créer votre compte, tapez simplement votre <strong>Nom d'utilisateur</strong> ou <strong>Nom Complet</strong> (par défaut) comme mot de passe initial pour vous connecter, réinitialiser votre mot de passe et remplir votre fiche.
-            </p>
           </div>
 
           <button
             type="submit"
             className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer font-serif italic text-xs shadow-xs"
           >
-            Se Connecter
+            {t('login')}
             <LogIn className="w-4 h-4 text-natural-accent" />
           </button>
         </form>
 
         <div className="bg-natural-bone p-3.5 rounded-2xl border border-natural-border/70 text-center text-[10px] text-natural-sage font-medium leading-relaxed">
-          <span>Besoin d'un accès ? Un administrateur ou coach de Mostaganem doit vous enregistrer dans l'annuaire pour activer votre compte.</span>
+          <span>{language === 'ar' ? 'هل تحتاج إلى وصول؟ يجب على مسؤول أو مدرب من مستغانم تسجيلك في الدليل لتفعيل حسابك.' : "Besoin d'un accès ? Un administrateur ou coach de Mostaganem doit vous enregistrer dans l'annuaire pour activer votre compte."}</span>
         </div>
       </div>
     </div>

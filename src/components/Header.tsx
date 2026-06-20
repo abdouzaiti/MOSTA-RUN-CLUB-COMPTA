@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Run, Runner } from '../types';
-import { CalendarRange, Award, Users, TrendingUp, Sparkles, Activity, Clock } from 'lucide-react';
+import { CalendarRange, Award, Users, TrendingUp, Sparkles, Activity, Clock, LogOut } from 'lucide-react';
+import { translations, Language } from '../translations';
 
 interface HeaderProps {
   activeTab: string;
@@ -8,9 +9,11 @@ interface HeaderProps {
   runs: Run[];
   currentUser: Runner;
   onLogout?: () => void;
+  language: Language;
 }
 
-export default function Header({ activeTab, setActiveTab, runs, currentUser, onLogout }: HeaderProps) {
+export default function Header({ activeTab, setActiveTab, runs, currentUser, onLogout, language }: HeaderProps) {
+  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   const [countdownStr, setCountdownStr] = useState<string>('');
   const [logoError, setLogoError] = useState<boolean>(false);
 
@@ -25,7 +28,7 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
         .sort((a, b) => a.getTime() - b.getTime());
 
       if (upcoming.length === 0) {
-        setCountdownStr('Aucun run de planifié');
+        setCountdownStr(language === 'ar' ? 'لا يوجد جري مبرمج' : language === 'en' ? 'No runs planned' : 'Aucun run de planifié');
         return;
       }
 
@@ -35,11 +38,11 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
       if (diffHrs > 24) {
-        setCountdownStr(`Dans ${Math.floor(diffHrs / 24)} jours`);
+        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${Math.floor(diffHrs / 24)} ${language === 'ar' ? 'أيام' : language === 'en' ? 'days' : 'jours'}`);
       } else if (diffHrs > 0) {
-        setCountdownStr(`Dans ${diffHrs}h ${diffMins}min`);
+        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${diffHrs}h ${diffMins}min`);
       } else {
-        setCountdownStr(`Dans ${diffMins} min 🔥`);
+        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${diffMins} min 🔥`);
       }
     };
 
@@ -99,18 +102,18 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-w-xl w-full md:w-auto">
           {/* Active User Badging */}
           <div className="col-span-2 lg:col-span-1 p-3 bg-natural-sage-light/60 rounded-2xl border border-natural-border flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5">
+            <div className={`flex items-center gap-2.5 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
               <div className="w-10 h-10 rounded-full bg-natural-olive text-white flex items-center justify-center text-sm font-bold font-serif italic border border-natural-border shadow-sm shrink-0">
                 {currentUser.name.split(' ').map(n => n[0]).join('')}
               </div>
               <div className="text-xs min-w-0">
                 <p className="font-bold text-sm text-natural-text truncate max-w-[120px]" title={currentUser.name}>{currentUser.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <div className={`flex items-center gap-1.5 mt-0.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                   <span className="text-[11px] px-1.5 py-0.5 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
                     {currentUser.bloodType || 'O+'}
                   </span>
                   <span className="text-xs text-natural-sage font-bold uppercase tracking-wider truncate">
-                    {currentUser.runClubRole || 'Membre'}
+                    {currentUser.runClubRole === 'Admin' ? t('admin') : currentUser.runClubRole === 'Coach' ? t('coach') : t('member')}
                   </span>
                 </div>
               </div>
@@ -118,33 +121,34 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-xs font-bold font-mono px-3 py-1.5 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
-                title="Se déconnecter de votre espace"
+                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-xs font-bold font-mono px-3 py-1.5 rounded-lg border border-red-200 transition cursor-pointer shrink-0 flex items-center gap-1"
+                title={t('logout')}
               >
-                Sortir
+                <LogOut className="w-3 h-3" />
+                {t('logout')}
               </button>
             )}
           </div>
 
-          <div className="p-3 bg-natural-bone rounded-2xl border border-natural-border">
-            <span className="text-natural-sage text-xs block uppercase font-bold">Prochain Run</span>
-            <div className="flex items-center gap-1.5 mt-1 text-natural-olive">
+          <div className={`p-3 bg-natural-bone rounded-2xl border border-natural-border ${language === 'ar' ? 'text-right' : ''}`}>
+            <span className="text-natural-sage text-xs block uppercase font-bold">{language === 'ar' ? 'الخرجة القادمة' : language === 'en' ? 'Next Run' : 'Prochain Run'}</span>
+            <div className={`flex items-center gap-1.5 mt-1 text-natural-olive ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <Clock className="w-4 h-4 text-natural-olive shrink-0" />
               <span className="font-serif italic font-bold text-sm truncate">{countdownStr}</span>
             </div>
           </div>
 
-          <div className="p-3 bg-natural-bone rounded-2xl border border-natural-border">
-            <span className="text-natural-sage text-xs block uppercase font-bold">Sorties Club</span>
+          <div className={`p-3 bg-natural-bone rounded-2xl border border-natural-border ${language === 'ar' ? 'text-right' : ''}`}>
+            <span className="text-natural-sage text-xs block uppercase font-bold">{language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'Club Outings' : 'Sorties Club'}</span>
             <p className="text-natural-text text-sm font-semibold mt-1">
-              <span className="text-natural-olive font-serif italic font-black text-base">{upcomingCount}</span> planifiées <span className="text-natural-border">|</span> <span className="text-natural-accent font-serif italic font-black text-base">{completedCount}</span> tkarir
+              <span className="text-natural-olive font-serif italic font-black text-base">{upcomingCount}</span> {language === 'ar' ? 'مخططة' : 'planifiées'} <span className="text-natural-border">|</span> <span className="text-natural-accent font-serif italic font-black text-base">{completedCount}</span> {language === 'ar' ? 'تقارير' : 'tkarir'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex border-t border-natural-border bg-natural-sage-light/30 p-2 gap-2">
+      <div className="flex border-t border-natural-border bg-natural-sage-light/30 p-2 gap-2 overflow-x-auto scroller-hidden">
         <button
           onClick={() => setActiveTab('planning')}
           className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
@@ -154,7 +158,7 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
           }`}
         >
           <CalendarRange className="w-4 h-4" />
-          <span>Planning t3 l-kharjat</span>
+          <span>{t('planning')}</span>
           {upcomingCount > 0 && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${activeTab === 'planning' ? 'bg-white/20 text-white' : 'bg-natural-sage-light text-natural-olive'}`}>
               {upcomingCount}
@@ -170,11 +174,8 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
               : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
           }`}
         >
-          <Award className="w-4 h-4" />
-          <span>Tkarir mlih (Rapports)</span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${activeTab === 'reports' ? 'bg-white/20 text-white' : 'bg-natural-sage-light text-natural-olive'}`}>
-            {completedCount}
-          </span>
+          <TrendingUp className="w-4 h-4" />
+          <span>{t('stats')}</span>
         </button>
 
         <button
@@ -186,7 +187,7 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>Membres du Club</span>
+          <span>{t('roster')}</span>
         </button>
       </div>
     </header>

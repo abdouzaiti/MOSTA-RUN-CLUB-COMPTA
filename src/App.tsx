@@ -9,13 +9,23 @@ import LoginScreen from './components/LoginScreen';
 import { Run, Runner, RunReport, RunnerFeedback } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
 import { isSupabaseConfigured, dbService } from './supabaseClient';
+import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
-  Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check
+  Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe
 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('planning');
+  const [language, setLanguage] = useState<Language | null>(() => {
+    const saved = localStorage.getItem('mrc_language');
+    return saved as Language || null;
+  });
+
+  const t = (key: string) => {
+    if (!language) return key;
+    return (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
+  };
 
   // Load from localStorage or initial configuration
   const [runners, setRunners] = useState<Runner[]>(() => {
@@ -40,6 +50,16 @@ export default function App() {
 
   // DB Sync Status States
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
+  useEffect(() => {
+    if (language) {
+      localStorage.setItem('mrc_language', language);
+      document.dir = language === 'ar' ? 'rtl' : 'ltr';
+    }
+  }, [language]);
+
+  const handleSelectLanguage = (lang: Language) => {
+    setLanguage(lang);
+  };
   const [dbError, setDbError] = useState<string | null>(null);
   const [showSqlSetup, setShowSqlSetup] = useState<boolean>(false);
   const [sqlCopied, setSqlCopied] = useState<boolean>(false);
@@ -536,12 +556,57 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
     setTimeout(() => setSqlCopied(false), 3000);
   };
 
+  if (!language) {
+    return (
+      <div className="min-h-screen bg-natural-page flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-natural-border overflow-hidden animate-fade-in">
+          <div className="bg-natural-olive p-10 text-center relative overflow-hidden">
+            <Globe className="absolute -right-6 -top-6 w-32 h-32 text-white/10" />
+            <Sparkles className="absolute -left-4 -bottom-4 w-20 h-20 text-white/5" />
+            <div className="relative z-10">
+              <h1 className="text-3xl font-serif italic font-black text-white">MOSTA RUN CLUB</h1>
+              <p className="text-natural-accent text-sm font-bold tracking-[0.2em] mt-1 uppercase">Choose your language</p>
+            </div>
+          </div>
+          
+          <div className="p-8 space-y-4">
+            <button 
+              onClick={() => handleSelectLanguage('ar')}
+              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+            >
+              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">العربية</span>
+              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">AR</span>
+            </button>
+
+            <button 
+              onClick={() => handleSelectLanguage('fr')}
+              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+            >
+              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">Français</span>
+              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">FR</span>
+            </button>
+
+            <button 
+              onClick={() => handleSelectLanguage('en')}
+              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+            >
+              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">English</span>
+              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">EN</span>
+            </button>
+          </div>
+
+          <div className="px-8 pb-8 text-center border-t border-natural-divider pt-4">
+            <p className="text-natural-sage text-[10px] uppercase font-bold tracking-[0.1em]">© 2026 Mostaganem Run Club • Bahr & Sahara</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-natural-bg text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive pb-12">
+    <div className={`min-h-screen bg-natural-bg text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive pb-12 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Container wrapper */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-
-
 
         {/* Database setup SQL assistance Accordion */}
         {showSqlSetup && (
@@ -615,9 +680,13 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
         {isLoadingDb && (
           <div className="p-16 text-center bg-white rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-4">
             <Cpu className="w-10 h-10 text-natural-olive animate-spin" />
-            <div>
-              <p className="text-sm font-bold text-natural-olive font-serif italic">Synchronisation Supabase en cours...</p>
-              <p className="text-xs text-natural-sage mt-1">Récupération sécurisée du roster de course et des planifications réelles.</p>
+            <div className={language === 'ar' ? 'font-arabic' : ''}>
+              <p className="text-sm font-bold text-natural-olive font-serif italic">
+                {language === 'ar' ? 'جاري مزامنة قاعدة البيانات...' : 'Synchronisation Supabase en cours...'}
+              </p>
+              <p className="text-xs text-natural-sage mt-1">
+                {language === 'ar' ? 'استرجاع قائمة العداءين والبرنامج المخطط له.' : 'Récupération sécurisée du roster de course et des planifications réelles.'}
+              </p>
             </div>
           </div>
         )}
@@ -629,6 +698,8 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
               setCurrentUser(user);
             }}
             onUpdateRunner={handleUpdateCurrentUser}
+            language={language}
+            setLanguage={setLanguage}
           />
         )}
 
@@ -641,6 +712,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
               runs={runs}
               currentUser={currentUser}
               onLogout={handleLogout}
+              language={language}
             />
 
             {/* Dynamic Inner Layout Router */}
@@ -658,6 +730,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                       runners={runners}
                       onAddParticipantByAdmin={handleAddParticipantByAdmin}
                       onRemoveParticipantByAdmin={handleRemoveParticipantByAdmin}
+                      language={language}
                     />
                   </div>
 
@@ -665,12 +738,13 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-xs font-bold text-natural-olive uppercase tracking-widest font-mono mb-2">
-                        Athlet Licence card
+                        {language === 'ar' ? 'ملفي الشخصي' : language === 'en' ? 'My Profile' : 'Mon Profil'}
                       </h3>
                       <InscriptionsAndProfile
                         currentUser={currentUser}
                         setCurrentUser={handleUpdateCurrentUser}
                         runs={runs}
+                        language={language}
                       />
                     </div>
                   </div>
@@ -684,6 +758,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                     runs={runs}
                     currentUser={currentUser}
                     onAddFeedback={handleAddFeedback}
+                    language={language}
                   />
                 </div>
               )}
@@ -696,6 +771,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                     onAddRunner={handleAddRunner}
                     onDeleteRunner={handleDeleteRunner}
                     onUpdateRunner={handleUpdateRunner}
+                    language={language}
                   />
                 </div>
               )}

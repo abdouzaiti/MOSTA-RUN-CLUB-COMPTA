@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RunnerFeedback, RunReport, Run, Runner } from '../types';
+import { translations, Language } from '../translations';
 import { Award, Thermometer, Calendar, Eye, Send, Star, Users, MapPin, Sparkles, Compass, CheckCircle } from 'lucide-react';
 
 interface ReportsSummaryProps {
@@ -7,9 +8,11 @@ interface ReportsSummaryProps {
   runs: Run[];
   currentUser: Runner;
   onAddFeedback: (reportId: string, feedback: Omit<RunnerFeedback, 'id' | 'dateStr' | 'avatarColor'>) => void;
+  language: Language;
 }
 
-export default function ReportsSummary({ reports, runs, currentUser, onAddFeedback }: ReportsSummaryProps) {
+export default function ReportsSummary({ reports, runs, currentUser, onAddFeedback, language }: ReportsSummaryProps) {
+  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   const [selectedReportId, setSelectedReportId] = useState<string>(reports[0]?.id || '');
   const [feedbackText, setFeedbackText] = useState('');
   const [rating, setRating] = useState<number>(5);
@@ -37,7 +40,12 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
 
       setFeedbackText('');
       setRating(5);
-      setMsg('Merci ! Votre compte-rendu a été ajouté et intégré aux statistiques de cette sortie. 🎉');
+      const successMsg = language === 'ar' 
+        ? 'شكرا لك! تمت إضافة تقريرك بنجاح. 🎉' 
+        : language === 'en' 
+          ? 'Thank you! Your feedback has been added successfully. 🎉'
+          : 'Merci ! Votre compte-rendu a été ajouté et intégré aux statistiques de cette sortie. 🎉';
+      setMsg(successMsg);
       setTimeout(() => setMsg(''), 4000);
     }
   };
@@ -53,37 +61,37 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
   }, 0) / (reports.length || 1)).toFixed(1);
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {/* Overview Cards (Tkarir Stats Dashboard) */}
-      <div>
-        <h2 className="text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5">
+      <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+        <h2 className={`text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
           <Award className="w-5 h-5 text-natural-accent" />
-          Rapports Collectifs & Comptes-rendus (Tkarir mlih)
+          {language === 'ar' ? 'تقارير جماعية ومحاضر (تقارير مليحة)' : language === 'en' ? 'Collective Reports & Feedback (Tkarir mlih)' : 'Rapports Collectifs & Comptes-rendus (Tkarir mlih)'}
         </h2>
         <p className="text-xs text-natural-sage font-medium">
-          Les statistiques consolidées et le feedback de la communauté sur nos précédents runs.
+          {language === 'ar' ? 'الإحصائيات المجمعة وتعليقات المجتمع حول خرجاتنا السابقة.' : language === 'en' ? 'Consolidated statistics and community feedback on our previous runs.' : 'Les statistiques consolidées et le feedback de la communauté sur nos précédents runs.'}
         </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-natural-olive text-white p-4 rounded-2xl border border-natural-border shadow-xs">
-          <span className="text-[10px] text-natural-sage-light uppercase tracking-wider font-mono font-bold">Distance Club</span>
+          <span className="text-[10px] text-natural-sage-light uppercase tracking-wider font-mono font-bold">{language === 'ar' ? 'مسافة النادي' : 'Distance Club'}</span>
           <p className="text-2xl font-black font-serif italic mt-1">
-            {totalDistanceCollective.toFixed(0)} <span className="text-xs font-normal">KM</span>
+            {totalDistanceCollective.toFixed(0)} <span className="text-xs font-normal">{language === 'ar' ? 'كلم' : 'KM'}</span>
           </p>
-          <span className="text-[9px] text-natural-sage-light font-mono block mt-0.5">Parcourus au total</span>
+          <span className="text-[9px] text-natural-sage-light font-mono block mt-0.5">{language === 'ar' ? 'تم قطعها إجمالاً' : 'Parcourus au total'}</span>
         </div>
 
         <div className="bg-natural-bone text-natural-text p-4 rounded-2xl border border-natural-border shadow-xs">
-          <span className="text-[10px] text-natural-sage uppercase tracking-wider font-mono font-bold">Sorties Clôturées</span>
+          <span className="text-[10px] text-natural-sage uppercase tracking-wider font-mono font-bold">{language === 'ar' ? 'خرجات منجزة' : 'Sorties Clôturées'}</span>
           <p className="text-2xl font-black font-serif italic mt-1 text-natural-olive">
-            {totalCompletedRuns} <span className="text-xs font-normal">sorties</span>
+            {totalCompletedRuns} <span className="text-xs font-normal">{language === 'ar' ? 'خرجة' : 'sorties'}</span>
           </p>
-          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">Comptabilisées</span>
+          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">{language === 'ar' ? 'تم احتسابها' : 'Comptabilisées'}</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-natural-border shadow-xs">
-          <span className="text-natural-sage text-[10px] uppercase tracking-wider font-mono font-bold">Note Globale</span>
+          <span className="text-natural-sage text-[10px] uppercase tracking-wider font-mono font-bold">{language === 'ar' ? 'التقييم العام' : 'Note Globale'}</span>
           <div className="flex items-center gap-1 mt-1">
             <span className="text-2xl font-black font-serif italic text-natural-olive">{averageClubRating}</span>
             <div className="flex text-amber-400">
@@ -91,22 +99,22 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
             </div>
             <span className="text-[9px] text-natural-sage font-mono">/5.0</span>
           </div>
-          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">Calculée sur {totalReviewsCount} avis</span>
+          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">{language === 'ar' ? `محسوب على ${totalReviewsCount} رأياً` : `Calculée sur ${totalReviewsCount} avis`}</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-natural-border shadow-xs col-span-2 lg:col-span-1">
-          <span className="text-natural-sage text-[10px] uppercase tracking-wider font-mono font-bold">Intensité club</span>
+          <span className="text-natural-sage text-[10px] uppercase tracking-wider font-mono font-bold">{language === 'ar' ? 'كثافة النادي' : 'Intensité club'}</span>
           <p className="text-lg font-bold text-natural-accent mt-1 leading-tight font-serif italic">
-            Esprit de Groupe
+            {language === 'ar' ? 'روح المجموعة' : 'Esprit de Groupe'}
           </p>
-          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">"Zéro abandon" certifié</span>
+          <span className="text-[9px] text-natural-sage font-mono block mt-0.5">{language === 'ar' ? '"صفر تخلي" موثق' : '"Zéro abandon" certifié'}</span>
         </div>
       </div>
 
       {/* Selector for reports */}
-      <div className="bg-natural-sage-light/30 p-3 rounded-2xl border border-natural-border flex items-center gap-3 overflow-x-auto">
+      <div className={`bg-natural-sage-light/30 p-3 rounded-2xl border border-natural-border flex items-center gap-3 overflow-x-auto ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
         <span className="text-[11px] font-bold text-natural-olive uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
-          Choisir un run :
+          {language === 'ar' ? 'اختر خرجة :' : language === 'en' ? 'Choose a run:' : 'Choisir un run :'}
         </span>
         <div className="flex gap-2">
           {reports.map(rep => {
@@ -138,31 +146,31 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
             {/* Run Profile Summary Card */}
             <div className="bg-natural-olive text-white rounded-3xl p-5 border border-natural-border relative overflow-hidden shadow-sm">
               <span className="text-[10px] uppercase tracking-widest font-mono text-natural-accent font-bold block mb-1">
-                Fiche Technique Finale
+                {language === 'ar' ? 'البطاقة التقنية النهائية' : 'Fiche Technique Finale'}
               </span>
               <h3 className="text-lg font-serif italic font-black text-white leading-tight">
                 {activeReport.title}
               </h3>
-              <p className="text-[11px] text-natural-sage-light mt-0.5 font-mono">Sortie du {new Date(activeReport.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-[11px] text-natural-sage-light mt-0.5 font-mono">{language === 'ar' ? 'خرجة يوم' : 'Sortie du'} {new Date(activeReport.date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : language === 'en' ? 'en-US' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
               <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-white/10">
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">Distance</span>
-                  <p className="text-md font-bold text-white">{activeReport.totalDistanceKm} KM</p>
+                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{t('distance')}</span>
+                  <p className="text-md font-bold text-white">{activeReport.totalDistanceKm} {language === 'ar' ? 'كلم' : 'KM'}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">Cadence Moyenne</span>
+                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{language === 'ar' ? 'متوسط الوتيرة' : 'Cadence Moyenne'}</span>
                   <p className="text-md font-bold text-natural-accent">{activeReport.averagePace}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">Présents</span>
+                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{t('participants')}</span>
                   <p className="text-md font-bold text-white flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-natural-sage-light" />
-                    {activeReport.participantsCount} coureurs
+                    {activeReport.participantsCount} {language === 'ar' ? 'عداء' : 'coureurs'}
                   </p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">Thermomètre</span>
+                  <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{t('weather')}</span>
                   <p className="text-md font-bold text-white flex items-center gap-1">
                     <Thermometer className="w-3.5 h-3.5 text-natural-accent" />
                     {activeReport.tempCelsius ? `${activeReport.tempCelsius}°C` : 'N/A'}
@@ -204,27 +212,35 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
           <div className="lg:col-span-2 space-y-4">
             {/* Highlights Story */}
             <div className="bg-white rounded-3xl p-6 border border-natural-border shadow-sm space-y-3">
-              <div className="flex items-center gap-2 border-b border-natural-divider pb-3">
+              <div className={`flex items-center gap-2 border-b border-natural-divider pb-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <Compass className="w-5 h-5 text-natural-olive" />
-                <div>
-                  <h3 className="font-serif italic font-medium text-natural-olive text-md">Résumé et Faits Marquants</h3>
-                  <p className="text-[10px] text-natural-sage font-semibold">Rédigé par le comité d'organisation</p>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <h3 className="font-serif italic font-medium text-natural-olive text-md">
+                    {language === 'ar' ? 'ملخص وأبرز الأحداث' : 'Résumé et Faits Marquants'}
+                  </h3>
+                  <p className="text-[10px] text-natural-sage font-semibold">
+                    {language === 'ar' ? 'بقلم اللجنة المنظمة' : "Rédigé par le comité d'organisation"}
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-natural-text leading-relaxed whitespace-pre-line text-justify font-medium">
+              <p className={`text-xs text-natural-text leading-relaxed whitespace-pre-line font-medium ${language === 'ar' ? 'text-right' : 'text-justify'}`}>
                 {activeReport.highlights}
               </p>
             </div>
 
             {/* Community Reviews & Feedback */}
             <div className="bg-white rounded-3xl p-6 border border-natural-border shadow-sm space-y-5">
-              <div className="flex justify-between items-center border-b border-natural-divider pb-3">
-                <div>
-                  <h3 className="font-serif italic font-medium text-natural-olive text-md">Retours des Coureurs</h3>
-                  <p className="text-[10px] text-natural-sage font-semibold">Impressions après la ligne d'arrivée</p>
+              <div className={`flex justify-between items-center border-b border-natural-divider pb-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <h3 className="font-serif italic font-medium text-natural-olive text-md">
+                    {language === 'ar' ? 'تعليقات العدائين' : 'Retours des Coureurs'}
+                  </h3>
+                  <p className="text-[10px] text-natural-sage font-semibold">
+                    {language === 'ar' ? 'انطباعات بعد خط الوصول' : "Impressions après la ligne d'arrivée"}
+                  </p>
                 </div>
                 <span className="text-xs font-bold font-mono px-3 py-1 bg-natural-sage-light text-natural-olive rounded-full border border-natural-border">
-                  {activeReport.feedback.length} commentaires
+                  {activeReport.feedback.length} {language === 'ar' ? 'تعليق' : 'commentaires'}
                 </span>
               </div>
 
@@ -261,7 +277,7 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
                         ))}
                       </div>
                     </div>
-                    <p className="text-xs text-natural-text leading-relaxed italic pr-2 font-medium">
+                    <p className={`text-xs text-natural-text leading-relaxed italic pr-2 font-medium ${language === 'ar' ? 'text-right' : ''}`}>
                       "{fb.text}"
                     </p>
                   </div>
@@ -270,14 +286,14 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
 
               {/* Leave a review form */}
               <form onSubmit={handleSubmitFeedback} className="bg-natural-bone rounded-2xl p-4 border border-natural-border space-y-3">
-                <div className="flex items-center justify-between">
+                <div className={`flex items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                   <h4 className="text-xs font-bold text-natural-olive uppercase tracking-wide font-mono">
-                    Ajouter mon compte-rendu personnel
+                    {language === 'ar' ? 'إضافة تقريري الشخصي' : 'Ajouter mon compte-rendu personnel'}
                   </h4>
 
                   {/* Rating Selector */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-natural-sage font-mono font-bold mr-1">Ressenti :</span>
+                  <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    <span className="text-[10px] text-natural-sage font-mono font-bold mr-1">{t('fealings')} :</span>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((starIdx) => (
                         <button
@@ -301,21 +317,21 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
                     required
                     value={feedbackText}
                     onChange={e => setFeedbackText(e.target.value)}
-                    placeholder="Comment s'est passée votre course ? Bonne ambiance, parcours, difficultés..."
-                    className="w-full text-xs px-3 py-2.5 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/70 font-semibold"
+                    placeholder={language === 'ar' ? 'كيف سارت رحلتك؟ الجو، المسار، الصعوبات...' : "Comment s'est passée votre course ? Bonne ambiance, parcours, difficultés..."}
+                    className={`w-full text-xs px-3 py-2.5 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text placeholder-natural-sage/70 font-semibold ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
 
-                <div className="flex justify-between items-center bg-transparent pt-1">
+                <div className={`flex justify-between items-center bg-transparent pt-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                   <span className="text-[10px] text-natural-sage font-mono leading-none font-bold">
-                    Identifié en tant que <strong className="text-natural-olive font-bold">{currentUser.name}</strong>
+                    {language === 'ar' ? 'مسجل كـ ' : 'Identifié en tant que '} <strong className="text-natural-olive font-bold">{currentUser.name}</strong>
                   </span>
                   <button
                     type="submit"
                     className="px-4 py-2 text-white bg-natural-olive hover:bg-natural-olive-hover font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    Soumettre mon rapport
+                    {t('send')}
                   </button>
                 </div>
               </form>

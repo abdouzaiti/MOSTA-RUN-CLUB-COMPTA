@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Run, Runner, RunParticipant } from '../types';
+import { translations, Language } from '../translations';
 import {
   Calendar, MapPin, Gauge, ShieldAlert, Plus, Users, Search, Filter,
   Check, X, Compass, CornerDownRight, ArrowUpRight, Flame, Layers,
@@ -16,6 +17,7 @@ interface OutingsPlanningProps {
   runners: Runner[];
   onAddParticipantByAdmin: (runId: string, runner: Runner) => void;
   onRemoveParticipantByAdmin: (runId: string, runnerId: string) => void;
+  language: Language;
 }
 
 export default function OutingsPlanning({
@@ -26,8 +28,10 @@ export default function OutingsPlanning({
   onUpdateParticipant,
   runners = [],
   onAddParticipantByAdmin,
-  onRemoveParticipantByAdmin
+  onRemoveParticipantByAdmin,
+  language
 }: OutingsPlanningProps) {
+  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   // Filtering states
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('Tous');
@@ -183,17 +187,34 @@ export default function OutingsPlanning({
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
+  const getDifficultyLabel = (diff: string) => {
+    const key = diff.toLowerCase();
+    if (key === 'easy' || key === 'facile') return t('easy');
+    if (key === 'medium' || key === 'moyen') return t('medium');
+    if (key === 'hard' || key === 'difficile') return t('hard');
+    if (key === 'expert') return t('expert');
+    return diff;
+  };
+
+  const getRunTypeLabel = (type: string) => {
+    const key = type.toLowerCase();
+    if (key.includes('morning')) return t('morningRun');
+    if (key.includes('trail')) return t('trail');
+    if (key.includes('night')) return t('nightRun');
+    return type;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {/* Header section with toggle for form */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-serif italic font-bold text-natural-olive flex items-center gap-2">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
+        <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+          <h2 className={`text-xl font-serif italic font-bold text-natural-olive flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
             <Flame className="w-5 h-5 text-natural-accent animate-pulse" />
-            Planning des Sorties Côte à Côte
+            {language === 'ar' ? 'تخطيط الخرجات يداً بيد' : language === 'en' ? 'Side by Side Outings Planning' : 'Planning des Sorties Côte à Côte'}
           </h2>
           <p className="text-xs text-natural-sage font-medium">
-            Rejoignez une sortie de groupe ou planifiez en une pour motiver les autres !
+            {language === 'ar' ? 'انضم إلى خرجة جماعية أو خطط لواحدة لتحفيز الآخرين!' : language === 'en' ? 'Join a group run or plan one to motivate others!' : 'Rejoignez une sortie de groupe ou planifiez en une pour motiver les autres !'}
           </p>
         </div>
 
@@ -233,11 +254,11 @@ export default function OutingsPlanning({
       {showForm && (
         <form onSubmit={handleCreateRun} className="bg-white rounded-3xl p-6 border border-natural-border space-y-4 animate-fade-in shadow-sm">
           <div>
-            <h3 className="text-sm font-bold text-natural-olive font-serif italic uppercase tracking-wider mb-1">
-              Détails du nouveau Run
+            <h3 className={`text-sm font-bold text-natural-olive font-serif italic uppercase tracking-wider mb-1 ${language === 'ar' ? 'text-right' : ''}`}>
+              {language === 'ar' ? 'تفاصيل الخرجة الجديدة' : 'Détails du nouveau Run'}
             </h3>
-            <p className="text-xs text-natural-sage">
-              Formulaire administrateur pour planifier les parcours officiels.
+            <p className={`text-xs text-natural-sage ${language === 'ar' ? 'text-right' : ''}`}>
+              {language === 'ar' ? 'نموذج المسؤول لتخطيط المسارات الرسمية.' : 'Formulaire administrateur pour planifier les parcours officiels.'}
             </p>
           </div>
 
@@ -251,61 +272,61 @@ export default function OutingsPlanning({
           <div className="space-y-4">
             {/* Infos obligatoires demandées par l'utilisateur */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Titre de la sortie *</label>
+              <div className={language === 'ar' ? 'text-right' : ''}>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">{language === 'ar' ? 'عنوان الخرجة *' : 'Titre de la sortie *'}</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  placeholder="Ex. Grande Sortie Nationale MRC"
-                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
+                  placeholder={language === 'ar' ? 'مثال: الخرجة الوطنية الكبرى MRC' : 'Ex. Grande Sortie Nationale MRC'}
+                  className={`w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70 ${language === 'ar' ? 'text-right' : ''}`}
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Point de Départ / RDV *</label>
+              <div className={language === 'ar' ? 'text-right' : ''}>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">{language === 'ar' ? 'نقطة الانطلاق / الموعد *' : 'Point de Départ / RDV *'}</label>
                 <input
                   type="text"
                   required
                   value={startPoint}
                   onChange={e => setStartPoint(e.target.value)}
-                  placeholder="Ex. Rond-point de Salamandre face au port"
-                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70"
+                  placeholder={language === 'ar' ? 'مثال: ساحة salamandre أمام الميناء' : 'Ex. Rond-point de Salamandre face au port'}
+                  className={`w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive focus:border-natural-olive text-natural-text placeholder-natural-sage/70 ${language === 'ar' ? 'text-right' : ''}`}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Date de départ *</label>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">{language === 'ar' ? 'تاريخ الانطلاق *' : 'Date de départ *'}</label>
                   <input
                     type="date"
                     required
                     value={date}
                     onChange={e => setDate(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                    className={`w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Heure de départ *</label>
+                <div className={language === 'ar' ? 'text-right' : ''}>
+                  <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">{language === 'ar' ? 'وقت الانطلاق *' : 'Heure de départ *'}</label>
                   <input
                     type="time"
                     required
                     value={time}
                     onChange={e => setTime(e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                    className={`w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">Wilaya de Destination</label>
+              <div className={language === 'ar' ? 'text-right' : ''}>
+                <label className="block text-[11px] font-bold text-natural-olive mb-1 uppercase tracking-wider">{language === 'ar' ? 'ولاية الوجهة' : 'Wilaya de Destination'}</label>
                 <input
                   type="text"
                   value={destinationWilaya}
                   onChange={e => setDestinationWilaya(e.target.value)}
-                  placeholder="Ex. Oran, Tipaza, Alger (Vide pour Locale)"
-                  className="w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text"
+                  placeholder={language === 'ar' ? 'مثال: وهران، تيبازة، الجزائر (اتركها فارغة للمحلية)' : 'Ex. Oran, Tipaza, Alger (Vide pour Locale)'}
+                  className={`w-full text-xs px-3 py-2.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                 />
               </div>
             </div>
@@ -376,82 +397,86 @@ export default function OutingsPlanning({
                 onClick={() => setShowAdvancedForm(!showAdvancedForm)}
                 className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-bold text-natural-olive hover:bg-natural-bone transition"
               >
-                <span className="flex items-center gap-1.5 font-mono">
-                  ⚙️ Options Sportives & Description ({showAdvancedForm ? 'Masquer' : 'Afficher'})
+                <span className={`flex items-center gap-1.5 font-mono ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  {language === 'ar' 
+                    ? `⚙️ الخيارات الرياضية والوصف (${showAdvancedForm ? 'إخفاء' : 'إظهار'})` 
+                    : `⚙️ Options Sportives & Description (${showAdvancedForm ? 'Masquer' : 'Afficher'})`}
                 </span>
                 <span className="text-[10px] text-natural-sage font-bold font-mono">
-                  {showAdvancedForm ? '▲' : '▼ (Facultatif)'}
+                  {showAdvancedForm ? '▲' : (language === 'ar' ? '▼ (اختياري)' : '▼ (Facultatif)')}
                 </span>
               </button>
 
               {showAdvancedForm && (
                 <div className="p-4 border-t border-natural-border bg-white space-y-4 animate-fade-in">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Distance (km)</label>
+                    <div className={language === 'ar' ? 'text-right' : ''}>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'المسافة (كلم)' : 'Distance (km)'}</label>
                       <input
                         type="number"
                         min="1"
                         max="100"
                         value={distance}
                         onChange={e => setDistance(Number(e.target.value))}
-                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text"
+                        className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Dénivelé positif (m)</label>
+                    <div className={language === 'ar' ? 'text-right' : ''}>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'الارتفاع الإيجابي (م)' : 'Dénivelé positif (m)'}</label>
                       <input
                         type="number"
                         min="0"
                         value={elevationGain}
                         onChange={e => setElevationGain(Number(e.target.value))}
-                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text"
+                        className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Difficulté</label>
+                    <div className={language === 'ar' ? 'text-right' : ''}>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'الصعوبة' : 'Difficulté'}</label>
                       <select
                         value={difficulty}
                         onChange={e => setDifficulty(e.target.value as any)}
                         className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl cursor-pointer text-natural-text"
+                        dir={language === 'ar' ? 'rtl' : 'ltr'}
                       >
-                        <option value="Facile">🟢 Facile</option>
-                        <option value="Moyen">🟡 Moyen</option>
-                        <option value="Difficile">🔴 Difficile</option>
+                        <option value="Facile">{language === 'ar' ? '🟢 سهل' : '🟢 Facile'}</option>
+                        <option value="Moyen">{language === 'ar' ? '🟡 متوسط' : '🟡 Moyen'}</option>
+                        <option value="Difficile">{language === 'ar' ? '🔴 صعب' : '🔴 Difficile'}</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Allure Estimée</label>
+                    <div className={language === 'ar' ? 'text-right' : ''}>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'الوتيرة المتوقعة' : 'Allure Estimée'}</label>
                       <input
                         type="text"
                         value={pace}
                         onChange={e => setPace(e.target.value)}
-                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text"
+                        placeholder={language === 'ar' ? 'مثال: 6:00 - 6:30 د/كلم' : 'Ex. 6:00 - 6:30 min/km'}
+                        className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Limite de coureurs</label>
+                    <div className={language === 'ar' ? 'text-right' : ''}>
+                      <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'حد العدائين' : 'Limite de coureurs'}</label>
                       <input
                         type="number"
                         min="5"
                         value={maxParticipants}
                         onChange={e => setMaxParticipants(Number(e.target.value))}
-                        className="w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text"
+                        className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl text-natural-text ${language === 'ar' ? 'text-right' : ''}`}
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">Description / Recommandations</label>
+                  <div className={language === 'ar' ? 'text-right' : ''}>
+                    <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">{language === 'ar' ? 'الوصف / التوصيات' : 'Description / Recommandations'}</label>
                     <textarea
                       rows={2}
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      placeholder="Décrivez l'itinéraire, les points d'ombre, les éventuelles pauses ravitaillement..."
-                      className="w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl text-natural-text placeholder-natural-sage/70"
+                      placeholder={language === 'ar' ? 'صف المسار، نقاط الظل، محطات التموين الممكنة...' : "Décrivez l'itinéraire, les points d'ombre, les éventuelles pauses ravitaillement..."}
+                      className={`w-full text-xs px-3 py-2 bg-natural-bone border border-natural-border rounded-xl text-natural-text placeholder-natural-sage/70 ${language === 'ar' ? 'text-right' : ''}`}
                     />
                   </div>
                 </div>
@@ -459,7 +484,7 @@ export default function OutingsPlanning({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className={`flex justify-end gap-2 pt-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
             <button
               type="button"
               onClick={() => {
@@ -468,13 +493,13 @@ export default function OutingsPlanning({
               }}
               className="px-4 py-2 text-natural-olive bg-natural-sage-light/60 hover:bg-natural-sage/20 rounded-xl text-xs font-bold transition"
             >
-              Annuler
+              {language === 'ar' ? 'إلغاء' : 'Annuler'}
             </button>
             <button
               type="submit"
               className="px-5 py-2.5 text-white bg-natural-olive hover:bg-natural-olive-hover font-bold rounded-xl text-xs shadow-sm transition"
             >
-              Planifier la Sortie 🚀
+              {language === 'ar' ? 'تخطيط الخرجة 🚀' : 'Planifier la Sortie 🚀'}
             </button>
           </div>
         </form>
@@ -484,23 +509,27 @@ export default function OutingsPlanning({
       <div className="bg-white rounded-3xl p-5 border border-natural-border shadow-sm mb-4">
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-3.5 w-5 h-5 text-natural-olive" />
+          <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-3.5 w-5 h-5 text-natural-olive`} />
           <input
             type="text"
-            placeholder="🔍 Rechercher une sortie par nom, route, wilaya..."
+            placeholder={t('searchPlaceholder')}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full text-base pl-11 pr-4 py-4 bg-white border-2 border-natural-olive/20 text-natural-text rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/30 focus:border-natural-olive font-medium shadow-md transition-all placeholder:text-natural-sage"
+            className={`w-full text-base ${language === 'ar' ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-4 bg-white border-2 border-natural-olive/20 text-natural-text rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/30 focus:border-natural-olive font-medium shadow-md transition-all placeholder:text-natural-sage`}
           />
         </div>
       </div>
 
       {/* Runs List */}
       {filteredRuns.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-3xl border border-natural-border shadow-xs">
+        <div className={`p-12 text-center bg-white rounded-3xl border border-natural-border shadow-xs ${language === 'ar' ? 'font-arabic' : ''}`}>
           <Compass className="w-10 h-10 text-natural-sage mx-auto mb-3 stroke-[1.5]" />
-          <p className="text-sm font-bold text-natural-olive font-serif italic">Aucun run ne correspond à vos filtres</p>
-          <p className="text-xs text-natural-sage mt-1 font-medium">Essayez d'élargir vos termes de recherche ou de réinitialiser les filtres.</p>
+          <p className="text-sm font-bold text-natural-olive font-serif italic text-base">
+            {language === 'ar' ? 'لا توجد نتائج تطابق بحثك' : language === 'en' ? 'No runs match your filters' : 'Aucun run ne correspond à vos filtres'}
+          </p>
+          <p className="text-xs text-natural-sage mt-1 font-medium">
+            {language === 'ar' ? 'حاول تغيير كلمات البحث أو إعادة ضبط الفلاتر.' : language === 'en' ? 'Try broadening your search terms or resetting filters.' : "Essayez d'élargir vos termes de recherche ou de réinitialiser les filtres."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -520,18 +549,18 @@ export default function OutingsPlanning({
                 <div className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     {/* Tags row */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className={`flex flex-wrap items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       <span className={`text-xs font-bold px-3 py-1 rounded border ${getDifficultyStyles(run.difficulty)}`}>
-                        {run.difficulty}
+                        {getDifficultyLabel(run.difficulty)}
                       </span>
                       <span className="text-xs text-natural-olive font-bold flex items-center gap-1.5 bg-natural-sage-light/30 px-2.5 py-1 rounded border border-natural-border/40">
                         <Calendar className="w-4 h-4 text-natural-olive" />
-                        {new Date(run.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} à {run.time}
+                        {new Date(run.date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : language === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} {language === 'ar' ? 'على الساعة' : language === 'en' ? 'at' : 'à'} {run.time}
                       </span>
                       {run.isOrWilaya && (
                         <span className="text-xs bg-amber-50 text-amber-800 font-extrabold border border-amber-200 px-2.5 py-1 rounded flex items-center gap-1.5 shadow-xxs shrink-0">
                           <Compass className="w-4 h-4 text-amber-700" />
-                          HORS WILAYA ({run.destinationWilaya || 'National'})
+                          {language === 'ar' ? 'خارج الولاية' : language === 'en' ? 'OUT OF CITY' : 'HORS WILAYA'} ({run.destinationWilaya || (language === 'ar' ? 'وطني' : 'National')})
                         </span>
                       )}
                     </div>
@@ -555,10 +584,10 @@ export default function OutingsPlanning({
 
                   {/* Highlights distance badges & toggle action */}
                   <div className="flex items-center md:justify-end gap-3 md:gap-5 pt-3 md:pt-0 border-t md:border-t-0 border-natural-divider">
-                    <div className="text-left md:text-right">
-                      <span className="text-xs text-natural-sage uppercase font-bold">Distance</span>
+                    <div className={language === 'ar' ? 'text-right' : 'text-left md:text-right'}>
+                      <span className="text-xs text-natural-sage uppercase font-bold">{t('distance')}</span>
                       <p className="font-serif italic font-black text-3xl text-natural-olive leading-none">
-                        {run.distance} <span className="text-xs font-bold text-natural-sage">KM</span>
+                        {run.distance} <span className="text-xs font-bold text-natural-sage">{language === 'ar' ? 'كلم' : 'KM'}</span>
                       </p>
                       {run.elevationGain && run.elevationGain > 0 ? (
                         <span className="text-xs text-natural-sage font-bold block mt-0.5">+{run.elevationGain}m d+</span>
@@ -567,7 +596,7 @@ export default function OutingsPlanning({
 
                     {/* Participants count bubble */}
                     <div className="px-3.5 py-2 bg-natural-bone rounded-xl text-center border border-natural-border">
-                      <span className="text-xs text-natural-sage block font-bold">Abonnés</span>
+                      <span className="text-xs text-natural-sage block font-bold">{t('participants')}</span>
                       <span className="text-sm font-bold text-natural-olive flex items-center gap-1 justify-center">
                         <Users className="w-3.5 h-3.5 text-natural-sage" />
                         {run.participants.length}
@@ -591,14 +620,14 @@ export default function OutingsPlanning({
                       {isUserRegistered ? (
                         <>
                           <X className="w-4 h-4" />
-                          Se désinscrire
+                          {t('unregister')}
                         </>
                       ) : isFull ? (
-                        'Complet'
+                        language === 'ar' ? 'مكتمل' : 'Full'
                       ) : (
                         <>
                           <Check className="w-4 h-4 text-white bg-white/20 rounded-full" />
-                          S'inscrire
+                          {t('register')}
                         </>
                       )}
                     </button>
@@ -611,43 +640,47 @@ export default function OutingsPlanning({
                   onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
                   className="px-5 py-3.5 bg-natural-sage-light/10 border-t border-natural-divider rounded-b-3xl flex items-center justify-between text-sm text-natural-sage hover:bg-natural-sage-light/30 cursor-pointer transition select-none font-bold"
                 >
-                  <p className="truncate max-w-[280px] md:max-w-md text-xs md:text-sm text-natural-sage font-medium italic">
+                  <p className={`truncate max-w-[280px] md:max-w-md text-xs md:text-sm text-natural-sage font-medium italic ${language === 'ar' ? 'text-right' : ''}`}>
                     {run.description}
                   </p>
                   <span className="text-natural-olive text-xs font-black uppercase tracking-wider flex items-center gap-0.5 shrink-0">
-                    {isExpanded ? 'Masquer détails ▲' : 'Détails & Participants ▼'}
+                    {isExpanded 
+                      ? (language === 'ar' ? 'إخفاء التفاصيل ▲' : language === 'en' ? 'Hide details ▲' : 'Masquer détails ▲')
+                      : (language === 'ar' ? 'التفاصيل والمشاركون ▼' : language === 'en' ? 'Details & Participants ▼' : 'Détails & Participants ▼')
+                    }
                   </span>
                 </div>
 
                 {/* Expanded Details section */}
                 {isExpanded && (
                   <div className="p-5 md:p-6 bg-natural-bone/40 border-t border-natural-divider space-y-5 animate-fade-in text-xs rounded-b-3xl">
-                    
                     {/* Admin & Coach exclusive logistics panel */}
                     {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
-                      <div className="bg-white border-2 border-natural-olive/35 rounded-2xl p-4.5 space-y-4 shadow-sm">
-                        <div className="flex items-center justify-between border-b border-natural-divider pb-2.5">
-                          <div className="flex items-center gap-1.5">
+                      <div className={`bg-white border-2 border-natural-olive/35 rounded-2xl p-4.5 space-y-4 shadow-sm ${language === 'ar' ? 'text-right' : ''}`}>
+                        <div className={`flex items-center justify-between border-b border-natural-divider pb-2.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                          <div className={`flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                             <Shield className="w-5 h-5 text-natural-olive animate-pulse shrink-0" />
                             <div>
                               <h4 className="font-bold text-natural-olive uppercase tracking-wide text-xs">
-                                👑 Panneau de Logistique & Budgets (Réservé aux Admins & Coachs)
+                                {language === 'ar' ? '👑 لوحة الخدمات اللوجستية والميزانيات (خاصة بالمسؤولين والمدربين)' : '👑 Panneau de Logistique & Budgets (Réservé aux Admins & Coachs)'}
                               </h4>
                               <p className="text-[10px] text-natural-sage font-semibold uppercase tracking-wider">
-                                {run.isOrWilaya ? `Sortie Nationale logistique • ${run.destinationWilaya || 'Hors Wilaya'}` : 'Sortie locale • Mostaganem'}
+                                {run.isOrWilaya 
+                                  ? (language === 'ar' ? `خرجة وطنية لوجستية • ${run.destinationWilaya || 'خارج الولاية'}` : `Sortie Nationale logistique • ${run.destinationWilaya || 'Hors Wilaya'}`)
+                                  : (language === 'ar' ? 'خرجة محلية • مستغانم' : 'Sortie locale • Mostaganem')}
                               </p>
                             </div>
                           </div>
                           <span className="text-[9px] bg-natural-olive text-white px-2.5 py-0.5 rounded font-mono font-bold">
-                            Espace Manager
+                            {language === 'ar' ? 'مساحة المسير' : 'Espace Manager'}
                           </span>
                         </div>
 
                         {/* Assign a new runner dropdown */}
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-natural-bone p-3 rounded-xl border border-natural-border">
-                          <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1.5 shrink-0">
+                        <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-natural-bone p-3 rounded-xl border border-natural-border ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                          <span className={`text-[11px] font-bold text-natural-olive flex items-center gap-1.5 shrink-0 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                             <UserPlus className="w-4 h-4 text-natural-olive" />
-                            Inscrire un coureur directement :
+                            {language === 'ar' ? 'تسجيل عداء مباشرة:' : 'Inscrire un coureur directement :'}
                           </span>
                           <select
                             onChange={(e) => {
@@ -660,12 +693,13 @@ export default function OutingsPlanning({
                               e.target.value = ''; // Reset select
                             }}
                             className="text-[11px] font-bold px-3 py-2 bg-white text-natural-text border border-natural-border rounded-lg outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
+                            dir={language === 'ar' ? 'rtl' : 'ltr'}
                           >
-                            <option value="">-- Sélectionner un athlète à ajouter --</option>
+                            <option value="">{language === 'ar' ? '-- اختر عداءً لإضافته --' : '-- Sélectionner un athlète à ajouter --'}</option>
                             {runners
                               .filter(r => !run.participants.some(p => p.id === r.id))
                               .map(r => (
-                                <option key={r.id} value={r.id}>{r.name} ({r.username || 'Pas d\'username'})</option>
+                                <option key={r.id} value={r.id}>{r.name} ({r.username || (language === 'ar' ? 'بدون اسم مستخدم' : 'Pas d\'username')})</option>
                               ))}
                           </select>
                         </div>
@@ -679,16 +713,16 @@ export default function OutingsPlanning({
                           <>
                             {/* Version Ordinateur / Tablette (Gros Tableau visible sur tablettes et écrans larges) */}
                             <div className="hidden md:block overflow-x-auto">
-                              <table className="w-full text-left text-[11px] border-collapse min-w-[650px]">
+                              <table className={`w-full text-left text-[11px] border-collapse min-w-[650px] ${language === 'ar' ? 'text-right' : ''}`}>
                                 <thead>
-                                  <tr className="border-b border-natural-border text-natural-sage font-bold font-mono tracking-wider">
-                                    <th className="py-2">Athlète</th>
-                                    <th className="py-2">Dossard</th>
-                                    <th className="py-2">Transport (Bus)</th>
-                                    <th className="py-2">Lmbata / Nuitée</th>
-                                    <th className="py-2 text-right">Prix Total</th>
-                                    <th className="py-2 text-center">Versement</th>
-                                    <th className="py-2 text-center">Action</th>
+                                  <tr className={`border-b border-natural-border text-natural-sage font-bold font-mono tracking-wider ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'العداء' : 'Athlète'}</th>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'الرقم' : 'Dossard'}</th>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'النقل (Bus)' : 'Transport (Bus)'}</th>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'المبيت / الليل' : 'Lmbata / Nuitée'}</th>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{language === 'ar' ? 'إجمالي السعر' : 'Prix Total'}</th>
+                                    <th className="py-2 text-center">{language === 'ar' ? 'التحويل' : 'Versement'}</th>
+                                    <th className="py-2 text-center">{language === 'ar' ? 'إجراء' : 'Action'}</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-natural-divider">
@@ -770,41 +804,46 @@ export default function OutingsPlanning({
                                               />
                                               <span className="text-[9px] font-mono text-natural-sage">DA</span>
                                             </div>
-                                            {partic.customPrice !== undefined && (
-                                              <button
-                                                onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
-                                                className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
-                                              >
-                                                Rétablir standard ({stdTotal} DA)
-                                              </button>
-                                            )}
-                                          </div>
-                                        </td>
-                                        <td className="py-2 text-center">
-                                          <button
-                                            onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
-                                            className={`px-2 py-1 rounded text-[10px] font-bold border transition ${
-                                              partic.isPaid
-                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                                                : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                                            }`}
-                                          >
-                                            {partic.isPaid ? '🟢 Payé' : '🔴 Non payé'}
-                                          </button>
-                                        </td>
-                                        <td className="py-2 text-center">
-                                          <button
-                                            onClick={() => {
-                                              if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
-                                                onRemoveParticipantByAdmin(run.id, partic.id);
-                                              }
-                                            }}
-                                            title="Désinscrire l'athlète"
-                                            className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </td>
+                                              {partic.customPrice !== undefined && (
+                                                <button
+                                                  onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
+                                                  className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
+                                                >
+                                                  {language === 'ar' ? `استعادة الافتراضي (${stdTotal} دج)` : `Rétablir standard (${stdTotal} DA)`}
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="py-2 text-center">
+                                            <button
+                                              onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
+                                              className={`px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                                partic.isPaid
+                                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                                  : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                                              }`}
+                                            >
+                                              {partic.isPaid 
+                                                ? (language === 'ar' ? '🟢 مدفوع' : '🟢 Payé') 
+                                                : (language === 'ar' ? '🔴 غير مدفوع' : '🔴 Non payé')}
+                                            </button>
+                                          </td>
+                                          <td className="py-2 text-center">
+                                            <button
+                                              onClick={() => {
+                                                const msg = language === 'ar' 
+                                                  ? `هل تريد إلغاء تسجيل ${partic.name} من هذه الخرجة؟` 
+                                                  : `Voulez-vous désinscrire ${partic.name} de cette sortie ?`;
+                                                if (window.confirm(msg)) {
+                                                  onRemoveParticipantByAdmin(run.id, partic.id);
+                                                }
+                                              }}
+                                              title={language === 'ar' ? 'إلغاء تسجيل العداء' : "Désinscrire l'athlète"}
+                                              className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </td>
                                       </tr>
                                     );
                                   })}
@@ -996,11 +1035,11 @@ export default function OutingsPlanning({
                       {/* Detailed Instruction Panel */}
                       <div className="md:col-span-2 space-y-3">
                         <div>
-                          <h4 className="font-bold text-natural-olive uppercase tracking-widest font-mono text-[10px] mb-1 flex items-center gap-1.5">
+                          <h4 className={`font-bold text-natural-olive uppercase tracking-widest font-mono text-[10px] mb-1 flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
                             <Compass className="w-3.5 h-3.5 text-natural-accent" />
-                            Description & Trajet du Club
+                            {language === 'ar' ? 'الوصف ومسار النادي' : 'Description & Trajet du Club'}
                           </h4>
-                          <p className="text-natural-text leading-relaxed text-xs font-semibold">
+                          <p className={`text-natural-text leading-relaxed text-xs font-semibold ${language === 'ar' ? 'text-right' : ''}`}>
                             {run.description}
                           </p>
                         </div>
@@ -1015,19 +1054,19 @@ export default function OutingsPlanning({
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-natural-olive">
                               <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
-                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🚌 Transport Club</span>
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">{language === 'ar' ? '🚌 نقل النادي' : '🚌 Transport Club'}</span>
                                 <span className="font-serif italic font-extrabold text-sm">{run.transportPrice || 0} DA</span>
                               </div>
                               <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
-                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Single (1p)</span>
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">{language === 'ar' ? '🏨 غرفة فردية (1ش)' : '🏨 Chambre Single (1p)'}</span>
                                 <span className="font-serif italic font-extrabold text-sm">{run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA</span>
                               </div>
                               <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
-                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Double (2p)</span>
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">{language === 'ar' ? '🏨 غرفة مزدوجة (2ش)' : '🏨 Chambre Double (2p)'}</span>
                                 <span className="font-serif italic font-extrabold text-sm">{run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA</span>
                               </div>
                               <div className="bg-white/60 p-3 rounded-xl border border-amber-200 text-center">
-                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">🏨 Chambre Triple (3p)</span>
+                                <span className="font-mono text-[9px] block font-bold text-amber-900 uppercase">{language === 'ar' ? '🏨 غرفة ثلاثية (3ش)' : '🏨 Chambre Triple (3p)'}</span>
                                 <span className="font-serif italic font-extrabold text-sm">{run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA</span>
                               </div>
                             </div>
@@ -1202,14 +1241,14 @@ export default function OutingsPlanning({
                           </div>
                         )}
 
-                        <div className="p-4 bg-natural-sage-light/35 border border-natural-border/70 rounded-xl space-y-1">
-                          <p className="font-bold text-natural-olive text-[11px] flex items-center gap-1">
-                            📢 Consignes Spéciales :
+                        <div className={`p-4 bg-natural-sage-light/35 border border-natural-border/70 rounded-xl space-y-1 ${language === 'ar' ? 'text-right' : ''}`}>
+                          <p className={`font-bold text-natural-olive text-[11px] flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                            {language === 'ar' ? '📢 تعليمات خاصة:' : '📢 Consignes Spéciales :'}
                           </p>
-                          <ul className="list-disc pl-4 space-y-1 text-natural-text font-medium text-[11px]">
-                            <li>Soyez à l'heure : le briefing des étirements commence 10min avant le départ.</li>
-                            <li>Emmenez votre bouteille d'eau ou système d'hydratation de 500ml minimum.</li>
-                            <li>En cas de retard, contactez l'un des admins ou signalez-vous sur le canal du club.</li>
+                          <ul className={`list-disc space-y-1 text-natural-text font-medium text-[11px] ${language === 'ar' ? 'pr-4 list-inside' : 'pl-4'}`}>
+                            <li>{language === 'ar' ? 'كن في الموعد: يبدأ شرح التمارين قبل 10 دقائق من الانطلاق.' : "Soyez à l'heure : le briefing des étirements commence 10min avant le départ."}</li>
+                            <li>{language === 'ar' ? 'أحضر زجاجة الماء الخاصة بك أو نظام ترطيب بسعة 500 مل على الأقل.' : "Emmenez votre bouteille d'eau ou système d'hydratation de 500ml minimum."}</li>
+                            <li>{language === 'ar' ? 'في حالة التأخر، اتصل بأحد المسؤولين أو أبلغنا على قناة النادي.' : "En cas de retard, contactez l'un des admins ou signalez-vous sur le canal du club."}</li>
                           </ul>
                         </div>
                       </div>
