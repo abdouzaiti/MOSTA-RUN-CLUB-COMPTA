@@ -350,10 +350,18 @@ CREATE TABLE IF NOT EXISTS runners (
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
   email TEXT NOT NULL,
+  username TEXT,
   blood_type TEXT,
   run_club_role TEXT DEFAULT 'Membre',
+  password TEXT,
+  password_changed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si la table runners existe déjà d'une ancienne version, on lui rajoute les nouvelles colonnes :
+ALTER TABLE runners ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE runners ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE runners ADD COLUMN IF NOT EXISTS password_changed BOOLEAN DEFAULT FALSE;
 
 -- 2. Table des sorties (Runs)
 CREATE TABLE IF NOT EXISTS runs (
@@ -399,12 +407,19 @@ ALTER TABLE runners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les politiques existantes si elles existent déjà pour éviter les erreurs
+DROP POLICY IF EXISTS "Allow public read on runners" ON runners;
+DROP POLICY IF EXISTS "Allow public write on runners" ON runners;
 CREATE POLICY "Allow public read on runners" ON runners FOR SELECT USING (true);
 CREATE POLICY "Allow public write on runners" ON runners FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow public read on runs" ON runs;
+DROP POLICY IF EXISTS "Allow public write on runs" ON runs;
 CREATE POLICY "Allow public read on runs" ON runs FOR SELECT USING (true);
 CREATE POLICY "Allow public write on runs" ON runs FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow public read on reports" ON reports;
+DROP POLICY IF EXISTS "Allow public write on reports" ON reports;
 CREATE POLICY "Allow public read on reports" ON reports FOR SELECT USING (true);
 CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
 
@@ -585,18 +600,25 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
             <span className="font-semibold">Bahr, Sahara w Riyah Al-Mostaganem 🇩🇿</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setShowSqlSetup(!showSqlSetup)}
+              className="flex items-center gap-1 hover:text-white hover:bg-slate-800 text-slate-800 border border-slate-300 rounded-xl px-2.5 py-1.5 transition cursor-pointer font-bold font-mono text-[10px]"
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              {showSqlSetup ? "Masquer Script SQL" : "Afficher Script SQL Supabase"}
+            </button>
             <button
               onClick={handleClearDemoData}
-              className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-2.5 py-1 transition cursor-pointer font-bold"
+              className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-2.5 py-1.5 transition cursor-pointer font-bold"
             >
               🗑️ Vider données démo
             </button>
             <button
               onClick={handleResetToSimulationDefaults}
-              className="flex items-center gap-1 hover:text-natural-olive transition font-mono text-[10px] bg-white border border-natural-border rounded-xl px-2.5 py-1 cursor-pointer font-semibold"
+              className="flex items-center gap-1 hover:text-natural-olive transition font-mono text-[10px] bg-white border border-natural-border rounded-xl px-2.5 py-1.5 cursor-pointer font-semibold"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="w-3" />
               Réinitialiser simulation presets
             </button>
           </div>

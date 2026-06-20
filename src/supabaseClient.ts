@@ -71,12 +71,19 @@ ALTER TABLE runners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+-- Supprimer les politiques existantes si elles existent déjà pour éviter les erreurs
+DROP POLICY IF EXISTS "Allow public read on runners" ON runners;
+DROP POLICY IF EXISTS "Allow public write on runners" ON runners;
 CREATE POLICY "Allow public read on runners" ON runners FOR SELECT USING (true);
 CREATE POLICY "Allow public write on runners" ON runners FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow public read on runs" ON runs;
+DROP POLICY IF EXISTS "Allow public write on runs" ON runs;
 CREATE POLICY "Allow public read on runs" ON runs FOR SELECT USING (true);
 CREATE POLICY "Allow public write on runs" ON runs FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow public read on reports" ON reports;
+DROP POLICY IF EXISTS "Allow public write on reports" ON reports;
 CREATE POLICY "Allow public read on reports" ON reports FOR SELECT USING (true);
 CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);
  */
