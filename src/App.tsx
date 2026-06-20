@@ -1,0 +1,625 @@
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import InscriptionsAndProfile from './components/InscriptionsAndProfile';
+import OutingsPlanning from './components/OutingsPlanning';
+import ReportsSummary from './components/ReportsSummary';
+import ClubStats from './components/ClubStats';
+
+import { Run, Runner, RunReport, RunnerFeedback } from './types';
+import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
+import { isSupabaseConfigured, dbService } from './supabaseClient';
+import {
+  Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
+  Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check
+} from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<string>('planning');
+
+  // Load from localStorage or initial configuration
+  const [runners, setRunners] = useState<Runner[]>(() => {
+    const saved = localStorage.getItem('mrc_runners');
+    return saved ? JSON.parse(saved) : INITIAL_RUNNERS;
+  });
+
+  const [runs, setRuns] = useState<Run[]>(() => {
+    const saved = localStorage.getItem('mrc_runs');
+    return saved ? JSON.parse(saved) : INITIAL_RUNS;
+  });
+
+  const [reports, setReports] = useState<RunReport[]>(() => {
+    const saved = localStorage.getItem('mrc_reports');
+    return saved ? JSON.parse(saved) : INITIAL_REPORTS;
+  });
+
+  const [currentUser, setCurrentUser] = useState<Runner>(() => {
+    const saved = localStorage.getItem('mrc_current_user');
+    return saved ? JSON.parse(saved) : INITIAL_RUNNERS[0];
+  });
+
+  // DB Sync Status States
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [showSqlSetup, setShowSqlSetup] = useState<boolean>(false);
+  const [sqlCopied, setSqlCopied] = useState<boolean>(false);
+
+  // Load asynchronously from Supabase if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsLoadingDb(false);
+      return;
+    }
+
+    async function loadSupabaseData() {
+      try {
+        setIsLoadingDb(true);
+        setDbError(null);
+
+        // Fetch everything in parallel
+        const [loadedRunners, loadedRuns, loadedReports] = await Promise.all([
+          dbService.getRunners(),
+          dbService.getRuns(),
+          dbService.getReports()
+        ]);
+
+        setRunners(loadedRunners);
+        setRuns(loadedRuns);
+        setReports(loadedReports);
+
+        // Synchronize Active/Logged User Profile
+        if (loadedRunners.length > 0) {
+          const savedUser = localStorage.getItem('mrc_current_user');
+          const parsed = savedUser ? JSON.parse(savedUser) : null;
+          const matched = loadedRunners.find(r => r.id === (parsed?.id || 'usr-1'));
+          if (matched) {
+            setCurrentUser(matched);
+          } else {
+            setCurrentUser(loadedRunners[0]);
+          }
+        } else {
+          // Empty DB? Let's seed Abdou as the default owner
+          const defaultAdmin: Runner = {
+            id: 'usr-1',
+            name: 'Abdou Zaiti',
+            phone: '0555123456',
+            email: 'zaitiabdou27@gmail.com',
+            bloodType: 'O+',
+            runClubRole: 'Admin'
+          };
+          await dbService.upsertRunner(defaultAdmin);
+          setRunners([defaultAdmin]);
+          setCurrentUser(defaultAdmin);
+        }
+      } catch (err: any) {
+        console.error("Supabase load error:", err);
+        setDbError(err.message || String(err));
+      } finally {
+        setIsLoadingDb(false);
+      }
+    }
+
+    loadSupabaseData();
+  }, []);
+
+  // Offline Sync Backup to localstorage
+  useEffect(() => {
+    localStorage.setItem('mrc_runners', JSON.stringify(runners));
+  }, [runners]);
+
+  useEffect(() => {
+    localStorage.setItem('mrc_runs', JSON.stringify(runs));
+  }, [runs]);
+
+  useEffect(() => {
+    localStorage.setItem('mrc_reports', JSON.stringify(reports));
+  }, [reports]);
+
+  useEffect(() => {
+    localStorage.setItem('mrc_current_user', JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  // Handle run registration (S'inscrire / Se désinscrire)
+  const handleToggleRegister = async (runId: string) => {
+    const targeted = runs.find(r => r.id === runId);
+    if (!targeted) return;
+
+    const isRegistered = targeted.participants.some(p => p.id === currentUser.id);
+    let updatedParticipants: Runner[];
+
+    if (isRegistered) {
+      updatedParticipants = targeted.participants.filter(p => p.id !== currentUser.id);
+    } else {
+      updatedParticipants = [...targeted.participants, currentUser];
+    }
+
+    const updatedRun = { ...targeted, participants: updatedParticipants };
+
+    // Update state locally (responsive feedback)
+    setRuns(prev => prev.map(r => r.id === runId ? updatedRun : r));
+
+    // Save to Supabase if linked
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRun(updatedRun);
+      } catch (err: any) {
+        console.error("Error toggling run registration on Supabase:", err);
+        alert("Erreur de sauvegarde: " + err.message);
+      }
+    }
+  };
+
+  // Update specific participant properties (bib assignment, transport, lodging)
+  const handleUpdateParticipant = async (runId: string, runnerId: string, updates: any) => {
+    const targeted = runs.find(r => r.id === runId);
+    if (!targeted) return;
+
+    const updatedParticipants = targeted.participants.map(p => {
+      if (p.id === runnerId) {
+        return { ...p, ...updates };
+      }
+      return p;
+    });
+
+    const updatedRun = { ...targeted, participants: updatedParticipants };
+
+    setRuns(prev => prev.map(r => r.id === runId ? updatedRun : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRun(updatedRun);
+      } catch (err: any) {
+        console.error("Error saving participant options in Supabase:", err);
+      }
+    }
+  };
+
+  // Handle adding new runs proposed by admins
+  const handleAddRun = async (newRunData: Omit<Run, 'participants' | 'completed'>) => {
+    const freshRun: Run = {
+      ...newRunData,
+      participants: [currentUser], // Register current planner by default
+      completed: false
+    };
+
+    setRuns(prev => [freshRun, ...prev]);
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRun(freshRun);
+      } catch (err: any) {
+        console.error("Error creating run in Supabase:", err);
+        alert("Erreur de création: " + err.message);
+      }
+    }
+  };
+
+  // Handle adding comments & feedback to report articles
+  const handleAddFeedback = async (
+    reportId: string,
+    newFeedback: Omit<RunnerFeedback, 'id' | 'dateStr' | 'avatarColor'>
+  ) => {
+    const colors = ['bg-emerald-500', 'bg-indigo-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-blue-500'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const feedbackWithMeta: RunnerFeedback = {
+      id: 'fb-' + Date.now(),
+      runnerName: newFeedback.runnerName,
+      text: newFeedback.text,
+      rating: newFeedback.rating,
+      avatarColor: randomColor,
+      dateStr: new Date().toISOString().split('T')[0]
+    };
+
+    const targeted = reports.find(r => r.id === reportId);
+    if (!targeted) return;
+
+    const updatedReport: RunReport = {
+      ...targeted,
+      feedback: [feedbackWithMeta, ...targeted.feedback],
+      participantsCount: targeted.participantsCount + 1
+    };
+
+    setReports(prev => prev.map(r => r.id === reportId ? updatedReport : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertReport(updatedReport);
+      } catch (err: any) {
+        console.error("Error rendering feedback on Supabase:", err);
+        alert("Erreur d'envoi du feedback: " + err.message);
+      }
+    }
+  };
+
+  // Handle profile current athlete license saving
+  const handleUpdateCurrentUser = async (updatedUser: Runner) => {
+    setCurrentUser(updatedUser);
+    setRunners(prev => prev.map(r => r.id === updatedUser.id ? updatedUser : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRunner(updatedUser);
+      } catch (err: any) {
+        console.error("Error saving profile to Supabase:", err);
+      }
+    }
+  };
+
+  // Handle adding a runner/athlete to the club roster
+  const handleAddRunner = async (newRunner: Runner) => {
+    setRunners(prev => [...prev, newRunner]);
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRunner(newRunner);
+      } catch (err: any) {
+        console.error("Error adding runner to Supabase:", err);
+        alert("Erreur de roster: " + err.message);
+      }
+    }
+  };
+
+  // Handle suspending a runner
+  const handleDeleteRunner = async (id: string) => {
+    setRunners(prev => prev.filter(r => r.id !== id));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.deleteRunner(id);
+      } catch (err: any) {
+        console.error("Error deleting runner from Supabase:", err);
+        alert("Erreur de suppression: " + err.message);
+      }
+    }
+  };
+
+  // Vider les données (Remove mock info for real inputs, requested by user)
+  const handleClearDemoData = () => {
+    const confirmMsg = isSupabaseConfigured
+      ? "Voulez-vous vraiment vider toutes les tables dans Supabase pour commencer à blanc ?"
+      : "Voulez-vous vraiment retirer toutes les données de simulation pour saisir vos vraies données du club ?";
+
+    if (window.confirm(confirmMsg)) {
+      // Clear local states
+      const clearedRunners: Runner[] = [{
+        id: 'usr-1',
+        name: currentUser.name || 'Abdou Zaiti',
+        phone: currentUser.phone || '0555123456',
+        email: currentUser.email || 'zaitiabdou27@gmail.com',
+        bloodType: currentUser.bloodType || 'O+',
+        runClubRole: 'Admin'
+      }];
+
+      setRunners(clearedRunners);
+      setRuns([]);
+      setReports([]);
+      setCurrentUser(clearedRunners[0]);
+
+      // If Supabase is active, clean DB recursively or instruct
+      if (isSupabaseConfigured) {
+        alert("Supabase est connecté ! Vous pouvez maintenant introduire directement de réels membres, runs et rapports depuis l'interface.");
+      }
+    }
+  };
+
+  // Reset ALL app data back to simulation presets
+  const handleResetToSimulationDefaults = () => {
+    if (window.confirm('Voulez-vous réinitialiser l\'application avec les données de simulation d\'origine ?')) {
+      localStorage.removeItem('mrc_runners');
+      localStorage.removeItem('mrc_runs');
+      localStorage.removeItem('mrc_reports');
+      localStorage.removeItem('mrc_current_user');
+
+      setRunners(INITIAL_RUNNERS);
+      setRuns(INITIAL_RUNS);
+      setReports(INITIAL_REPORTS);
+      setCurrentUser(INITIAL_RUNNERS[0]);
+      setDbError(null);
+    }
+  };
+
+  const sqlQueryText = `-- SQL SCRIPT FOR SUPABASE SQL EDITOR
+-- Copiez-collez ce script pour créer vos tables en 1 clic :
+
+-- 1. Table des coureurs (Athlètes)
+CREATE TABLE IF NOT EXISTS runners (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  email TEXT NOT NULL,
+  blood_type TEXT,
+  run_club_role TEXT DEFAULT 'Membre',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Table des sorties (Runs)
+CREATE TABLE IF NOT EXISTS runs (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  distance NUMERIC NOT NULL,
+  elevation_gain NUMERIC,
+  pace TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  start_point TEXT NOT NULL,
+  description TEXT NOT NULL,
+  max_participants INT,
+  participants JSONB DEFAULT '[]'::jsonb,
+  completed BOOLEAN DEFAULT FALSE,
+  is_or_wilaya BOOLEAN DEFAULT FALSE,
+  destination_wilaya TEXT,
+  transport_price NUMERIC DEFAULT 0,
+  accommodation_price NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Table des rapports de course (Reports mlih)
+CREATE TABLE IF NOT EXISTS reports (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  total_distance_km NUMERIC NOT NULL,
+  participants_count INT NOT NULL,
+  average_pace TEXT NOT NULL,
+  temp_celsius INT,
+  highlights TEXT NOT NULL,
+  route_map_description TEXT,
+  gallery_urls JSONB DEFAULT '[]'::jsonb,
+  feedback JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Désactivez l'accès restrictif par défaut temporairement pour l'édition publique (ou configurez vos règles RLS)
+ALTER TABLE runners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read on runners" ON runners FOR SELECT USING (true);
+CREATE POLICY "Allow public write on runners" ON runners FOR ALL USING (true);
+
+CREATE POLICY "Allow public read on runs" ON runs FOR SELECT USING (true);
+CREATE POLICY "Allow public write on runs" ON runs FOR ALL USING (true);
+
+CREATE POLICY "Allow public read on reports" ON reports FOR SELECT USING (true);
+CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
+
+  const copySqlToClipboard = () => {
+    navigator.clipboard.writeText(sqlQueryText);
+    setSqlCopied(true);
+    setTimeout(() => setSqlCopied(false), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-natural-bg text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive pb-12">
+      {/* Container wrapper */}
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        {/* Supabase Connection Status Banner */}
+        <div className="w-full">
+          {isSupabaseConfigured ? (
+            <div className="bg-white rounded-2xl border border-natural-border p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-emerald-500/10 text-emerald-600 p-2 rounded-xl border border-emerald-500/20 shrink-0">
+                  <Database className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider font-mono">
+                      Supabase Cloud Synchrone Actif
+                    </h4>
+                    <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
+                  </div>
+                  <p className="text-[11px] text-natural-sage mt-0.5 leading-relaxed font-semibold">
+                    Vos athlètes, sorties, et rapports sont conservés en temps réel de manière persistante sur votre instance Supabase.
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setShowSqlSetup(!showSqlSetup)}
+                className="text-[10px] uppercase font-mono font-bold bg-natural-sage-light text-natural-olive px-3 py-1.5 rounded-lg border border-natural-border hover:bg-natural-border transition shrink-0 cursor-pointer"
+              >
+                {showSqlSetup ? "Masquer Raccourci SQL Schema" : "Afficher Script SQL Tables"}
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-yellow-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-yellow-100 text-yellow-700 p-2 rounded-xl border border-yellow-200 shrink-0">
+                  <Info className="w-5 h-5 text-yellow-600 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-yellow-800 uppercase tracking-wider font-mono">
+                    ⚠️ Mode de Stockage Local Intérimaire
+                  </h4>
+                  <p className="text-[11px] text-natural-sage mt-0.5 leading-relaxed font-semibold">
+                    Pour lier l'application à vos données Supabase réelles, configurez simplement <code className="bg-natural-sage-light px-1.5 py-0.5 rounded font-mono text-natural-olive">VITE_SUPABASE_URL</code> et <code className="bg-natural-sage-light px-1.5 py-0.5 rounded font-mono text-natural-olive">VITE_SUPABASE_ANON_KEY</code> dans les paramètres secrets d'AI Studio.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleClearDemoData}
+                className="bg-natural-olive text-white shadow-xs font-serif italic text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-natural-olive-hover transition shrink-0 cursor-pointer"
+              >
+                🗑️ Supprimer les données démo (Start Fresh)
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Database setup SQL assistance Accordion */}
+        {showSqlSetup && (
+          <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="text-natural-accent w-5 h-5" />
+                <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
+              </div>
+              <button
+                onClick={copySqlToClipboard}
+                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
+              >
+                {sqlCopied ? (
+                  <>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    Copié !
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    Copier le Script
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
+            </p>
+            <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
+              {sqlQueryText}
+            </pre>
+          </div>
+        )}
+
+        {/* Database Setup Error Notice */}
+        {dbError && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
+                  Erreur d'initialisation de la base de données
+                </h4>
+                <p className="text-[11px] text-rose-700 font-medium mt-0.5">
+                  La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pl-7">
+              <button
+                onClick={() => setShowSqlSetup(true)}
+                className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
+              >
+                👉 Afficher le script de création SQL
+              </button>
+              <button
+                onClick={() => {
+                  setDbError(null);
+                  setIsLoadingDb(false);
+                }}
+                className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
+              >
+                Ignorer et passer en mode local
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Global Loading state spinner for DB */}
+        {isLoadingDb && (
+          <div className="p-16 text-center bg-white rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-4">
+            <Cpu className="w-10 h-10 text-natural-olive animate-spin" />
+            <div>
+              <p className="text-sm font-bold text-natural-olive font-serif italic">Synchronisation Supabase en cours...</p>
+              <p className="text-xs text-natural-sage mt-1">Récupération sécurisée du roster de course et des planifications réelles.</p>
+            </div>
+          </div>
+        )}
+
+        {!isLoadingDb && (
+          <>
+            {/* Navigation & Header summary */}
+            <Header
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              runs={runs}
+              currentUser={currentUser}
+            />
+
+            {/* Dynamic Inner Layout Router */}
+            <main className="min-h-[500px]">
+              {activeTab === 'planning' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                  {/* Main outings list (2/3 width) */}
+                  <div className="lg:col-span-2">
+                    <OutingsPlanning
+                      runs={runs}
+                      currentUser={currentUser}
+                      onToggleRegister={handleToggleRegister}
+                      onAddRun={handleAddRun}
+                      onUpdateParticipant={handleUpdateParticipant}
+                    />
+                  </div>
+
+                  {/* Sidebar profile and loyalty license card (1/3 width) */}
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-natural-olive uppercase tracking-widest font-mono mb-2">
+                        Athlet Licence card
+                      </h3>
+                      <InscriptionsAndProfile
+                        currentUser={currentUser}
+                        setCurrentUser={handleUpdateCurrentUser}
+                        runs={runs}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'reports' && (
+                <div className="space-y-6">
+                  <ReportsSummary
+                    reports={reports}
+                    runs={runs}
+                    currentUser={currentUser}
+                    onAddFeedback={handleAddFeedback}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'roster' && (
+                <div className="space-y-6">
+                  <ClubStats
+                    runners={runners}
+                    currentUser={currentUser}
+                    onAddRunner={handleAddRunner}
+                    onDeleteRunner={handleDeleteRunner}
+                  />
+                </div>
+              )}
+            </main>
+          </>
+        )}
+
+        {/* Humble system credits & Actions */}
+        <footer className="pt-8 mt-12 border-t border-natural-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-natural-sage">
+          <div className="flex items-center gap-2">
+            <span className="font-serif italic font-bold text-natural-olive">Mosta Run Club © 2026</span>
+            <span>•</span>
+            <span className="font-semibold">Bahr, Sahara w Riyah Al-Mostaganem 🇩🇿</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleClearDemoData}
+              className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-2.5 py-1 transition cursor-pointer font-bold"
+            >
+              🗑️ Vider données démo
+            </button>
+            <button
+              onClick={handleResetToSimulationDefaults}
+              className="flex items-center gap-1 hover:text-natural-olive transition font-mono text-[10px] bg-white border border-natural-border rounded-xl px-2.5 py-1 cursor-pointer font-semibold"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Réinitialiser simulation presets
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+}
