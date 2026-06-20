@@ -216,6 +216,54 @@ export default function App() {
     }
   };
 
+  // Add athlete participant directly as administrator/coach
+  const handleAddParticipantByAdmin = async (runId: string, runner: Runner) => {
+    const targeted = runs.find(r => r.id === runId);
+    if (!targeted) return;
+
+    const isAlready = targeted.participants.some(p => p.id === runner.id);
+    if (isAlready) return;
+
+    const newParticipant = {
+      ...runner,
+      useTransport: true,       // Default to auto transport
+      useAccommodation: false,  // Default to false lodging
+      isPaid: false
+    };
+
+    const updatedParticipants = [...targeted.participants, newParticipant];
+    const updatedRun = { ...targeted, participants: updatedParticipants };
+
+    setRuns(prev => prev.map(r => r.id === runId ? updatedRun : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRun(updatedRun);
+      } catch (err: any) {
+        console.error("Error adding participant by admin in Supabase:", err);
+      }
+    }
+  };
+
+  // Unregister athlete participant directly as administrator/coach
+  const handleRemoveParticipantByAdmin = async (runId: string, runnerId: string) => {
+    const targeted = runs.find(r => r.id === runId);
+    if (!targeted) return;
+
+    const updatedParticipants = targeted.participants.filter(p => p.id !== runnerId);
+    const updatedRun = { ...targeted, participants: updatedParticipants };
+
+    setRuns(prev => prev.map(r => r.id === runId ? updatedRun : r));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertRun(updatedRun);
+      } catch (err: any) {
+        console.error("Error removing participant by admin in Supabase:", err);
+      }
+    }
+  };
+
   // Handle adding comments & feedback to report articles
   const handleAddFeedback = async (
     reportId: string,
@@ -548,6 +596,9 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                       onToggleRegister={handleToggleRegister}
                       onAddRun={handleAddRun}
                       onUpdateParticipant={handleUpdateParticipant}
+                      runners={runners}
+                      onAddParticipantByAdmin={handleAddParticipantByAdmin}
+                      onRemoveParticipantByAdmin={handleRemoveParticipantByAdmin}
                     />
                   </div>
 

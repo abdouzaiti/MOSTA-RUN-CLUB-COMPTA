@@ -16,6 +16,8 @@ export interface RunParticipant extends Runner {
   bibNumber?: string;          // Numéro de dossard tawa3hom
   useTransport?: boolean;      // Transport ma3na (Oui / Non)
   useAccommodation?: boolean;  // Lmbata / Hébergement  (Oui / Non)
+  isPaid?: boolean;            // Versement / payé (Oui / Non)
+  customPrice?: number;        // Prix ajusté manuellement (Algerian DA)
 }
 
 export interface Run {

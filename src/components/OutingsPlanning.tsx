@@ -3,7 +3,8 @@ import { Run, Runner, RunParticipant } from '../types';
 import {
   Calendar, MapPin, Gauge, ShieldAlert, Plus, Users, Search, Filter,
   Check, X, Compass, CornerDownRight, ArrowUpRight, Flame, Layers,
-  Bus, Home, Tag, UserCheck, Settings, Edit3, Save, Info, AlertCircle
+  Bus, Home, Tag, UserCheck, Settings, Edit3, Save, Info, AlertCircle,
+  UserPlus, Trash2, Coins, Shield
 } from 'lucide-react';
 
 interface OutingsPlanningProps {
@@ -12,6 +13,9 @@ interface OutingsPlanningProps {
   onToggleRegister: (runId: string) => void;
   onAddRun: (newRun: Omit<Run, 'participants' | 'completed'>) => void;
   onUpdateParticipant: (runId: string, runnerId: string, updates: Partial<RunParticipant>) => void;
+  runners: Runner[];
+  onAddParticipantByAdmin: (runId: string, runner: Runner) => void;
+  onRemoveParticipantByAdmin: (runId: string, runnerId: string) => void;
 }
 
 export default function OutingsPlanning({
@@ -19,7 +23,10 @@ export default function OutingsPlanning({
   currentUser,
   onToggleRegister,
   onAddRun,
-  onUpdateParticipant
+  onUpdateParticipant,
+  runners = [],
+  onAddParticipantByAdmin,
+  onRemoveParticipantByAdmin
 }: OutingsPlanningProps) {
   // Filtering states
   const [searchTerm, setSearchTerm] = useState('');
@@ -629,6 +636,214 @@ export default function OutingsPlanning({
                 {/* Expanded Details section */}
                 {isExpanded && (
                   <div className="p-5 md:p-6 bg-natural-bone/40 border-t border-natural-divider space-y-5 animate-fade-in text-xs rounded-b-3xl">
+                    
+                    {/* Admin & Coach exclusive logistics panel */}
+                    {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+                      <div className="bg-white border-2 border-natural-olive/35 rounded-2xl p-4.5 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-natural-divider pb-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <Shield className="w-5 h-5 text-natural-olive animate-pulse shrink-0" />
+                            <div>
+                              <h4 className="font-bold text-natural-olive uppercase tracking-wide text-xs">
+                                👑 Panneau de Logistique & Budgets (Réservé aux Admins & Coachs)
+                              </h4>
+                              <p className="text-[10px] text-natural-sage font-semibold uppercase tracking-wider">
+                                {run.isOrWilaya ? `Sortie Nationale logistique • ${run.destinationWilaya || 'Hors Wilaya'}` : 'Sortie locale • Mostaganem'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[9px] bg-natural-olive text-white px-2.5 py-0.5 rounded font-mono font-bold">
+                            Espace Manager
+                          </span>
+                        </div>
+
+                        {/* Assign a new runner dropdown */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-natural-bone p-3 rounded-xl border border-natural-border">
+                          <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1.5 shrink-0">
+                            <UserPlus className="w-4 h-4 text-natural-olive" />
+                            Inscrire un coureur directement :
+                          </span>
+                          <select
+                            onChange={(e) => {
+                              const selectedId = e.target.value;
+                              if (!selectedId) return;
+                              const matchedRunner = runners.find(r => r.id === selectedId);
+                              if (matchedRunner) {
+                                onAddParticipantByAdmin(run.id, matchedRunner);
+                              }
+                              e.target.value = ''; // Reset select
+                            }}
+                            className="text-[11px] font-bold px-3 py-2 bg-white text-natural-text border border-natural-border rounded-lg outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
+                          >
+                            <option value="">-- Sélectionner un athlète à ajouter --</option>
+                            {runners
+                              .filter(r => !run.participants.some(p => p.id === r.id))
+                              .map(r => (
+                                <option key={r.id} value={r.id}>{r.name} ({r.username || 'Pas d\'username'})</option>
+                              ))}
+                          </select>
+                        </div>
+
+                        {/* Detailed table of current registered runners in logistics */}
+                        {run.participants.length === 0 ? (
+                          <div className="p-4 text-center text-[11px] text-natural-sage italic border border-dashed border-natural-border rounded-xl">
+                            Aucun participant inscrit pour l'instant. Choisissez un athlète ci-dessus pour l'ajouter manuellement !
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-[11px] border-collapse min-w-[650px]">
+                              <thead>
+                                <tr className="border-b border-natural-border text-natural-sage font-bold font-mono tracking-wider">
+                                  <th className="py-2">Athlète</th>
+                                  <th className="py-2">Dossard</th>
+                                  <th className="py-2">Transport (Bus)</th>
+                                  <th className="py-2">Lmbata / Nuitée</th>
+                                  <th className="py-2 text-right">Prix Total</th>
+                                  <th className="py-2 text-center">Versement</th>
+                                  <th className="py-2 text-center">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-natural-divider">
+                                {run.participants.map(partic => {
+                                  const hasTransport = partic.useTransport !== false;
+                                  const hasLodging = !!partic.useAccommodation;
+                                  
+                                  const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
+                                  const costLodging = run.isOrWilaya ? (run.accommodationPrice || 0) : 0;
+                                  
+                                  const stdTotal = (hasTransport ? costTransport : 0) + (hasLodging ? costLodging : 0);
+                                  const displayPrice = partic.customPrice !== undefined ? partic.customPrice : stdTotal;
+
+                                  return (
+                                    <tr key={partic.id} className="hover:bg-natural-bone/50 transition-colors">
+                                      <td className="py-2.5 font-bold text-natural-text">
+                                        <p className="text-[11px]">{partic.name}</p>
+                                        <p className="text-[9px] font-mono font-medium text-natural-sage">
+                                          {partic.phone || 'Pas de tél.'} • {partic.bloodType || 'O+'}
+                                        </p>
+                                      </td>
+                                      <td className="py-2">
+                                        <input
+                                          type="text"
+                                          value={partic.bibNumber || ''}
+                                          placeholder="Ex. 102"
+                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { bibNumber: e.target.value })}
+                                          className="w-18 font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
+                                        />
+                                      </td>
+                                      <td className="py-2">
+                                        <select
+                                          value={hasTransport ? 'yes' : 'no'}
+                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { useTransport: e.target.value === 'yes' })}
+                                          className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                        >
+                                          <option value="yes">🚌 Bus ({costTransport} DA)</option>
+                                          <option value="no">🚫 Solo</option>
+                                        </select>
+                                      </td>
+                                      <td className="py-2">
+                                        <select
+                                          value={hasLodging ? 'yes' : 'no'}
+                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { useAccommodation: e.target.value === 'yes' })}
+                                          className="text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none"
+                                        >
+                                          <option value="yes">🏨 Nuitée ({costLodging} DA)</option>
+                                          <option value="no">🚫 Non (A/R)</option>
+                                        </select>
+                                      </td>
+                                      <td className="py-2 text-right">
+                                        <div className="flex flex-col items-end gap-0.5">
+                                          <div className="flex items-center gap-1">
+                                            <input
+                                              type="number"
+                                              value={displayPrice}
+                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { customPrice: Number(e.target.value) })}
+                                              className="w-20 font-mono font-bold text-right border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
+                                            />
+                                            <span className="text-[9px] font-mono text-natural-sage">DA</span>
+                                          </div>
+                                          {partic.customPrice !== undefined && (
+                                            <button
+                                              onClick={() => onUpdateParticipant(run.id, partic.id, { customPrice: undefined })}
+                                              className="text-[8px] font-sans font-bold text-amber-700 hover:underline hover:text-amber-800"
+                                            >
+                                              Rétablir standard ({stdTotal} DA)
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-2 text-center">
+                                        <button
+                                          onClick={() => onUpdateParticipant(run.id, partic.id, { isPaid: !partic.isPaid })}
+                                          className={`px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                            partic.isPaid
+                                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                              : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                                          }`}
+                                        >
+                                          {partic.isPaid ? '🟢 Payé' : '🔴 Non payé'}
+                                        </button>
+                                      </td>
+                                      <td className="py-2 text-center">
+                                        <button
+                                          onClick={() => {
+                                            if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
+                                              onRemoveParticipantByAdmin(run.id, partic.id);
+                                            }
+                                          }}
+                                          title="Désinscrire l'athlète"
+                                          className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {/* Outing logistical math summaries */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-natural-bone/40 p-3.5 rounded-xl border border-natural-border text-center">
+                          <div className="bg-white p-2.5 rounded-lg border border-natural-border shadow-xxs">
+                            <span className="text-[9px] text-natural-sage block font-mono font-bold uppercase leading-normal">Total Athlètes</span>
+                            <span className="text-xs font-black text-natural-olive font-mono">
+                              {run.participants.length} inscrits
+                            </span>
+                          </div>
+                          <div className="bg-white p-2.5 rounded-lg border border-natural-border shadow-xxs">
+                            <span className="text-[9px] text-natural-sage block font-mono font-bold uppercase leading-normal">Bus (Places)</span>
+                            <span className="text-xs font-black text-natural-olive font-mono">
+                              {run.participants.filter(p => p.useTransport !== false).length} places
+                            </span>
+                          </div>
+                          <div className="bg-white p-2.5 rounded-lg border border-natural-border shadow-xxs">
+                            <span className="text-[9px] text-natural-sage block font-mono font-bold uppercase leading-normal">Lmbata / Nuitées</span>
+                            <span className="text-xs font-black text-natural-olive font-mono">
+                              {run.participants.filter(p => p.useAccommodation).length} pers
+                            </span>
+                          </div>
+                          <div className="bg-white p-2.5 rounded-lg border border-natural-border shadow-xxs bg-emerald-500/5">
+                            <span className="text-[9px] text-emerald-800 block font-mono font-bold uppercase leading-normal flex items-center justify-center gap-1">
+                              <Coins className="w-3 h-3 text-emerald-700" /> Montant Collecté Club
+                            </span>
+                            <span className="text-xs font-serif font-black italic text-emerald-800">
+                              {run.participants.reduce((sum, partic) => {
+                                const hasTransport = partic.useTransport !== false;
+                                const hasLodging = !!partic.useAccommodation;
+                                const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
+                                const costLodging = run.isOrWilaya ? (run.accommodationPrice || 0) : 0;
+                                const stdTotal = (hasTransport ? costTransport : 0) + (hasLodging ? costLodging : 0);
+                                return sum + (partic.customPrice !== undefined ? partic.customPrice : stdTotal);
+                              }, 0).toLocaleString('fr-FR')} DA
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Detailed Instruction Panel */}
                       <div className="md:col-span-2 space-y-3">
