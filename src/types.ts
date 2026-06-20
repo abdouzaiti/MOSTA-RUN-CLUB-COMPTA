@@ -5,8 +5,11 @@ export interface Runner {
   name: string;
   phone: string;
   email: string;
+  username?: string;            // Identifiant de connexion unique (ex. abdou_z)
   bloodType?: string;
   runClubRole?: 'Membre' | 'Coach' | 'Admin';
+  password?: string;            // Le mot de passe (Initialement identique au Nom de l'athlète ou username)
+  passwordChanged?: boolean;    // Flag pour forcer la mise à jour au premier login
 }
 
 export interface RunParticipant extends Runner {

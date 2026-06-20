@@ -4,6 +4,7 @@ import InscriptionsAndProfile from './components/InscriptionsAndProfile';
 import OutingsPlanning from './components/OutingsPlanning';
 import ReportsSummary from './components/ReportsSummary';
 import ClubStats from './components/ClubStats';
+import LoginScreen from './components/LoginScreen';
 
 import { Run, Runner, RunReport, RunnerFeedback } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -32,9 +33,9 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_REPORTS;
   });
 
-  const [currentUser, setCurrentUser] = useState<Runner>(() => {
+  const [currentUser, setCurrentUser] = useState<Runner | null>(() => {
     const saved = localStorage.getItem('mrc_current_user');
-    return saved ? JSON.parse(saved) : INITIAL_RUNNERS[0];
+    return saved ? JSON.parse(saved) : null;
   });
 
   // DB Sync Status States
@@ -69,12 +70,20 @@ export default function App() {
         // Synchronize Active/Logged User Profile
         if (loadedRunners.length > 0) {
           const savedUser = localStorage.getItem('mrc_current_user');
-          const parsed = savedUser ? JSON.parse(savedUser) : null;
-          const matched = loadedRunners.find(r => r.id === (parsed?.id || 'usr-1'));
-          if (matched) {
-            setCurrentUser(matched);
+          if (savedUser) {
+            try {
+              const parsed = JSON.parse(savedUser);
+              const matched = loadedRunners.find(r => r.id === parsed.id);
+              if (matched) {
+                setCurrentUser(matched);
+              } else {
+                setCurrentUser(null);
+              }
+            } catch {
+              setCurrentUser(null);
+            }
           } else {
-            setCurrentUser(loadedRunners[0]);
+            setCurrentUser(null);
           }
         } else {
           // Empty DB? Let's seed Abdou as the default owner
@@ -83,12 +92,15 @@ export default function App() {
             name: 'Abdou Zaiti',
             phone: '0555123456',
             email: 'zaitiabdou27@gmail.com',
+            username: 'abdou_z',
             bloodType: 'O+',
-            runClubRole: 'Admin'
+            runClubRole: 'Admin',
+            password: 'Abdou Zaiti',
+            passwordChanged: true
           };
           await dbService.upsertRunner(defaultAdmin);
           setRunners([defaultAdmin]);
-          setCurrentUser(defaultAdmin);
+          setCurrentUser(null);
         }
       } catch (err: any) {
         console.error("Supabase load error:", err);
@@ -115,11 +127,21 @@ export default function App() {
   }, [reports]);
 
   useEffect(() => {
-    localStorage.setItem('mrc_current_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('mrc_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('mrc_current_user');
+    }
   }, [currentUser]);
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setActiveTab('planning');
+  };
 
   // Handle run registration (S'inscrire / Se désinscrire)
   const handleToggleRegister = async (runId: string) => {
+    if (!currentUser) return;
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
@@ -175,6 +197,7 @@ export default function App() {
 
   // Handle adding new runs proposed by admins
   const handleAddRun = async (newRunData: Omit<Run, 'participants' | 'completed'>) => {
+    if (!currentUser) return;
     const freshRun: Run = {
       ...newRunData,
       participants: [currentUser], // Register current planner by default
@@ -477,7 +500,17 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
           </div>
         )}
 
-        {!isLoadingDb && (
+        {!isLoadingDb && !currentUser && (
+          <LoginScreen
+            runners={runners}
+            onLoginSuccess={(user) => {
+              setCurrentUser(user);
+            }}
+            onUpdateRunner={handleUpdateCurrentUser}
+          />
+        )}
+
+        {!isLoadingDb && currentUser && (
           <>
             {/* Navigation & Header summary */}
             <Header
@@ -485,6 +518,7 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
               setActiveTab={setActiveTab}
               runs={runs}
               currentUser={currentUser}
+              onLogout={handleLogout}
             />
 
             {/* Dynamic Inner Layout Router */}

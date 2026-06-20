@@ -18,31 +18,76 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
   const [bloodType, setBloodType] = useState('O+');
   const [role, setRole] = useState<'Membre' | 'Coach' | 'Admin'>('Membre');
   const [errorMsg, setErrorMsg] = useState('');
+  const [username, setUsername] = useState('');
+  const [isCustomUsername, setIsCustomUsername] = useState(false);
+
+  const generateUsername = (fullName: string) => {
+    return fullName
+      .toLowerCase()
+      .normalize('NFD') // remove accents
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .replace(/[^a-z0-9._-]/g, '_') // replace spaces or other chars with underscores
+      .replace(/_+/g, '_'); // collapse multiple underscores
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (!isCustomUsername) {
+      setUsername(generateUsername(val));
+    }
+  };
 
   const filteredRunners = runners.filter(r =>
     r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.username && r.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (r.email && r.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (r.bloodType && r.bloodType.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleAddRunner = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !email) {
-      setErrorMsg('Veuillez remplir tous les champs requis.');
+    if (!name.trim()) {
+      setErrorMsg('Veuillez indiquer au moins le Nom Complet.');
+      return;
+    }
+
+    const finalUsername = (username.trim() || generateUsername(name)).toLowerCase();
+
+    if (!finalUsername) {
+      setErrorMsg("L'identifiant d'utilisateur généré est invalide ou vide.");
+      return;
+    }
+
+    // Check if runner already exists with this username or name
+    const existsName = runners.some(r => r.name.toLowerCase().trim() === name.toLowerCase().trim());
+    const existsUser = runners.some(r => r.username?.toLowerCase().trim() === finalUsername);
+    
+    if (existsName) {
+      setErrorMsg('Un athlète portant ce nom existe déjà.');
+      return;
+    }
+    if (existsUser) {
+      setErrorMsg(`L'identifiant "@${finalUsername}" est déjà utilisé de manière unique.`);
       return;
     }
 
     onAddRunner({
       id: 'usr-' + Date.now(),
-      name,
-      phone,
-      email,
-      bloodType,
-      runClubRole: role
+      name: name.trim(),
+      username: finalUsername,
+      phone: phone.trim() || '',
+      email: email.trim() || '',
+      bloodType: bloodType || 'O+',
+      runClubRole: role,
+      password: name.trim(), // Le mot de passe initial est identique au nom complet
+      passwordChanged: false // Forcer le changement au premier login
     });
 
     // Reset Form
     setName('');
+    setUsername('');
+    setIsCustomUsername(false);
     setEmail('');
     setPhone('');
     setBloodType('O+');
@@ -98,16 +143,32 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 type="text"
                 required
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => handleNameChange(e.target.value)}
                 placeholder="Ex. Sofiane Slimani"
                 className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Téléphone d'urgence *</label>
+              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Nom d'utilisateur (Username de connexion) *</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={e => {
+                  setUsername(e.target.value);
+                  setIsCustomUsername(true);
+                }}
+                placeholder="Ex. sofiane_s"
+                className="w-full px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive text-natural-text font-semibold placeholder-natural-sage/50 font-mono"
+              />
+              <span className="text-[9px] text-natural-sage font-medium block mt-0.5">
+                Utilisé pour se connecter rapidement (ex: @{username || 'username'}).
+              </span>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Téléphone (Optionnel - à remplir soi-même)</label>
               <input
                 type="tel"
-                required
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="Ex. 0661122334"
@@ -115,10 +176,9 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Adresse Email *</label>
+              <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono">Adresse Email (Optionnelle - à remplir soi-même)</label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="Ex. sofiane.mosta@gmail.com"
@@ -236,7 +296,14 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                     <h3 className="font-serif italic font-extrabold text-natural-text text-sm tracking-wide">
                       {runner.name} {isMe && <span className="text-[10px] text-natural-accent font-bold font-mono">(Moi)</span>}
                     </h3>
-                    <p className="text-[10px] text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <span className="text-[9px] text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</span>
+                      {runner.username && (
+                        <span className="text-[9px] bg-natural-sage-light/50 text-natural-olive border border-natural-border/60 font-mono font-bold px-1.5 py-0.2 rounded">
+                          @{runner.username}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -244,11 +311,23 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 <div className="mt-4 pt-3 border-t border-natural-divider space-y-2 text-xs text-natural-text">
                   <div className="flex items-center gap-2">
                     <Phone className="w-3.5 h-3.5 text-natural-sage shrink-0" />
-                    <span className="font-mono text-natural-text font-bold">{runner.phone}</span>
+                    {runner.phone ? (
+                      <span className="font-mono text-natural-text font-bold">{runner.phone}</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-600 font-bold italic font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                        Téléphone manquant ⚠️
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 truncate">
                     <Mail className="w-3.5 h-3.5 text-natural-sage shrink-0" />
-                    <span className="truncate font-semibold">{runner.email}</span>
+                    {runner.email ? (
+                      <span className="truncate font-semibold">{runner.email}</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-600 font-bold italic font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                        Email manquant ⚠️
+                      </span>
+                    )}
                   </div>
                 </div>
 

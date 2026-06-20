@@ -23,8 +23,11 @@ CREATE TABLE IF NOT EXISTS runners (
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
   email TEXT NOT NULL,
+  username TEXT,
   blood_type TEXT,
   run_club_role TEXT DEFAULT 'Membre',
+  password TEXT,
+  password_changed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -85,8 +88,11 @@ function mapRunnerFromDb(dbItem: any): Runner {
     name: dbItem.name,
     phone: dbItem.phone,
     email: dbItem.email,
+    username: dbItem.username || undefined,
     bloodType: dbItem.blood_type,
-    runClubRole: dbItem.run_club_role
+    runClubRole: dbItem.run_club_role,
+    password: dbItem.password || undefined,
+    passwordChanged: dbItem.password_changed !== undefined ? Boolean(dbItem.password_changed) : undefined
   };
 }
 
@@ -96,8 +102,11 @@ function mapRunnerToDb(item: Runner): any {
     name: item.name,
     phone: item.phone,
     email: item.email,
+    username: item.username || null,
     blood_type: item.bloodType,
-    run_club_role: item.runClubRole
+    run_club_role: item.runClubRole,
+    password: item.password || null,
+    password_changed: item.passwordChanged ?? false
   };
 }
 

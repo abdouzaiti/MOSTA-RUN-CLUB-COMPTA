@@ -7,9 +7,10 @@ interface HeaderProps {
   setActiveTab: (tab: string) => void;
   runs: Run[];
   currentUser: Runner;
+  onLogout?: () => void;
 }
 
-export default function Header({ activeTab, setActiveTab, runs, currentUser }: HeaderProps) {
+export default function Header({ activeTab, setActiveTab, runs, currentUser, onLogout }: HeaderProps) {
   const [countdownStr, setCountdownStr] = useState<string>('');
   const [logoError, setLogoError] = useState<boolean>(false);
 
@@ -97,21 +98,32 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser }: H
         {/* Quick info / Dashboard metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-w-xl w-full md:w-auto">
           {/* Active User Badging */}
-          <div className="col-span-2 lg:col-span-1 p-3 bg-natural-sage-light/60 rounded-2xl border border-natural-border flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-natural-olive text-white flex items-center justify-center font-bold font-serif italic border border-natural-border shadow-sm">
-              {currentUser.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div className="text-xs">
-              <p className="font-bold text-natural-text truncate max-w-[124px]">{currentUser.name}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[9px] px-1.5 py-0.2 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
-                  {currentUser.bloodType || 'O+'}
-                </span>
-                <span className="text-[10px] text-natural-sage font-bold uppercase tracking-wider text-[9px]">
-                  {currentUser.runClubRole || 'Membre'}
-                </span>
+          <div className="col-span-2 lg:col-span-1 p-3 bg-natural-sage-light/60 rounded-2xl border border-natural-border flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-natural-olive text-white flex items-center justify-center text-xs font-bold font-serif italic border border-natural-border shadow-sm shrink-0">
+                {currentUser.name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div className="text-xs min-w-0">
+                <p className="font-bold text-natural-text truncate max-w-[100px]" title={currentUser.name}>{currentUser.name}</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[9px] px-1 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
+                    {currentUser.bloodType || 'O+'}
+                  </span>
+                  <span className="text-[10px] text-natural-sage font-bold uppercase tracking-wider text-[8px] truncate">
+                    {currentUser.runClubRole || 'Membre'}
+                  </span>
+                </div>
               </div>
             </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-[10px] font-bold font-mono px-2 py-1 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
+                title="Se déconnecter de votre espace"
+              >
+                Sortir
+              </button>
+            )}
           </div>
 
           <div className="p-3 bg-natural-bone rounded-2xl border border-natural-border">
