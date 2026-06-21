@@ -558,8 +558,11 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
 
   if (!language) {
     return (
-      <div className="min-h-screen bg-natural-page flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-natural-border overflow-hidden animate-fade-in">
+      <div 
+        className="min-h-screen flex items-center justify-center p-6 bg-cover bg-center bg-fixed"
+        style={{ backgroundImage: "url('/back.png')" }}
+      >
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-natural-border overflow-hidden animate-fade-in relative z-10">
           <div className="bg-natural-olive p-10 text-center relative overflow-hidden">
             <Globe className="absolute -right-6 -top-6 w-32 h-32 text-white/10" />
             <Sparkles className="absolute -left-4 -bottom-4 w-20 h-20 text-white/5" />
@@ -604,9 +607,14 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
   }
 
   return (
-    <div className={`min-h-screen bg-natural-bg text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive pb-12 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      {/* Container wrapper */}
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+    <div 
+      className={`min-h-screen text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
+      dir={language === 'ar' ? 'rtl' : 'ltr'}
+      style={{ 
+        backgroundImage: "url('/back.png')" 
+      }}
+    >
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
 
         {/* Database setup SQL assistance Accordion */}
         {showSqlSetup && (
@@ -780,13 +788,6 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
         )}
 
         {/* Humble system credits */}
-        <footer className="pt-8 mt-12 border-t border-natural-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-natural-sage">
-          <div className="flex items-center gap-2">
-            <span className="font-serif italic font-bold text-natural-olive">Mosta Run Club © 2026</span>
-            <span>•</span>
-            <span className="font-semibold">Mostaganem-DZ</span>
-          </div>
-        </footer>
       </div>
     </div>
   );

@@ -131,6 +131,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
         <div className="w-full max-w-lg bg-white rounded-3xl border border-natural-border shadow-md overflow-hidden animate-fade-in">
           {/* Header */}
           <div className="p-6 bg-natural-olive/10 border-b border-natural-divider text-center space-y-2 relative">
+            <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-2 object-contain" />
             <div className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1`}>
               <Sparkles className="w-3 h-3 animate-pulse" />
               {language === 'ar' ? 'عضو جديد !' : 'Nouveau membre !'}
@@ -268,90 +269,110 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
   }
 
   return (
-    <div className={`min-h-screen bg-natural-bg text-natural-text font-sans flex flex-col items-center justify-center p-4 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      {/* Visual Identity Logo */}
-      <div className="text-center mb-6 space-y-2">
-        <span className="font-mono text-[10px] bg-natural-olive/10 border border-natural-olive/20 text-natural-olive font-black tracking-widest px-3 py-1 rounded-full uppercase">
-          {language === 'ar' ? '🇩🇿 نادي ألعاب القوى بالكورنيش' : '🇩🇿 Club d\'Athlétisme de la Corniche'}
-        </span>
-        <h1 className="text-2xl md:text-3xl font-serif italic font-black text-natural-olive tracking-wide">
-          MOSTA RUN CLUB
-        </h1>
-        <p className="text-xs text-natural-sage font-medium max-w-xs mx-auto">
-          {language === 'ar' ? 'التخطيط للخرجات الطويلة، المسارات الساحلية، الخدمات اللوجستية خارج الولاية ومتابعة المشتركين.' : 'Planification de sorties longues, trails côtiers, logistique hors-wilaya et suivi des licenciés.'}
-        </p>
+    <div className={`min-h-[85vh] grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Left Content: Hero Branding */}
+      <div className="flex flex-col items-center lg:items-start text-center lg:text-right space-y-6 animate-fade-in order-2 lg:order-1 lg:-mt-20">
+        <div className="relative inline-block">
+          <img 
+            src="/logo.png" 
+            alt="Mosta Run Club" 
+            className="w-32 h-32 sm:w-48 sm:h-48 object-contain drop-shadow-2xl animate-float" 
+          />
+        </div>
+        
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-4xl font-black text-blue-950 tracking-tighter shadow-white drop-shadow-sm">
+            نجري معا
+          </h1>
+          <h1 className="text-2xl sm:text-4xl font-black text-blue-950 tracking-tighter shadow-white drop-shadow-sm">
+            نتحدى حدودنا
+          </h1>
+        </div>
+
+        <div className="space-y-0.5">
+          <p className="text-xs sm:text-sm font-bold text-slate-600/80 leading-tight">
+            إنضم ألى مجتمع مستغانم
+          </p>
+          <p className="text-xs sm:text-sm font-bold text-slate-600/80 leading-tight">
+            للركض وكن جزءا من التغيير
+          </p>
+        </div>
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-3xl border border-natural-border shadow-md overflow-hidden p-6 animate-fade-in text-xs space-y-4">
-        <div className="flex justify-center gap-2 mb-4">
-          <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'ar' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>AR</button>
-          <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'fr' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>FR</button>
-          <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded text-[10px] font-bold ${language === 'en' ? 'bg-natural-olive text-white' : 'bg-white text-natural-olive border border-natural-olive/20'}`}>EN</button>
-        </div>
-
-        <div className="border-b border-natural-divider pb-3 text-center">
-          <h2 className="font-bold font-serif italic text-natural-olive text-md uppercase tracking-wider">{t('login')}</h2>
-          <p className="text-[10px] text-natural-sage font-bold mt-0.5 font-mono">{t('welcome')}</p>
-        </div>
-
-        {errorMsg && (
-          <div className="p-3 bg-rose-50 text-rose-700 font-bold rounded-xl border border-rose-100 leading-relaxed font-mono text-[11px]">
-            ⚠️ {errorMsg}
+      {/* Right Content: Login Form */}
+      <div className="flex justify-center lg:justify-end order-1 lg:order-2">
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[3rem] border border-natural-border shadow-2xl overflow-hidden p-8 sm:p-10 animate-fade-in text-xs space-y-6">
+          <div className="flex justify-center gap-3 mb-2">
+            <button onClick={() => setLanguage('ar')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'ar' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>AR</button>
+            <button onClick={() => setLanguage('fr')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'fr' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>FR</button>
+            <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'en' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>EN</button>
           </div>
-        )}
 
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono uppercase tracking-wider">
-              {t('username')}
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
-              <input
-                type="text"
-                required
-                value={identifier}
-                onChange={e => setIdentifier(e.target.value)}
-                placeholder={t('searchPlaceholder')}
-                className="w-full pl-9 pr-3 py-2.5 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold font-mono"
-              />
+          <div className="border-b border-natural-divider pb-4 text-center">
+            <h2 className="font-bold font-serif italic text-natural-olive text-lg uppercase tracking-widest">{t('login')}</h2>
+            <p className="text-[11px] text-natural-sage font-bold mt-1 font-mono uppercase opacity-80 letter-spacing-1">{t('welcome')}</p>
+          </div>
+
+          {errorMsg && (
+            <div className="p-4 bg-rose-50 text-rose-700 font-bold rounded-2xl border border-rose-100 leading-relaxed font-mono text-[11px] flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              {errorMsg}
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-[10px] font-bold text-natural-olive mb-1 font-mono uppercase tracking-wider">
-              {t('password')}
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 w-4 h-4 text-natural-sage" />
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full pl-9 pr-10 py-2.5 bg-natural-bone text-natural-text border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold font-mono text-sm leading-normal"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-natural-sage hover:text-natural-olive transition"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          <form onSubmit={handleLoginSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-natural-olive px-1 font-mono uppercase tracking-wider">
+                {t('username')}
+              </label>
+              <div className="relative group">
+                <User className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors" />
+                <input
+                  type="text"
+                  required
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
+                  placeholder={t('searchPlaceholder')}
+                  className="w-full pl-11 pr-4 py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-mono transition-all"
+                />
+              </div>
             </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-natural-olive px-1 font-mono uppercase tracking-wider">
+                {t('password')}
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-12 py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-mono text-sm transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-natural-sage hover:text-natural-olive transition-colors p-0.5"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer font-serif italic text-sm shadow-lg hover:shadow-xl active:scale-95 group"
+            >
+              <span className="uppercase tracking-widest">{t('login')}</span>
+              <LogIn className="w-5 h-5 text-natural-accent group-hover:translate-x-1 transition-transform" />
+            </button>
+          </form>
+
+          <div className="bg-natural-bone/50 p-4 rounded-2xl border border-natural-border/70 text-center text-[10px] text-natural-sage font-medium leading-relaxed italic">
+            <span>{language === 'ar' ? 'هل تحتاج إلى وصول؟ يجب على مسؤول أو مدرب من مستغانم تسجيلك في الدليل لتفعيل حسابك.' : "Besoin d'un accès ? Un administrateur ou coach de Mostaganem doit vous enregistrer dans l'annuaire pour activer votre compte."}</span>
           </div>
-
-          <button
-            type="submit"
-            className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition cursor-pointer font-serif italic text-xs shadow-xs"
-          >
-            {t('login')}
-            <LogIn className="w-4 h-4 text-natural-accent" />
-          </button>
-        </form>
-
-        <div className="bg-natural-bone p-3.5 rounded-2xl border border-natural-border/70 text-center text-[10px] text-natural-sage font-medium leading-relaxed">
-          <span>{language === 'ar' ? 'هل تحتاج إلى وصول؟ يجب على مسؤول أو مدرب من مستغانم تسجيلك في الدليل لتفعيل حسابك.' : "Besoin d'un accès ? Un administrateur ou coach de Mostaganem doit vous enregistrer dans l'annuaire pour activer votre compte."}</span>
         </div>
       </div>
     </div>
