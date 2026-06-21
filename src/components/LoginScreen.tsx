@@ -269,7 +269,11 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
   }
 
   return (
-    <div className={`min-h-[85vh] grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div 
+      className={`min-h-[85vh] grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
+      dir={language === 'ar' ? 'rtl' : 'ltr'}
+      style={{ backgroundImage: "url('/back.png')" }}
+    >
       {/* Left Content: Hero Branding */}
       <div className="flex flex-col items-center lg:items-start text-center lg:text-right space-y-6 animate-fade-in order-2 lg:order-1 lg:-mt-20">
         <div className="relative inline-block">
