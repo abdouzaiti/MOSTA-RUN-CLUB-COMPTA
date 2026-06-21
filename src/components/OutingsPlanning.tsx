@@ -72,6 +72,9 @@ export default function OutingsPlanning({
   // Success message after creating the run
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Participant search state
+  const [participantSearchTerm, setParticipantSearchTerm] = useState('');
+
   // Get active upcoming runs only
   const upcomingRuns = runs.filter(r => !r.completed);
 
@@ -711,6 +714,26 @@ export default function OutingsPlanning({
                           </div>
                         ) : (
                           <>
+                            {/* Search bar for participants */}
+                            <div className="mb-3 relative group">
+                              <Search className={`absolute ${language === 'ar' ? 'right-2.5' : 'left-2.5'} top-2.5 w-3.5 h-3.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
+                              <input
+                                type="text"
+                                placeholder={language === 'ar' ? 'البحث عن عداء في هذه القائمة...' : 'Rechercher un athlète dans cette liste...'}
+                                value={participantSearchTerm}
+                                onChange={(e) => setParticipantSearchTerm(e.target.value)}
+                                className={`w-full text-[10px] sm:text-[11px] ${language === 'ar' ? 'pr-8 pl-3' : 'pl-8 pr-3'} py-2 bg-natural-bone/50 border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold transition-all`}
+                              />
+                              {participantSearchTerm && (
+                                <button 
+                                  onClick={() => setParticipantSearchTerm('')}
+                                  className={`absolute ${language === 'ar' ? 'left-2' : 'right-2'} top-2 p-0.5 hover:bg-natural-divider rounded-full transition-colors`}
+                                >
+                                  <X className="w-3.5 h-3.5 text-natural-sage" />
+                                </button>
+                              )}
+                            </div>
+
                             {/* Version Ordinateur / Tablette (Gros Tableau visible sur tablettes et écrans larges) */}
                             <div className="hidden md:block overflow-x-auto">
                               <table className={`w-full text-left text-[11px] border-collapse min-w-[650px] ${language === 'ar' ? 'text-right' : ''}`}>
@@ -726,8 +749,10 @@ export default function OutingsPlanning({
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-natural-divider">
-                                  {run.participants.map(partic => {
-                                    const hasTransport = partic.useTransport !== false;
+                                  {run.participants
+                                    .filter(p => !participantSearchTerm || p.name.toLowerCase().includes(participantSearchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(participantSearchTerm.toLowerCase())))
+                                    .map(partic => {
+                                      const hasTransport = partic.useTransport !== false;
                                     const hasLodging = !!partic.useAccommodation;
                                     
                                     const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
@@ -853,8 +878,10 @@ export default function OutingsPlanning({
 
                             {/* Version Téléphone Mobile (Liste de Cartes ultra-optimisée avec espacements adaptés aux doigts) */}
                             <div className="block md:hidden space-y-3">
-                              {run.participants.map(partic => {
-                                const hasTransport = partic.useTransport !== false;
+                              {run.participants
+                                .filter(p => !participantSearchTerm || p.name.toLowerCase().includes(participantSearchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(participantSearchTerm.toLowerCase())))
+                                .map(partic => {
+                                  const hasTransport = partic.useTransport !== false;
                                 const hasLodging = !!partic.useAccommodation;
                                 
                                 const costTransport = run.isOrWilaya ? (run.transportPrice || 0) : 0;
