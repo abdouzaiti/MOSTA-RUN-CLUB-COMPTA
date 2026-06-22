@@ -549,6 +549,7 @@ CREATE TABLE IF NOT EXISTS runners (
   run_club_role TEXT DEFAULT 'Membre',
   password TEXT,
   password_changed BOOLEAN DEFAULT FALSE,
+  avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -556,6 +557,7 @@ CREATE TABLE IF NOT EXISTS runners (
 ALTER TABLE runners ADD COLUMN IF NOT EXISTS username TEXT;
 ALTER TABLE runners ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE runners ADD COLUMN IF NOT EXISTS password_changed BOOLEAN DEFAULT FALSE;
+ALTER TABLE runners ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- 2. Table des sorties (Runs)
 CREATE TABLE IF NOT EXISTS runs (

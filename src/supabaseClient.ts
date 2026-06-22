@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS runners (
   run_club_role TEXT DEFAULT 'Membre',
   password TEXT,
   password_changed BOOLEAN DEFAULT FALSE,
+  avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -132,7 +133,8 @@ function mapRunnerFromDb(dbItem: any): Runner {
     bloodType: dbItem.blood_type,
     runClubRole: dbItem.run_club_role,
     password: dbItem.password || undefined,
-    passwordChanged: dbItem.password_changed !== undefined ? Boolean(dbItem.password_changed) : undefined
+    passwordChanged: dbItem.password_changed !== undefined ? Boolean(dbItem.password_changed) : undefined,
+    avatarUrl: dbItem.avatar_url || undefined
   };
 }
 
@@ -146,7 +148,8 @@ function mapRunnerToDb(item: Runner): any {
     blood_type: item.bloodType,
     run_club_role: item.runClubRole,
     password: item.password || null,
-    password_changed: item.passwordChanged ?? false
+    password_changed: item.passwordChanged ?? false,
+    avatar_url: item.avatarUrl || null
   };
 }
 
