@@ -158,16 +158,18 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setShowAddRunnerForm(!showAddRunnerForm);
-            setErrorMsg('');
-          }}
-          className="flex items-center justify-center gap-1 bg-natural-olive hover:bg-natural-olive-hover text-white px-4 py-2 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer font-serif italic"
-        >
-          <BadgePlus className="w-3.5 h-3.5 text-natural-accent" />
-          {t('addRunner')}
-        </button>
+        {currentUser.runClubRole === 'Admin' && (
+          <button
+            onClick={() => {
+              setShowAddRunnerForm(!showAddRunnerForm);
+              setErrorMsg('');
+            }}
+            className="flex items-center justify-center gap-1 bg-natural-olive hover:bg-natural-olive-hover text-white px-4 py-2 text-xs font-bold rounded-xl transition shadow-xs cursor-pointer font-serif italic"
+          >
+            <BadgePlus className="w-3.5 h-3.5 text-natural-accent" />
+            {t('addRunner')}
+          </button>
+        )}
       </div>
 
       {/* Add/Edit Runner Form */}
@@ -397,15 +399,17 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
 
                   {/* Let the user delete runners if they are not the active currentUser */}
                   <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <button
-                      onClick={() => handleStartEdit(runner)}
-                      className="p-1 px-2.5 border border-natural-border hover:border-natural-olive/30 hover:bg-natural-olive/5 rounded text-natural-text hover:text-natural-olive text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
-                      title="Modifier les informations"
-                    >
-                      <BadgePlus className="w-3.5 h-3.5 text-natural-olive rotate-45" />
-                      {t('edit')}
-                    </button>
-                    {!isMe && (
+                    {(isMe || currentUser.runClubRole === 'Admin') && (
+                      <button
+                        onClick={() => handleStartEdit(runner)}
+                        className="p-1 px-2.5 border border-natural-border hover:border-natural-olive/30 hover:bg-natural-olive/5 rounded text-natural-text hover:text-natural-olive text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                        title="Modifier les informations"
+                      >
+                        <BadgePlus className="w-3.5 h-3.5 text-natural-olive rotate-45" />
+                        {t('edit')}
+                      </button>
+                    )}
+                    {!isMe && currentUser.runClubRole === 'Admin' && (
                       <button
                         onClick={() => onDeleteRunner(runner.id)}
                         className="p-1 px-2.5 border border-natural-border hover:border-rose-200 hover:bg-rose-50 rounded text-natural-text hover:text-rose-600 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
