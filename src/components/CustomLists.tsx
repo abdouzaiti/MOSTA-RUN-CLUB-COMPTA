@@ -41,9 +41,12 @@ export default function CustomLists({
   const [columnNameInput, setColumnNameInput] = useState<string>('');
   const [columnTypeInput, setColumnTypeInput] = useState<'boolean' | 'text'>('boolean');
   const [selectedRunnerIds, setSelectedRunnerIds] = useState<string[]>(runners.map(r => r.id)); // Default select all
+  const [tempGuests, setTempGuests] = useState<string[]>([]);
+  const [newGuestName, setNewGuestName] = useState<string>('');
 
   // Sheet Internal Search
   const [sheetSearch, setSheetSearch] = useState<string>('');
+  const [guestNameInput, setGuestNameInput] = useState<string>('');
 
   const activeList = lists.find(l => l.id === activeListId);
 
@@ -95,12 +98,12 @@ export default function CustomLists({
       alert(language === 'ar' ? 'يرجى كتابة عنوان للقائمة' : 'Veuillez saisir un titre pour la liste');
       return;
     }
-    if (selectedRunnerIds.length === 0) {
-      alert(language === 'ar' ? 'يرجى تحديد عداء واحد على الأقل' : 'Veuillez sélectionner au moins un athlète');
+    if (selectedRunnerIds.length === 0 && tempGuests.length === 0) {
+      alert(language === 'ar' ? 'يرجى تحديد عداء أو إضافة اسم خارجي واحد على الأقل' : 'Veuillez sélectionner au moins un athlète ou saisir un externe');
       return;
     }
 
-    // Build Rows
+    // Build Rows for registered members
     const rows: CustomRow[] = selectedRunnerIds.map(runnerId => {
       const runner = runners.find(r => r.id === runnerId);
       const values: { [colId: string]: any } = {};
@@ -117,6 +120,19 @@ export default function CustomLists({
       };
     });
 
+    // Build Rows for guests/externals
+    const guestRows: CustomRow[] = tempGuests.map((guestName, idx) => {
+      const values: { [colId: string]: any } = {};
+      tempColumns.forEach(col => {
+        values[col.id] = col.type === 'boolean' ? false : '';
+      });
+      return {
+        runnerId: `guest-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+        runnerName: guestName,
+        values
+      };
+    });
+
     const newList: CustomList = {
       id: `list-${Date.now()}`,
       title: newTitle.trim(),
@@ -127,7 +143,7 @@ export default function CustomLists({
         day: 'numeric'
       }),
       columns: tempColumns,
-      rows
+      rows: [...rows, ...guestRows]
     };
 
     onSaveList(newList);
@@ -141,6 +157,8 @@ export default function CustomLists({
       { id: 'col-status', name: language === 'ar' ? 'الحالة (تم)' : 'Statut (Cbn)', type: 'boolean' }
     ]);
     setSelectedRunnerIds(runners.map(r => r.id));
+    setTempGuests([]);
+    setNewGuestName('');
   };
 
   // Toggle boolean cell value in worksheet
@@ -189,6 +207,29 @@ export default function CustomLists({
       rows: [...list.rows, newRow]
     });
     setShowAddMemberDropdown(false);
+  };
+
+  // Add custom guest (non-athlete) to an existing list
+  const handleAddGuestToList = (list: CustomList, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    const values: { [colId: string]: any } = {};
+    list.columns.forEach(col => {
+      values[col.id] = col.type === 'boolean' ? false : '';
+    });
+
+    const newRow: CustomRow = {
+      runnerId: `guest-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      runnerName: trimmed,
+      values
+    };
+
+    onSaveList({
+      ...list,
+      rows: [...list.rows, newRow]
+    });
+    setGuestNameInput('');
   };
 
   // Remove athlete row from list
@@ -493,6 +534,71 @@ export default function CustomLists({
                     </label>
                   ))}
                 </div>
+
+                {/* External guests / non-registered participants */}
+                <div className="space-y-2 mt-4 bg-slate-50/60 border border-slate-200/40 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-natural-olive uppercase tracking-wider block">
+                      {language === 'ar' ? 'إضافة ضيوف أو أشخاص خارجيين (غير مسجلين)' : 'Ajouter des externes / invités (non inscrits)'}
+                    </span>
+                    {tempGuests.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setTempGuests([])}
+                        className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                      >
+                        {language === 'ar' ? 'إفراغ القائمة' : 'Vider la liste'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={language === 'ar' ? 'مثال: يوسف، أحمد...' : 'Ex: Youssef, Ahmed...'}
+                      value={newGuestName}
+                      onChange={(e) => setNewGuestName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newGuestName.trim()) {
+                            setTempGuests([...tempGuests, newGuestName.trim()]);
+                            setNewGuestName('');
+                          }
+                        }
+                      }}
+                      className="flex-1 text-xs px-3 py-2 border border-natural-border rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newGuestName.trim()) {
+                          setTempGuests([...tempGuests, newGuestName.trim()]);
+                          setNewGuestName('');
+                        }
+                      }}
+                      className="bg-natural-olive hover:opacity-95 text-white font-bold text-xs px-4 rounded-xl transition cursor-pointer"
+                    >
+                      {language === 'ar' ? 'إضافة' : 'Ajouter'}
+                    </button>
+                  </div>
+
+                  {tempGuests.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {tempGuests.map((guest, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 bg-[#1034A6]/10 text-[#1034A6] font-bold px-2.5 py-1 rounded-xl text-[11px] border border-blue-100">
+                          {guest}
+                          <button
+                            type="button"
+                            onClick={() => setTempGuests(tempGuests.filter((_, i) => i !== idx))}
+                            className="text-[#1034A6] hover:text-red-700 ml-1 font-bold text-xs"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Footer Forms */}
@@ -567,6 +673,41 @@ export default function CustomLists({
                               {language === 'ar' ? 'جميع عدائي النادي مضافون حالياً' : 'Tous les membres sont déjà inscrits'}
                             </div>
                           )}
+
+                          {/* Guest/External name input inside the dropdown */}
+                          <div className="border-t border-natural-divider mt-2 pt-2 p-1 space-y-1.5">
+                            <div className="text-[10px] font-bold text-natural-olive uppercase tracking-wider">
+                              {language === 'ar' ? 'أو ضيف شخص خارجي (غير مسجل)' : 'Ou ajouter un invité / externe'}
+                            </div>
+                            <div className="flex gap-1">
+                              <input
+                                type="text"
+                                placeholder={language === 'ar' ? 'الاسم واللقب...' : 'Nom complet...'}
+                                value={guestNameInput}
+                                onChange={(e) => setGuestNameInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (guestNameInput.trim()) {
+                                      handleAddGuestToList(activeList, guestNameInput);
+                                    }
+                                  }
+                                }}
+                                className="flex-1 text-[11px] px-2 py-1 border border-natural-border rounded-xl bg-natural-bone/30 focus:outline-none font-semibold text-natural-olive"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (guestNameInput.trim()) {
+                                    handleAddGuestToList(activeList, guestNameInput);
+                                  }
+                                }}
+                                className="bg-natural-olive hover:opacity-90 text-white font-bold text-xs px-2.5 rounded-xl transition cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>

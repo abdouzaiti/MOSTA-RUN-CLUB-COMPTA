@@ -340,12 +340,19 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 )}
 
                 {/* Main Identity avatar and credentials */}
-                <div className="flex items-center gap-3">
-                  <div>
+                <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-xs overflow-hidden">
+                    {runner.avatarUrl ? (
+                      <img src={runner.avatarUrl} alt={runner.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      runner.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                    )}
+                  </div>
+                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
                     <h3 className="font-serif italic font-extrabold text-natural-text text-base tracking-wide">
                       {runner.name} {isMe && <span className="text-xs text-natural-accent font-bold font-mono">(Moi)</span>}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    <div className={`flex flex-wrap items-center gap-1.5 mt-1 ${language === 'ar' ? 'justify-end' : ''}`}>
                       <span className="text-xs text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</span>
                       {runner.username && (
                         <span className="text-xs bg-natural-sage-light/50 text-natural-olive border border-natural-border/60 font-mono font-bold px-2 py-0.5 rounded">

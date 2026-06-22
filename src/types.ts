@@ -10,6 +10,7 @@ export interface Runner {
   runClubRole?: 'Membre' | 'Coach' | 'Admin';
   password?: string;            // Le mot de passe (Initialement identique au Nom de l'athlète ou username)
   passwordChanged?: boolean;    // Flag pour forcer la mise à jour au premier login
+  avatarUrl?: string;           // Photo de profil ou avatar URL choisi
 }
 
 export interface RunParticipant extends Runner {

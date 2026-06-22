@@ -35,7 +35,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
     { id: 'stats', label: language === 'ar' ? 'الإحصائيات' : language === 'en' ? 'Stats' : 'Stats', icon: BarChart3 },
     { id: 'reports', label: language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'List of Runs' : 'Liste des Runs', icon: Map },
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },
-    { id: 'lists', label: language === 'ar' ? 'الترتيب والجداول' : language === 'en' ? 'Standings' : 'Classements', icon: Trophy },
+    { id: 'lists', label: language === 'ar' ? 'القوائم' : language === 'en' ? 'Lists' : 'Liste', icon: Trophy },
     { id: 'messagerie', label: language === 'ar' ? 'الرسائل والتعليقات' : language === 'en' ? 'Messaging' : 'Messagerie', icon: MessageSquare },
     { id: 'settings', label: language === 'ar' ? 'الإعدادات' : language === 'en' ? 'Settings' : 'Paramètres', icon: Settings },
   ];
@@ -52,8 +52,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
       {/* Mobile Header (Sits on top for screens below lg) */}
       <div className="lg:hidden w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0 relative z-40">
         <div className="flex items-center gap-2">
-          <div className="bg-[#1E56A0] p-2 rounded-xl text-white">
-            <Trophy className="w-5 h-5" />
+          <div className="bg-white p-1 rounded-xl border border-slate-100 shadow-3xs shrink-0">
+            <img src="/logo.png" alt="Mosta Run Club Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
           </div>
           <div>
             <span className="font-serif italic font-black text-xs text-[#1034A6] tracking-widest block leading-none">MOSTA RUN CLUB</span>
@@ -101,10 +101,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
           {/* Top Header & Logo stacked */}
           <div className="space-y-6">
             <div className="flex flex-col items-center pt-2 text-center relative z-15">
-              <div className="bg-white p-3.5 rounded-[1.5rem] shadow-md flex flex-col items-center justify-center w-22 h-22 border border-blue-100/50 transform hover:scale-105 transition duration-300">
-                <span className="text-[10px] font-bold font-sans tracking-widest text-[#1034A6] leading-none">MOSTA</span>
-                <span className="text-xl font-serif italic font-black text-[#1034A6] my-0.5 leading-none">RUN</span>
-                <span className="text-[8px] font-bold tracking-[0.2em] text-cyan-500 leading-none">CLUB</span>
+              <div className="bg-white p-2 rounded-[1.5rem] shadow-xl flex items-center justify-center w-22 h-22 border border-blue-100/50 transform hover:scale-[1.05] transition duration-300 overflow-hidden">
+                <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               </div>
             </div>
 

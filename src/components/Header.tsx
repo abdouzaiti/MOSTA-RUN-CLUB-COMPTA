@@ -82,10 +82,8 @@ export default function Header({
       {/* Slogan and big titles block */}
       <div className="flex items-center gap-3.5 select-none md:flex-row flex-col text-center md:text-left">
         {/* Simple elegant inline round logo */}
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center border border-blue-200 shadow-xs shrink-0 transform rotate-3">
-          <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#1034A6]" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.28 8.28 0 013.661-1.762 8.29 8.29 0 002.701-2.624z" />
-          </svg>
+        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center border border-blue-100 shadow-xs shrink-0 transform rotate-3 overflow-hidden p-1">
+          <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
         </div>
 
         <div>
@@ -117,8 +115,12 @@ export default function Header({
               <span>{currentUser.runClubRole || 'Membre'}</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm">
-            {initials}
+          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden">
+            {currentUser.avatarUrl ? (
+              <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              initials
+            )}
           </div>
         </div>
 
