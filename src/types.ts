@@ -69,3 +69,25 @@ export interface RunReport {
   galleryUrls: string[];
   feedback: RunnerFeedback[];
 }
+
+export interface CustomColumn {
+  id: string;
+  name: string;
+  type: 'boolean' | 'text'; // 'boolean' for "cbn ou nn" checkmarks, 'text' for editable comments/notes
+}
+
+export interface CustomRow {
+  runnerId: string;
+  runnerName: string;
+  values: { [columnId: string]: any };
+}
+
+export interface CustomList {
+  id: string;
+  title: string;
+  description?: string;
+  createdAt: string;
+  columns: CustomColumn[];
+  rows: CustomRow[];
+}
+

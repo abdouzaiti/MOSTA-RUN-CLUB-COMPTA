@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Runner, Run, RunReport } from './types';
+import { Runner, Run, RunReport, CustomList } from './types';
 
 // Read Supabase credentials from client-side environment variables
 const SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL || '';
@@ -82,10 +82,22 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 4. Table des listes personnalisées (Custom Lists)
+CREATE TABLE IF NOT EXISTS custom_lists (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at_str TEXT NOT NULL,
+  columns JSONB DEFAULT '[]'::jsonb,
+  rows JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Activez l'accès en lecture/écriture publique temporaire (ou configurez vos règles RLS)
 ALTER TABLE runners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_lists ENABLE ROW LEVEL SECURITY;
 
 -- Supprimer les politiques existantes si elles existent déjà pour éviter les erreurs
 DROP POLICY IF EXISTS "Allow public read on runners" ON runners;
@@ -102,6 +114,11 @@ DROP POLICY IF EXISTS "Allow public read on reports" ON reports;
 DROP POLICY IF EXISTS "Allow public write on reports" ON reports;
 CREATE POLICY "Allow public read on reports" ON reports FOR SELECT USING (true);
 CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow public read on custom_lists" ON custom_lists;
+DROP POLICY IF EXISTS "Allow public write on custom_lists" ON custom_lists;
+CREATE POLICY "Allow public read on custom_lists" ON custom_lists FOR SELECT USING (true);
+CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING (true);
  */
 
 // Helper to handle conversion from snake_case database schema to camelCase front-end TypeScript interfaces
@@ -214,6 +231,28 @@ function mapReportToDb(item: RunReport): any {
     route_map_description: item.routeMapDescription,
     gallery_urls: item.galleryUrls,
     feedback: item.feedback
+  };
+}
+
+function mapCustomListFromDb(dbItem: any): CustomList {
+  return {
+    id: dbItem.id,
+    title: dbItem.title,
+    description: dbItem.description || undefined,
+    createdAt: dbItem.created_at_str || '',
+    columns: Array.isArray(dbItem.columns) ? dbItem.columns : [],
+    rows: Array.isArray(dbItem.rows) ? dbItem.rows : []
+  };
+}
+
+function mapCustomListToDb(item: CustomList): any {
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description || null,
+    created_at_str: item.createdAt,
+    columns: item.columns,
+    rows: item.rows
   };
 }
 
@@ -352,6 +391,52 @@ export const dbService = {
 
     if (error) {
       console.error('Error deleting report:', error.message);
+      throw error;
+    }
+  },
+
+  // --- CUSTOM LISTS ---
+  async getCustomLists(): Promise<CustomList[]> {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('custom_lists')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching custom lists:', error.message);
+        throw error;
+      }
+      return (data || []).map(mapCustomListFromDb);
+    } catch (e) {
+      console.error('Db service getCustomLists failed:', e);
+      throw e;
+    }
+  },
+
+  async upsertCustomList(list: CustomList): Promise<void> {
+    if (!supabase) return;
+    const dbList = mapCustomListToDb(list);
+    const { error } = await supabase
+      .from('custom_lists')
+      .upsert(dbList);
+
+    if (error) {
+      console.error('Error upserting custom list:', error.message);
+      throw error;
+    }
+  },
+
+  async deleteCustomList(id: string): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('custom_lists')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting custom list:', error.message);
       throw error;
     }
   }

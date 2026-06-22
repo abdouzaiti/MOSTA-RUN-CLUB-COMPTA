@@ -5,8 +5,9 @@ import OutingsPlanning from './components/OutingsPlanning';
 import ReportsSummary from './components/ReportsSummary';
 import ClubStats from './components/ClubStats';
 import LoginScreen from './components/LoginScreen';
+import CustomLists from './components/CustomLists';
 
-import { Run, Runner, RunReport, RunnerFeedback } from './types';
+import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
 import { isSupabaseConfigured, dbService } from './supabaseClient';
 import { translations, Language } from './translations';
@@ -48,6 +49,42 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [customLists, setCustomLists] = useState<CustomList[]>(() => {
+    const saved = localStorage.getItem('mrc_custom_lists');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing custom lists:", e);
+      }
+    }
+    // Default initial custom checklist
+    return [
+      {
+        id: 'list-init-1',
+        title: 'Cotisation Maillot 2026',
+        description: 'Suivi de paiement et taille des maillots officiels du club pour la nouvelle saison.',
+        createdAt: '22 Juin 2026',
+        columns: [
+          { id: 'col-paid', name: 'Payé (Cbn)', type: 'boolean' },
+          { id: 'col-size', name: 'Taille Maillot', type: 'text' },
+          { id: 'col-remise', name: 'Date de remise', type: 'text' }
+        ],
+        rows: [
+          {
+            runnerId: 'usr-1',
+            runnerName: 'Abdou Zaiti',
+            values: {
+              'col-paid': true,
+              'col-size': 'M',
+              'col-remise': '20/06/2026'
+            }
+          }
+        ]
+      }
+    ];
+  });
+
   // DB Sync Status States
   const [isLoadingDb, setIsLoadingDb] = useState<boolean>(isSupabaseConfigured);
   useEffect(() => {
@@ -77,15 +114,17 @@ export default function App() {
         setDbError(null);
 
         // Fetch everything in parallel
-        const [loadedRunners, loadedRuns, loadedReports] = await Promise.all([
+        const [loadedRunners, loadedRuns, loadedReports, loadedCustomLists] = await Promise.all([
           dbService.getRunners(),
           dbService.getRuns(),
-          dbService.getReports()
+          dbService.getReports(),
+          dbService.getCustomLists()
         ]);
 
         setRunners(loadedRunners);
         setRuns(loadedRuns);
         setReports(loadedReports);
+        setCustomLists(loadedCustomLists.length > 0 ? loadedCustomLists : customLists);
 
         // Synchronize Active/Logged User Profile
         if (loadedRunners.length > 0) {
@@ -147,6 +186,10 @@ export default function App() {
   }, [reports]);
 
   useEffect(() => {
+    localStorage.setItem('mrc_custom_lists', JSON.stringify(customLists));
+  }, [customLists]);
+
+  useEffect(() => {
     if (currentUser) {
       localStorage.setItem('mrc_current_user', JSON.stringify(currentUser));
     } else {
@@ -157,6 +200,39 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setActiveTab('planning');
+  };
+
+  const handleSaveCustomList = async (updatedList: CustomList) => {
+    setCustomLists(prev => {
+      const idx = prev.findIndex(l => l.id === updatedList.id);
+      if (idx !== -1) {
+        const copy = [...prev];
+        copy[idx] = updatedList;
+        return copy;
+      } else {
+        return [...prev, updatedList];
+      }
+    });
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.upsertCustomList(updatedList);
+      } catch (err: any) {
+        console.error("Error saving custom list to Supabase:", err);
+      }
+    }
+  };
+
+  const handleDeleteCustomList = async (listId: string) => {
+    setCustomLists(prev => prev.filter(l => l.id !== listId));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.deleteCustomList(listId);
+      } catch (err: any) {
+        console.error("Error deleting custom list from Supabase:", err);
+      }
+    }
   };
 
   const isAdminOrCoach = (user: Runner): boolean => {
@@ -529,10 +605,22 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 4. Table des listes personnalisées (Custom Lists)
+CREATE TABLE IF NOT EXISTS custom_lists (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at_str TEXT NOT NULL,
+  columns JSONB DEFAULT '[]'::jsonb,
+  rows JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Désactivez l'accès restrictif par défaut temporairement pour l'édition publique (ou configurez vos règles RLS)
 ALTER TABLE runners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_lists ENABLE ROW LEVEL SECURITY;
 
 -- Supprimer les politiques existantes si elles existent déjà pour éviter les erreurs
 DROP POLICY IF EXISTS "Allow public read on runners" ON runners;
@@ -548,7 +636,12 @@ CREATE POLICY "Allow public write on runs" ON runs FOR ALL USING (true);
 DROP POLICY IF EXISTS "Allow public read on reports" ON reports;
 DROP POLICY IF EXISTS "Allow public write on reports" ON reports;
 CREATE POLICY "Allow public read on reports" ON reports FOR SELECT USING (true);
-CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
+CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow public read on custom_lists" ON custom_lists;
+DROP POLICY IF EXISTS "Allow public write on custom_lists" ON custom_lists;
+CREATE POLICY "Allow public read on custom_lists" ON custom_lists FOR SELECT USING (true);
+CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING (true);`;
 
   const copySqlToClipboard = () => {
     navigator.clipboard.writeText(sqlQueryText);
@@ -610,114 +703,116 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
       className={`min-h-screen text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive bg-white ${language === 'ar' ? 'font-arabic' : ''}`} 
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-
-        {/* Database setup SQL assistance Accordion */}
-        {showSqlSetup && (
-          <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Terminal className="text-natural-accent w-5 h-5" />
-                <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
-              </div>
-              <button
-                onClick={copySqlToClipboard}
-                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
-              >
-                {sqlCopied ? (
-                  <>
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                    Copié !
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    Copier le Script
-                  </>
-                )}
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
-            </p>
-            <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
-              {sqlQueryText}
-            </pre>
-          </div>
-        )}
-
-        {/* Database Setup Error Notice */}
-        {dbError && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
-                  Erreur d'initialisation de la base de données
-                </h4>
-                <p className="text-[11px] text-rose-700 font-medium mt-0.5">
-                  La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
-                </p>
+      {!currentUser ? (
+        <>
+          {/* Global Loading state spinner for DB */}
+          {isLoadingDb ? (
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen flex items-center justify-center">
+              <div className="p-16 text-center bg-white rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-4">
+                <Cpu className="w-10 h-10 text-natural-olive animate-spin" />
+                <div className={language === 'ar' ? 'font-arabic' : ''}>
+                  <p className="text-sm font-bold text-natural-olive font-serif italic">
+                    {language === 'ar' ? 'جاري مزامنة قاعدة البيانات...' : 'Synchronisation Supabase en cours...'}
+                  </p>
+                  <p className="text-xs text-natural-sage mt-1">
+                    {language === 'ar' ? 'استرجاع قائمة العداءين والبرنامج المخطط له.' : 'Récupération sécurisée du roster de course et des planifications réelles.'}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 pl-7">
-              <button
-                onClick={() => setShowSqlSetup(true)}
-                className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
-              >
-                👉 Afficher le script de création SQL
-              </button>
-              <button
-                onClick={() => {
-                  setDbError(null);
-                  setIsLoadingDb(false);
-                }}
-                className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
-              >
-                Ignorer et passer en mode local
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Global Loading state spinner for DB */}
-        {isLoadingDb && (
-          <div className="p-16 text-center bg-white rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-4">
-            <Cpu className="w-10 h-10 text-natural-olive animate-spin" />
-            <div className={language === 'ar' ? 'font-arabic' : ''}>
-              <p className="text-sm font-bold text-natural-olive font-serif italic">
-                {language === 'ar' ? 'جاري مزامنة قاعدة البيانات...' : 'Synchronisation Supabase en cours...'}
-              </p>
-              <p className="text-xs text-natural-sage mt-1">
-                {language === 'ar' ? 'استرجاع قائمة العداءين والبرنامج المخطط له.' : 'Récupération sécurisée du roster de course et des planifications réelles.'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {!isLoadingDb && !currentUser && (
-          <LoginScreen
-            runners={runners}
-            onLoginSuccess={(user) => {
-              setCurrentUser(user);
-            }}
-            onUpdateRunner={handleUpdateCurrentUser}
-            language={language}
-            setLanguage={setLanguage}
-          />
-        )}
-
-        {!isLoadingDb && currentUser && (
-          <>
-            {/* Navigation & Header summary */}
-            <Header
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              runs={runs}
-              currentUser={currentUser}
-              onLogout={handleLogout}
+          ) : (
+            <LoginScreen
+              runners={runners}
+              onLoginSuccess={(user) => {
+                setCurrentUser(user);
+              }}
+              onUpdateRunner={handleUpdateCurrentUser}
               language={language}
+              setLanguage={setLanguage}
             />
+          )}
+        </>
+      ) : (
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+          {/* Database setup SQL assistance Accordion */}
+          {showSqlSetup && (
+            <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Terminal className="text-natural-accent w-5 h-5" />
+                  <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
+                </div>
+                <button
+                  onClick={copySqlToClipboard}
+                  className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
+                >
+                  {sqlCopied ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      Copié !
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copier le Script
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
+              </p>
+              <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
+                {sqlQueryText}
+              </pre>
+            </div>
+          )}
+
+          {/* Database Setup Error Notice */}
+          {dbError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
+                    Erreur d'initialisation de la base de données
+                  </h4>
+                  <p className="text-[11px] text-rose-700 font-medium mt-0.5">
+                    La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pl-7">
+                <button
+                  onClick={() => setShowSqlSetup(true)}
+                  className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
+                >
+                  👉 Afficher le script de création SQL
+                </button>
+                <button
+                  onClick={() => {
+                    setDbError(null);
+                    setIsLoadingDb(false);
+                  }}
+                  className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
+                >
+                  Ignorer et passer en mode local
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isLoadingDb && currentUser && (
+            <>
+              {/* Navigation & Header summary */}
+              <Header
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                runs={runs}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                language={language}
+              />
 
             {/* Dynamic Inner Layout Router */}
             <main className="min-h-[500px]">
@@ -779,12 +874,26 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);`;
                   />
                 </div>
               )}
+
+              {activeTab === 'lists' && (
+                <div className="space-y-6">
+                  <CustomLists
+                    runners={runners}
+                    currentUser={currentUser}
+                    lists={customLists}
+                    onSaveList={handleSaveCustomList}
+                    onDeleteList={handleDeleteCustomList}
+                    language={language}
+                  />
+                </div>
+              )}
             </main>
           </>
         )}
 
         {/* Humble system credits */}
       </div>
+      )}
     </div>
   );
 }

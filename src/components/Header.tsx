@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Run, Runner } from '../types';
-import { CalendarRange, Award, Users, TrendingUp, Sparkles, Activity, Clock, LogOut } from 'lucide-react';
+import { CalendarRange, Award, Users, TrendingUp, Sparkles, Activity, Clock, LogOut, ClipboardList } from 'lucide-react';
 import { translations, Language } from '../translations';
 
 interface HeaderProps {
@@ -188,6 +188,18 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
         >
           <Users className="w-4 h-4" />
           <span>{t('roster')}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('lists')}
+          className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
+            activeTab === 'lists'
+              ? 'bg-natural-olive text-white shadow-md font-bold'
+              : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
+          }`}
+        >
+          <ClipboardList className="w-4 h-4" />
+          <span>{t('customLists')}</span>
         </button>
       </div>
     </header>
