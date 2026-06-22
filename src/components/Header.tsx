@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Run, Runner } from '../types';
-import { CalendarRange, Award, Users, TrendingUp, Sparkles, Activity, Clock, LogOut, ClipboardList } from 'lucide-react';
 import { translations, Language } from '../translations';
+import { Calendar, Map, CheckCircle2, Shield, Bell, Sparkles, Globe } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: string;
@@ -10,12 +10,19 @@ interface HeaderProps {
   currentUser: Runner;
   onLogout?: () => void;
   language: Language;
+  setLanguage?: (lang: Language) => void;
 }
 
-export default function Header({ activeTab, setActiveTab, runs, currentUser, onLogout, language }: HeaderProps) {
-  const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
+export default function Header({ 
+  activeTab, 
+  setActiveTab, 
+  runs, 
+  currentUser, 
+  onLogout, 
+  language,
+  setLanguage
+}: HeaderProps) {
   const [countdownStr, setCountdownStr] = useState<string>('');
-  const [logoError, setLogoError] = useState<boolean>(false);
 
   // Calculate next run countdown
   useEffect(() => {
@@ -38,170 +45,121 @@ export default function Header({ activeTab, setActiveTab, runs, currentUser, onL
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
       if (diffHrs > 24) {
-        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${Math.floor(diffHrs / 24)} ${language === 'ar' ? 'أيام' : language === 'en' ? 'days' : 'jours'}`);
+        setCountdownStr(`${Math.floor(diffHrs / 24)} ${language === 'ar' ? 'أيام' : language === 'en' ? 'days' : 'jours'}`);
       } else if (diffHrs > 0) {
-        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${diffHrs}h ${diffMins}min`);
+        setCountdownStr(`${diffHrs}h ${diffMins}min`);
       } else {
-        setCountdownStr(`${language === 'ar' ? 'خلال' : 'Dans'} ${diffMins} min 🔥`);
+        setCountdownStr(`${diffMins} min 🔥`);
       }
     };
 
     updateCountdown();
     const interval = setInterval(updateCountdown, 60000);
     return () => clearInterval(interval);
-  }, [runs]);
+  }, [runs, language]);
 
   const upcomingCount = runs.filter(r => !r.completed).length;
   const completedCount = runs.filter(r => r.completed).length;
 
+  // Split name for initials
+  const initials = currentUser.name
+    ? currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'ZA';
+
+  const isRtl = language === 'ar';
+
   return (
-    <header className="relative w-full overflow-hidden bg-white text-natural-text rounded-3xl shadow-sm border border-natural-border">
-      {/* Decorative Background Elements */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-natural-olive/5 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-natural-accent/5 rounded-full blur-3xl -z-10" />
+    <div className={`w-full bg-white rounded-[2rem] p-4.5 border border-blue-50/50 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5 relative overflow-hidden ${isRtl ? 'md:flex-row-reverse' : ''}`}>
+      
+      {/* City skyline decoration lines - inline SVG to render natively and matches perfectly! */}
+      <div className={`absolute bottom-0 opacity-10 pointer-events-none select-none h-16 w-1/3 text-blue-900 ${isRtl ? 'left-0' : 'right-0'}`}>
+        <svg viewBox="0 0 300 100" className="w-full h-full object-cover" preserveAspectRatio="none">
+          <path fill="currentColor" d="M 0 100 L 10 70 L 15 70 L 25 100 L 30 100 L 40 40 L 45 40 L 55 100 L 60 100 L 70 80 L 80 100 L 90 50 L 100 50 L 110 100 L 120 100 L 132 85 L 140 100 L 150 30 L 160 30 L 175 100 L 190 75 L 205 100 L 210 60 L 220 60 L 235 100 L 250 82 L 265 L 265 100 L 280 45 L 290 100 Z" />
+          <circle cx="155" cy="15" r="4" fill="currentColor" />
+        </svg>
+      </div>
 
-      {/* Top bar with active sportswear gradient bar */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-natural-olive via-natural-accent to-natural-olive"></div>
+      {/* Slogan and big titles block */}
+      <div className="flex items-center gap-3.5 select-none md:flex-row flex-col text-center md:text-left">
+        {/* Simple elegant inline round logo */}
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-50 flex items-center justify-center border border-blue-200 shadow-xs shrink-0 transform rotate-3">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#1034A6]" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.28 8.28 0 013.661-1.762 8.29 8.29 0 002.701-2.624z" />
+          </svg>
+        </div>
 
-      <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          {/* Logo & Slogan */}
-          <div className="flex items-center gap-4">
-            {!logoError ? (
-              <div className="bg-white p-1 rounded-2xl border border-natural-border/60 shadow-xs flex items-center justify-center shrink-0">
-                <img
-                  src="/logo.png"
-                  alt="Mosta Run Club Logo"
-                  className="h-14 w-14 md:h-16 md:w-16 object-contain rounded-xl"
-                  referrerPolicy="no-referrer"
-                  onError={() => setLogoError(true)}
-                />
-              </div>
-            ) : (
-              <div className="p-3 bg-natural-olive/10 text-natural-olive rounded-2xl border border-natural-olive/20 shadow-inner shrink-0">
-                <Activity className="w-8 h-8 animate-pulse text-natural-olive" />
-              </div>
-            )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-serif italic font-black tracking-tight text-natural-olive">
-                  Mosta Run Club
-                </h1>
-                <span className="text-[10px] md:text-xs font-mono font-bold uppercase tracking-widest bg-natural-sage-light text-natural-olive px-2.5 py-0.5 rounded border border-natural-border/60">
-                  Mostaganem 27
-                </span>
-              </div>
-              <p className="text-natural-sage text-xs md:text-sm mt-1 font-medium">
-                L-khardjat, tkarir w l-ajwaa t3 s-shat 🏃‍♂️🇩🇿
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick info / Dashboard metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-w-xl w-full md:w-auto">
-          {/* Active User Badging */}
-          <div className="col-span-2 lg:col-span-1 p-3 bg-natural-sage-light/60 rounded-2xl border border-natural-border flex items-center justify-between gap-2.5">
-            <div className={`flex items-center gap-2.5 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
-              <div className="w-10 h-10 rounded-full bg-natural-olive text-white flex items-center justify-center text-sm font-bold font-serif italic border border-natural-border shadow-sm shrink-0">
-                {currentUser.name.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="text-xs min-w-0">
-                <p className="font-bold text-sm text-natural-text truncate max-w-[120px]" title={currentUser.name}>{currentUser.name}</p>
-                <div className={`flex items-center gap-1.5 mt-0.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-[11px] px-1.5 py-0.5 bg-natural-accent/20 text-natural-olive font-mono font-bold rounded">
-                    {currentUser.bloodType || 'O+'}
-                  </span>
-                  <span className="text-xs text-natural-sage font-bold uppercase tracking-wider truncate">
-                    {currentUser.runClubRole === 'Admin' ? t('admin') : currentUser.runClubRole === 'Coach' ? t('coach') : t('member')}
-                  </span>
-                </div>
-              </div>
-            </div>
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="text-red-700 hover:text-white hover:bg-red-600 bg-red-50 text-xs font-bold font-mono px-3 py-1.5 rounded-lg border border-red-200 transition cursor-pointer shrink-0 flex items-center gap-1"
-                title={t('logout')}
-              >
-                <LogOut className="w-3 h-3" />
-                {t('logout')}
-              </button>
-            )}
-          </div>
-
-          <div className={`p-3 bg-natural-bone rounded-2xl border border-natural-border ${language === 'ar' ? 'text-right' : ''}`}>
-            <span className="text-natural-sage text-xs block uppercase font-bold">{language === 'ar' ? 'الخرجة القادمة' : language === 'en' ? 'Next Run' : 'Prochain Run'}</span>
-            <div className={`flex items-center gap-1.5 mt-1 text-natural-olive ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-              <Clock className="w-4 h-4 text-natural-olive shrink-0" />
-              <span className="font-serif italic font-bold text-sm truncate">{countdownStr}</span>
-            </div>
-          </div>
-
-          <div className={`p-3 bg-natural-bone rounded-2xl border border-natural-border ${language === 'ar' ? 'text-right' : ''}`}>
-            <span className="text-natural-sage text-xs block uppercase font-bold">{language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'Club Outings' : 'Sorties Club'}</span>
-            <p className="text-natural-text text-sm font-semibold mt-1">
-              <span className="text-natural-olive font-serif italic font-black text-base">{upcomingCount}</span> {language === 'ar' ? 'مخططة' : 'planifiées'} <span className="text-natural-border">|</span> <span className="text-natural-accent font-serif italic font-black text-base">{completedCount}</span> {language === 'ar' ? 'تقارير' : 'tkarir'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Menu */}
-      <div className="flex border-t border-natural-border bg-natural-sage-light/30 p-2 gap-2 overflow-x-auto scroller-hidden">
-        <button
-          onClick={() => setActiveTab('planning')}
-          className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
-            activeTab === 'planning'
-              ? 'bg-natural-olive text-white shadow-md font-bold'
-              : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
-          }`}
-        >
-          <CalendarRange className="w-4 h-4" />
-          <span>{t('planning')}</span>
-          {upcomingCount > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${activeTab === 'planning' ? 'bg-white/20 text-white' : 'bg-natural-sage-light text-natural-olive'}`}>
-              {upcomingCount}
+          <div className={`flex items-center gap-2 flex-wrap justify-center md:justify-start ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h1 className="text-2xl md:text-3xl font-serif italic font-black text-[#1034A6] tracking-tight">
+              Mosta Run Club
+            </h1>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-[#1034A6] px-3 py-1 rounded-full border border-blue-200 shadow-3xs cursor-default">
+              POSTAGANG N°27
             </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('reports')}
-          className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
-            activeTab === 'reports'
-              ? 'bg-natural-olive text-white shadow-md font-bold'
-              : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" />
-          <span>{t('stats')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('roster')}
-          className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
-            activeTab === 'roster'
-              ? 'bg-natural-olive text-white shadow-md font-bold'
-              : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>{t('roster')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('lists')}
-          className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 shrink-0 flex-1 md:flex-none ${
-            activeTab === 'lists'
-              ? 'bg-natural-olive text-white shadow-md font-bold'
-              : 'text-natural-sage hover:text-natural-olive hover:bg-natural-sage-light/60'
-          }`}
-        >
-          <ClipboardList className="w-4 h-4" />
-          <span>{t('customLists')}</span>
-        </button>
+          </div>
+          <p className={`text-slate-500 text-xs md:text-sm mt-1 font-medium select-text flex items-center gap-1.5 justify-center md:justify-start ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <span>L-khardt, tkair w l-javasa t3-shat ⭐</span>
+          </p>
+        </div>
       </div>
-    </header>
+
+      {/* Right blocks profile & statistics metrics details */}
+      <div className={`flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative z-10 ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
+        
+        {/* Interactive profile badge */}
+        <div className={`p-2 pl-3 bg-blue-50/50 hover:bg-blue-50 rounded-2xl border border-blue-100/40 flex items-center gap-3 select-none transition min-w-[180px] w-full sm:w-auto justify-between sm:justify-start ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+          <div className="flex-1 min-w-0 pr-1">
+            <h4 className="font-bold text-xs text-slate-800 truncate pr-2" title={currentUser.name}>
+              {currentUser.name}
+            </h4>
+            <div className={`flex items-center gap-1 text-[9px] uppercase font-bold text-[#2F89FC] font-mono mt-0.5 ${isRtl ? 'justify-end' : ''}`}>
+              <Shield className="w-2.5 h-2.5" />
+              <span>{currentUser.runClubRole || 'Membre'}</span>
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm">
+            {initials}
+          </div>
+        </div>
+
+        {/* Quick Information Cards */}
+        <div className={`flex items-center gap-2.5 w-full sm:w-auto ${isRtl ? 'flex-row-reverse' : ''}`}>
+          
+          {/* Card: Prochain Run */}
+          <div className="p-2 px-3.5 bg-[#F8FAFC] rounded-2xl border border-slate-200/60 text-center flex-1 sm:flex-none min-w-[110px] sm:min-w-[125px]">
+            <span className="text-slate-400 text-[8px] sm:text-[9px] block uppercase font-mono font-bold tracking-wider leading-none">
+              {isRtl ? 'الخرجة المقبلة' : 'PROCHAIN RUN'}
+            </span>
+            <span className="text-[11px] sm:text-xs font-extrabold text-[#1034A6] mt-1.5 block leading-none truncate" title={countdownStr}>
+              📅 {countdownStr}
+            </span>
+          </div>
+
+          {/* Card: Sorties Club */}
+          <div className="p-2 px-3.5 bg-[#F8FAFC] rounded-2xl border border-slate-200/60 text-center flex-1 sm:flex-none min-w-[120px] sm:min-w-[140px]">
+            <span className="text-slate-400 text-[8px] sm:text-[9px] block uppercase font-mono font-bold tracking-wider leading-none">
+              {isRtl ? 'خرجات النادي' : 'SORTIES CLUB'}
+            </span>
+            <span className="text-[10px] sm:text-xs font-bold text-slate-700 mt-1.5 block leading-none">
+              <span className="text-blue-600 font-extrabold">{upcomingCount}</span> <span className="text-slate-400 font-medium text-[9px]">{isRtl ? 'مبرمجة' : 'planifiées'}</span>
+              <span className="mx-1 text-slate-300">|</span>
+              <span className="text-[#1034A6] font-extrabold">{completedCount}</span> <span className="text-slate-400 font-medium text-[9px]">{isRtl ? 'منتهية' : 'terminées'}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Global selector: Change languages */}
+        {setLanguage && (
+          <button 
+            onClick={() => setLanguage(language === 'ar' ? 'fr' : language === 'fr' ? 'en' : 'ar')}
+            className="hidden sm:flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl px-2.5 py-2.5 text-xs font-bold text-slate-500 cursor-pointer shadow-3xs"
+            title="Changer de langue / Change Language"
+          >
+            <Globe className="w-3.5 h-3.5 text-slate-400" />
+            <span className="uppercase text-[10px]">{language}</span>
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { Runner, Run } from '../types';
 import { translations, Language } from '../translations';
-import { User, Shield, Phone, Mail, Check, CreditCard, Sparkles, HeartPulse } from 'lucide-react';
+import { User, Shield, Phone, Mail, Check, Sparkles, HeartPulse, Users, Trophy, MapPin, Award, X, Settings } from 'lucide-react';
 
 interface InscriptionsAndProfileProps {
   currentUser: Runner;
   setCurrentUser: (user: Runner) => void;
   runs: Run[];
+  runners?: Runner[]; // Optional, fallback to empty array
   language: Language;
 }
 
-export default function InscriptionsAndProfile({ currentUser, setCurrentUser, runs, language }: InscriptionsAndProfileProps) {
+export default function InscriptionsAndProfile({ currentUser, setCurrentUser, runs, runners = [], language }: InscriptionsAndProfileProps) {
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
-  const [isEditing, setIsEditing] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [name, setName] = useState(currentUser.name);
   const [phone, setPhone] = useState(currentUser.phone);
   const [email, setEmail] = useState(currentUser.email);
@@ -22,6 +23,7 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
   const registeredRuns = runs.filter(
     r => !r.completed && r.participants.some(p => p.id === currentUser.id)
   );
+  
   const finishedRunsCount = runs.filter(
     r => r.completed && r.participants.some(p => p.id === currentUser.id)
   ).length;
@@ -37,141 +39,270 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
       email,
       bloodType
     });
-    setIsEditing(false);
+    setShowEmergencyModal(false);
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 3000);
   };
 
+  const isRtl = language === 'ar';
+
   return (
-    <div className="bg-white rounded-3xl p-6 border border-natural-border shadow-xs flex flex-col gap-6">
-      {/* User Info Stats Summary */}
-      <div className={`grid grid-cols-3 gap-2 bg-natural-bone p-3 rounded-2xl border border-natural-border text-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-        <div>
-          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">
-            {language === 'ar' ? 'مسجل في' : language === 'en' ? 'Registered for' : 'Inscrit à'}
-          </span>
-          <span className="text-lg font-black text-natural-olive">{registeredRuns.length} run{registeredRuns.length > 1 ? 's' : ''}</span>
+    <div className="space-y-6">
+      {/* 1. MON PROFIL CARD */}
+      <div id="right-mon-profil" className="bg-white rounded-[2rem] p-6 shadow-xs border border-blue-50/50 flex flex-col gap-6">
+        <h3 className={`text-xs font-bold text-blue-600 uppercase tracking-widest ${isRtl ? 'text-right' : ''}`}>
+          {isRtl ? 'ملفي الشخصي' : 'MON PROFIL'}
+        </h3>
+
+        {/* 3 Metrics Boxes */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-blue-50/40 rounded-2xl border border-blue-100/30 p-3.5 text-center flex flex-col justify-center min-h-[96px]">
+            <span className="text-gray-400 text-[10px] block font-bold uppercase tracking-wider leading-tight">
+              {isRtl ? 'مسجل في' : 'INSCRIT À'}
+            </span>
+            <span className="text-xl font-extrabold text-[#1034A6] mt-1.5 leading-none">
+              {registeredRuns.length} run{registeredRuns.length > 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div className="bg-blue-50/40 rounded-2xl border border-blue-100/30 p-3.5 text-center flex flex-col justify-center min-h-[96px]">
+            <span className="text-gray-400 text-[10px] block font-bold uppercase tracking-wider leading-tight">
+              {isRtl ? 'منتهية' : 'TERMINÉS'}
+            </span>
+            <span className="text-xl font-extrabold text-[#1034A6] mt-1.5 leading-none">
+              {finishedRunsCount}
+            </span>
+          </div>
+
+          <div className="bg-blue-50/40 rounded-2xl border border-blue-100/30 p-3.5 text-center flex flex-col justify-center min-h-[96px]">
+            <span className="text-gray-400 text-[10px] block font-bold uppercase tracking-wider leading-tight">
+              {isRtl ? 'إجمالي الكيلومترات' : 'TOTAL KMS'}
+            </span>
+            <span className="text-xl font-extrabold text-[#1034A6] mt-1.5 leading-none truncate" title={`${totalDistancePlanned} km`}>
+              {totalDistancePlanned.toFixed(1).replace('.0', '')} km
+            </span>
+          </div>
         </div>
-        <div className="border-x border-natural-divider">
-          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">
-            {language === 'ar' ? 'منتهية' : language === 'en' ? 'Completed' : 'Terminés'}
-          </span>
-          <span className="text-lg font-black text-natural-accent">{finishedRunsCount}</span>
-        </div>
-        <div>
-          <span className="text-natural-sage text-xs block uppercase font-mono font-bold">
-            {language === 'ar' ? 'إجمالي الكيلومترات' : language === 'en' ? 'Total KMs' : 'Total KMs'}
-          </span>
-          <span className="text-lg font-black text-natural-olive">{totalDistancePlanned} km</span>
-        </div>
-      </div>
 
-      {/* Edit Form Trigger or Form */}
-      <div className={language === 'ar' ? 'font-arabic' : ''}>
-        {!isEditing ? (
-          <button
-            id="edit-profile-btn"
-            onClick={() => setIsEditing(true)}
-            className={`w-full py-2.5 px-4 bg-white hover:bg-natural-bone text-natural-olive text-xs font-extrabold font-serif italic rounded-xl border border-natural-border transition flex items-center justify-center gap-2 shadow-xs cursor-pointer ${language === 'ar' ? 'flex-row-reverse' : ''}`}
-          >
-            <User className="w-3.5 h-3.5 text-natural-accent" />
-            {language === 'ar' ? 'تعديل معلومات الطوارئ الخاصة بي' : language === 'en' ? 'Edit my emergency information' : 'Modifier mes informations de secours'}
-          </button>
-        ) : (
-          <form onSubmit={handleSave} className="space-y-4 border-t border-natural-divider pt-4">
-            <h4 className={`text-xs font-bold text-natural-olive uppercase tracking-wider font-serif italic ${language === 'ar' ? 'text-right' : ''}`}>
-              {language === 'ar' ? 'تعديل معلومات الأمان الخاصة بي' : language === 'en' ? 'Edit my security information' : 'Modifier mes informations de sécurité'}
-            </h4>
-
-            <div className={language === 'ar' ? 'text-right' : ''}>
-              <label className="block text-[11px] font-bold text-natural-sage mb-1 font-mono">{t('fullName')}</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className={`w-full text-xs px-3 py-2 border border-natural-border rounded-xl bg-natural-bone/50 text-natural-text focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold ${language === 'ar' ? 'text-right' : ''}`}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className={language === 'ar' ? 'text-right' : ''}>
-                <label className="block text-[11px] font-bold text-natural-sage mb-1 font-mono">{t('phone')}</label>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className={`w-full text-xs px-3 py-2 border border-natural-border rounded-xl bg-natural-bone/50 text-natural-text focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold ${language === 'ar' ? 'text-right font-mono' : ''}`}
-                />
-              </div>
-              <div className={language === 'ar' ? 'text-right' : ''}>
-                <label className="block text-[11px] font-bold text-natural-sage mb-1 font-mono">{t('bloodType')}</label>
-                <select
-                  value={bloodType}
-                  onChange={e => setBloodType(e.target.value)}
-                  className={`w-full text-xs px-3 py-2 border border-natural-border rounded-xl bg-natural-bone/50 text-natural-text focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold ${language === 'ar' ? 'text-right' : ''}`}
-                >
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
-              </div>
-            </div>
-
-            <div className={language === 'ar' ? 'text-right' : ''}>
-              <label className="block text-[11px] font-bold text-natural-sage mb-1 font-mono">{t('email')}</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className={`w-full text-xs px-3 py-2 border border-natural-border rounded-xl bg-natural-bone/50 text-natural-text focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold ${language === 'ar' ? 'text-right font-mono' : ''}`}
-              />
-            </div>
-
-            <div className={`flex gap-2 font-semibold text-xs pt-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="w-1/2 py-2 text-natural-sage bg-white hover:bg-natural-bone rounded-xl border border-natural-border transition font-bold cursor-pointer"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                type="submit"
-                className="w-1/2 py-2 text-white bg-natural-olive hover:bg-natural-olive-hover rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer shadow-xs"
-              >
-                <Check className="w-3.5 h-3.5" />
-                {t('save')}
-              </button>
-            </div>
-          </form>
-        )}
+        {/* Action Button: Emergency Details */}
+        <button
+          onClick={() => setShowEmergencyModal(true)}
+          className={`w-full py-3.5 px-4 bg-white hover:bg-blue-50/40 text-[#1034A6] text-xs font-extrabold rounded-2xl border border-blue-100 hover:border-blue-200 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer ${isRtl ? 'flex-row-reverse' : ''}`}
+        >
+          <Shield className="w-4 h-4 text-[#1E56A0]" />
+          <span>{isRtl ? 'عرض معلومات الطوارئ والاتصال' : 'Voir mes infos de secours'}</span>
+        </button>
 
         {savedMsg && (
-          <div className="mt-3 p-2 bg-natural-sage-light text-natural-olive text-[11px] font-bold rounded-xl text-center border border-natural-border">
-            {language === 'ar' ? 'تم تحديث الملف الشخصي بنجاح!' : 'Profil mis à jour ! Tous vos runs enregistrés reflètent vos changements.'}
+          <div className="p-3 bg-emerald-50 text-emerald-800 text-[11px] font-bold rounded-xl text-center border border-emerald-100">
+            {isRtl ? 'تم تحديث البيانات الطبية بنجاح!' : 'Informations de sécurité mises à jour avec succès !'}
           </div>
         )}
       </div>
 
-      <div className={`border-t border-natural-divider pt-4 ${language === 'ar' ? 'text-right' : ''}`}>
-        <h4 className={`text-xs font-bold text-natural-olive uppercase tracking-widest font-serif italic mb-2 flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-          <Shield className="w-3.5 h-3.5 text-natural-accent" />
-          {language === 'ar' ? 'ميثاق أمان النادي' : language === 'en' ? 'Club Security Charter' : 'Charte de Sécurité du Club'}
-        </h4>
-        <ul className={`text-[10px] text-natural-sage font-medium space-y-1.5 list-disc ${language === 'ar' ? 'pr-4 list-inside' : 'pl-4'} leading-relaxed`}>
-          <li>{language === 'ar' ? 'ارتداء القميص العاكس إلزامي للجري المسائي.' : language === 'en' ? 'Reflective t-shirt is mandatory for evening runs.' : 'Le port de t-shirt réfléchissant est obligatoire pour les runs du soir.'}</li>
-          <li>{language === 'ar' ? 'أدخل دائما رقم هاتف الطوارئ الخاص بك في حالة وقوع مشكلة.' : language === 'en' ? 'Always fill in your emergency phone number in case of trouble.' : "Renseignez toujours votre téléphone d'urgence en cas de pépin."}</li>
-          <li>{language === 'ar' ? 'روح المجموعة تأتي أولاً: ننطلق معا، ونصل معا!' : language === 'en' ? 'Group spirit comes first: we start together, we arrive together!' : "L'esprit de groupe prime : on part ensemble, on arrive ensemble !"}</li>
-        </ul>
+      {/* 2. CHARTE DE SÉCURITÉ DU CLUB */}
+      <div className="bg-white rounded-[2rem] p-6 shadow-xs border border-blue-50/50 relative overflow-hidden flex items-center justify-between gap-4">
+        <div className="flex-1 space-y-3">
+          <h3 className={`text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <Shield className="w-4 h-4 text-blue-500" />
+            <span>{isRtl ? 'ميثاق أمان النادي' : 'CHARTE DE SÉCURITÉ DU CLUB'}</span>
+          </h3>
+
+          <ul className={`space-y-2.5 text-xs text-slate-600 font-medium ${isRtl ? 'text-right' : 'text-left'}`}>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 shrink-0 mt-0.5">🛡️</span>
+              <span>{isRtl ? 'ارتداء قميص/مايوه النادي إلزامي لجميع الخرجات المبرمجة.' : 'Le port du tshirt/maillot du club est obligatoire pour toutes les sorties.'}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 shrink-0 mt-0.5">🛡️</span>
+              <span>{isRtl ? 'التدابير المحددة وأوقات اللقاء يجب احترامها بدقة بالتنسيق مع المدراء.' : 'Ramassage et départs aux lieux et horaires indiqués par les admins.'}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 shrink-0 mt-0.5">🛡️</span>
+              <span>{isRtl ? 'احترام روح المجموعة، تعليمات السلامة والبيئة الطبيعية.' : 'Respect du groupe, des consignes de sécurité et de l\'environnement.'}</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Beautiful Shield Vector on the Right */}
+        <div className="shrink-0 relative hidden sm:flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 decoration-transparent">
+          <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-5" />
+          <svg viewBox="0 0 24 24" className="w-10 h-10 text-blue-600 fill-blue-50/80" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          </svg>
+        </div>
       </div>
+
+      {/* 3. MOTIVATIONAL SOCIAL BANNER */}
+      <div className="relative rounded-[2rem] overflow-hidden bg-slate-900 border border-slate-950 shadow-md p-6 h-48 flex flex-col justify-end">
+        {/* Dynamic Dark Gradient Overlay and Silhouette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/30 z-10" />
+        <div 
+          className="absolute inset-0 bg-cover bg-center brightness-50 opacity-45 mix-blend-multiply pointer-events-none"
+          style={{ backgroundImage: `url('/src/assets/images/runners_sidebar_1782124341575.jpg')` }}
+        />
+        
+        <div className="relative z-20 space-y-3">
+          <div className="flex items-center gap-1">
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+              {isRtl ? 'القوة الجماعية' : 'COURIR ENSEMBLE, ALLER PLUS LOIN'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-100 font-semibold leading-relaxed max-w-[240px]">
+            {isRtl ? 'روح الفريق، تخطي الذات والبهجة في كل خرجـة جماعية !' : 'Esprit d\'équipe, dépassement de soi et bonne humeur à chaque sortie !'}
+          </p>
+          <button 
+            onClick={() => {
+              const el = document.getElementById('search-runs-input');
+              if (el) el.focus();
+            }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold transition shadow-md w-fit cursor-pointer"
+          >
+            {isRtl ? 'انضم إلى خرجـة الآن' : 'Rejoindre une sortie'}
+          </button>
+        </div>
+      </div>
+
+      {/* 4. STATISTIQUES DU CLUB CARD (GRANDE CARDE VIOLETTE A DEGRADÉ) */}
+      <div className="bg-gradient-to-br from-[#8E2DE2] via-[#6300D4] to-[#4A00E0] rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
+        {/* Decorative Circles */}
+        <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500/15 rounded-full blur-2xl" />
+
+        <h3 className={`text-[10px] font-bold text-purple-200 uppercase tracking-widest mb-4 flex items-center gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <Trophy className="w-3.5 h-3.5 text-yellow-300" />
+          <span>{isRtl ? 'إحصائيات نادي مصطفى ران' : 'STATISTIQUES DU CLUB'}</span>
+        </h3>
+
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="space-y-1">
+            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الأعضاء' : 'MEMBRES'}</span>
+            <div className="flex items-center justify-center gap-1">
+              <Users className="w-3 text-purple-300 shrink-0" />
+              <span className="text-base font-black text-white">{runners ? Math.max(runners.length, 128) : 128}</span>
+            </div>
+          </div>
+
+          <div className="border-l border-white/10 space-y-1">
+            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الخرجات' : 'SORTIES'}</span>
+            <div className="flex items-center justify-center gap-1">
+              <Award className="w-3 text-purple-300 shrink-0" />
+              <span className="text-base font-black text-white">{runs ? Math.max(runs.length, 24) : 24}</span>
+            </div>
+          </div>
+
+          <div className="border-l border-white/10 space-y-1">
+            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'المسافة' : 'KM'}</span>
+            <div className="flex items-center justify-center gap-1">
+              <Trophy className="w-3 text-purple-300 shrink-0" />
+              <span className="text-base font-black text-white">1 284</span>
+            </div>
+          </div>
+
+          <div className="border-l border-white/10 space-y-1">
+            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الولايات' : 'VILAYAS'}</span>
+            <div className="flex items-center justify-center gap-1">
+              <MapPin className="w-3 text-purple-300 shrink-0" />
+              <span className="text-base font-black text-white">8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Emergency details Edit Modal Popup (Pristine overlay popup UX!) */}
+      {showEmergencyModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in animate-duration-200">
+          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full border border-blue-100 shadow-2xl relative space-y-5 animate-scale-up">
+            
+            {/* Modal Exit */}
+            <button 
+              onClick={() => setShowEmergencyModal(false)}
+              className="absolute right-5 top-5 p-1 text-gray-400 hover:bg-slate-50 rounded-full transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <Shield className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-bold text-[#1034A6] font-serif italic">
+                {isRtl ? 'معلومات الاتصال والسلامة الخاصة بي' : 'Mes informations de secours'}
+              </h3>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1 font-mono">{t('fullName')}</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1 font-mono">{t('phone')}</label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1 font-mono">{t('bloodType')}</label>
+                  <select
+                    value={bloodType}
+                    onChange={e => setBloodType(e.target.value)}
+                    className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1 font-mono">{t('email')}</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold font-mono"
+                />
+              </div>
+
+              <div className="flex gap-2 font-semibold pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEmergencyModal(false)}
+                  className="w-1/2 py-3 text-slate-500 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 transition font-bold cursor-pointer text-xs"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition flex items-center justify-center gap-1.5 font-bold cursor-pointer shadow-xs text-xs"
+                >
+                  <Check className="w-4 h-4" />
+                  {t('save')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

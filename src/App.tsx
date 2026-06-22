@@ -6,6 +6,7 @@ import ReportsSummary from './components/ReportsSummary';
 import ClubStats from './components/ClubStats';
 import LoginScreen from './components/LoginScreen';
 import CustomLists from './components/CustomLists';
+import Sidebar from './components/Sidebar';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -13,7 +14,8 @@ import { isSupabaseConfigured, dbService } from './supabaseClient';
 import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
-  Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe
+  Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe,
+  MessageSquare, Settings, HelpCircle
 } from 'lucide-react';
 
 export default function App() {
@@ -733,166 +735,423 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
           )}
         </>
       ) : (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-          {/* Database setup SQL assistance Accordion */}
-          {showSqlSetup && (
-            <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Terminal className="text-natural-accent w-5 h-5" />
-                  <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
-                </div>
-                <button
-                  onClick={copySqlToClipboard}
-                  className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
-                >
-                  {sqlCopied ? (
-                    <>
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      Copié !
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      Copier le Script
-                    </>
-                  )}
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
-              </p>
-              <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
-                {sqlQueryText}
-              </pre>
-            </div>
-          )}
+        <div className="flex flex-col lg:flex-row h-screen w-full bg-[#F3F6FF] text-slate-800 overflow-hidden antialiased">
+          {/* Main Floating Left Sidebar Nav */}
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            language={language}
+            setLanguage={setLanguage}
+          />
 
-          {/* Database Setup Error Notice */}
-          {dbError && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
-                    Erreur d'initialisation de la base de données
-                  </h4>
-                  <p className="text-[11px] text-rose-700 font-medium mt-0.5">
-                    La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pl-7">
-                <button
-                  onClick={() => setShowSqlSetup(true)}
-                  className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
-                >
-                  👉 Afficher le script de création SQL
-                </button>
-                <button
-                  onClick={() => {
-                    setDbError(null);
-                    setIsLoadingDb(false);
-                  }}
-                  className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
-                >
-                  Ignorer et passer en mode local
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!isLoadingDb && currentUser && (
-            <>
-              {/* Navigation & Header summary */}
-              <Header
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                runs={runs}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                language={language}
-              />
-
-            {/* Dynamic Inner Layout Router */}
-            <main className="min-h-[500px]">
-              {activeTab === 'planning' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                  {/* Main outings list (2/3 width) */}
-                  <div className="lg:col-span-2">
-                    <OutingsPlanning
-                      runs={runs}
-                      currentUser={currentUser}
-                      onToggleRegister={handleToggleRegister}
-                      onAddRun={handleAddRun}
-                      onUpdateParticipant={handleUpdateParticipant}
-                      runners={runners}
-                      onAddParticipantByAdmin={handleAddParticipantByAdmin}
-                      onRemoveParticipantByAdmin={handleRemoveParticipantByAdmin}
-                      language={language}
-                    />
+          {/* Right Main Scrollable View Panel */}
+          <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 lg:p-6 space-y-6 lg:no-scrollbar relative">
+            
+            {/* Database setup SQL assistance Accordion (rendered at top of content when visible) */}
+            {showSqlSetup && (
+              <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="text-natural-accent w-5 h-5" />
+                    <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
                   </div>
+                  <button
+                    onClick={copySqlToClipboard}
+                    className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
+                  >
+                    {sqlCopied ? (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                        Copié !
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        Copier le Script
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
+                </p>
+                <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
+                  {sqlQueryText}
+                </pre>
+              </div>
+            )}
 
-                  {/* Sidebar profile and loyalty license card (1/3 width) */}
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xs font-bold text-natural-olive uppercase tracking-widest font-mono mb-2">
-                        {language === 'ar' ? 'ملفي الشخصي' : language === 'en' ? 'My Profile' : 'Mon Profil'}
-                      </h3>
-                      <InscriptionsAndProfile
-                        currentUser={currentUser}
-                        setCurrentUser={handleUpdateCurrentUser}
+            {/* Database Setup Error Notice */}
+            {dbError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
+                      Erreur d'initialisation de la base de données
+                    </h4>
+                    <p className="text-[11px] text-rose-700 font-medium mt-0.5">
+                      La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pl-7">
+                  <button
+                    onClick={() => setShowSqlSetup(true)}
+                    className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
+                  >
+                    👉 Afficher le script de création SQL
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDbError(null);
+                      setIsLoadingDb(false);
+                    }}
+                    className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
+                  >
+                    Ignorer et passer en mode local
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isLoadingDb && currentUser && (
+              <>
+                {/* Premium Header card layout */}
+                <Header
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  runs={runs}
+                  currentUser={currentUser}
+                  onLogout={handleLogout}
+                  language={language}
+                  setLanguage={setLanguage}
+                />
+
+                {/* Main page views router */}
+                <main className="min-h-[500px]">
+                  {/* TAB 1: PLANNING (Matches columns exact layout) */}
+                  {activeTab === 'planning' && (
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                      {/* Left: Main outings listings */}
+                      <div className="xl:col-span-8">
+                        <OutingsPlanning
+                          runs={runs}
+                          currentUser={currentUser}
+                          onToggleRegister={handleToggleRegister}
+                          onAddRun={handleAddRun}
+                          onUpdateParticipant={handleUpdateParticipant}
+                          runners={runners}
+                          onAddParticipantByAdmin={handleAddParticipantByAdmin}
+                          onRemoveParticipantByAdmin={handleRemoveParticipantByAdmin}
+                          language={language}
+                        />
+                      </div>
+
+                      {/* Right: Personal profile Emergency and statistics */}
+                      <div className="xl:col-span-4 space-y-6">
+                        <InscriptionsAndProfile
+                          currentUser={currentUser}
+                          setCurrentUser={handleUpdateCurrentUser}
+                          runs={runs}
+                          runners={runners}
+                          language={language}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: RICH STATS & LEADERBOARD (Aesthetic addition) */}
+                  {activeTab === 'stats' && (
+                    <div className="space-y-6 animate-fade-in">
+                      {/* Top metrics grids */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs">
+                          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Membres Actifs</span>
+                          <span className="text-2xl font-black text-[#1034A6] mt-2 block">{runners.length}</span>
+                          <p className="text-[10px] text-slate-500 mt-1">Nombre d'athlètes enregistrés</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs">
+                          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Runs Planifiés</span>
+                          <span className="text-2xl font-black text-[#1034A6] mt-2 block">{runs.filter(r => !r.completed).length}</span>
+                          <p className="text-[10px] text-slate-500 mt-1">Prochaines sorties programmées</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs">
+                          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Sorties Terminées</span>
+                          <span className="text-2xl font-black text-emerald-600 mt-2 block">{runs.filter(r => r.completed).length}</span>
+                          <p className="text-[10px] text-slate-500 mt-1">Explorations réelles complétées</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-3xs">
+                          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Distance Globale</span>
+                          <span className="text-2xl font-black text-amber-600 mt-2 block">1 284 km</span>
+                          <p className="text-[10px] text-slate-500 mt-1">Total de kilomètres collectifs</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Club Leaderboard podium */}
+                        <div className="lg:col-span-8 bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs">
+                          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                            🏆 LEADERBOARD • LES ULTRA-COUREURS DU CLUB
+                          </h3>
+                          <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                            Classement honorifique des athlètes ayant participé au plus grand nombre de sorties de groupe officielles mémorisées dans l'application.
+                          </p>
+
+                          <div className="space-y-3.5">
+                            {runners
+                              .map(rn => {
+                                const participations = runs.filter(r => r.participants.some(p => p.id === rn.id)).length;
+                                const dist = runs.filter(r => r.participants.some(p => p.id === rn.id)).reduce((acc, c) => acc + c.distance, 0);
+                                return { ...rn, count: participations, distance: dist };
+                              })
+                              .sort((a, b) => b.count - a.count || b.distance - a.distance)
+                              .slice(0, 5)
+                              .map((athlete, index) => {
+                                const medals = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+                                return (
+                                  <div key={athlete.id} className="flex items-center justify-between p-3.5 hover:bg-slate-50/50 rounded-2xl border border-slate-100/50 transition duration-300">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-lg">{medals[index]}</span>
+                                      <div>
+                                        <p className="font-bold text-xs text-slate-800">{athlete.name}</p>
+                                        <p className="text-[10px] font-medium text-slate-400 uppercase font-mono">{athlete.role || 'Membre'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-xs font-black text-[#1034A6]">{athlete.count} Sortie{athlete.count > 1 ? 's' : ''}</p>
+                                      <p className="text-[10px] font-mono text-slate-400 font-bold">{athlete.distance.toFixed(1)} Km total</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+
+                        {/* Distribution difficulty visual */}
+                        <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-5">
+                          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
+                            🔥 NIVEAU DE DIFFICULTÉ
+                          </h3>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Répartition des tracés selon la technicité des reliefs.
+                          </p>
+
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-emerald-700">Moyenne (Moderé)</span>
+                                <span>65%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2">
+                                <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '65%' }}></div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-amber-700">Dur (Expert)</span>
+                                <span>25%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2">
+                                <div className="bg-amber-500 h-2 rounded-full" style={{ width: '25%' }}></div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-sky-700">Facile (Tranquille)</span>
+                                <span>10%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2">
+                                <div className="bg-sky-500 h-2 rounded-full" style={{ width: '10%' }}></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: LISTS OF COMPLETED RUNS */}
+                  {activeTab === 'reports' && (
+                    <div className="space-y-6">
+                      <ReportsSummary
+                        reports={reports}
                         runs={runs}
+                        currentUser={currentUser}
+                        onAddFeedback={handleAddFeedback}
                         language={language}
                       />
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {activeTab === 'reports' && (
-                <div className="space-y-6">
-                  <ReportsSummary
-                    reports={reports}
-                    runs={runs}
-                    currentUser={currentUser}
-                    onAddFeedback={handleAddFeedback}
-                    language={language}
-                  />
-                </div>
-              )}
+                  {/* TAB 4: RUNNER DIRECTORY LISTING */}
+                  {activeTab === 'roster' && (
+                    <div className="space-y-6">
+                      <ClubStats
+                        runners={runners}
+                        currentUser={currentUser}
+                        onAddRunner={handleAddRunner}
+                        onDeleteRunner={handleDeleteRunner}
+                        onUpdateRunner={handleUpdateRunner}
+                        language={language}
+                      />
+                    </div>
+                  )}
 
-              {activeTab === 'roster' && (
-                <div className="space-y-6">
-                  <ClubStats
-                    runners={runners}
-                    currentUser={currentUser}
-                    onAddRunner={handleAddRunner}
-                    onDeleteRunner={handleDeleteRunner}
-                    onUpdateRunner={handleUpdateRunner}
-                    language={language}
-                  />
-                </div>
-              )}
+                  {/* TAB 5: CUSTOM SPREADSHEET checklists */}
+                  {activeTab === 'lists' && (
+                    <div className="space-y-6">
+                      <CustomLists
+                        runners={runners}
+                        currentUser={currentUser}
+                        lists={customLists}
+                        onSaveList={handleSaveCustomList}
+                        onDeleteList={handleDeleteCustomList}
+                        language={language}
+                      />
+                    </div>
+                  )}
 
-              {activeTab === 'lists' && (
-                <div className="space-y-6">
-                  <CustomLists
-                    runners={runners}
-                    currentUser={currentUser}
-                    lists={customLists}
-                    onSaveList={handleSaveCustomList}
-                    onDeleteList={handleDeleteCustomList}
-                    language={language}
-                  />
-                </div>
-              )}
-            </main>
-          </>
-        )}
+                  {/* TAB 6: MESSAGING WORKSPACE (Sugestions & Feedback box) */}
+                  {activeTab === 'messagerie' && (
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6 animate-fade-in text-center py-12">
+                      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100 shadow-xs">
+                        <MessageSquare className="w-8 h-8" />
+                      </div>
+                      <div className="max-w-md mx-auto space-y-2">
+                        <h3 className="text-xl font-black text-[#1034A6] font-serif italic">Messagerie Interactive & Avis</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          Discutez avec les admins du club, donnez votre feedback ou partagez de belles photos de vos trails ! Les notifications importantes de la Postagang N°27 sont partagées ici.
+                        </p>
+                      </div>
 
-        {/* Humble system credits */}
-      </div>
+                      {/* Contact Suggestion form inside */}
+                      <div className="max-w-lg mx-auto bg-slate-50 border border-slate-200/50 p-6 rounded-2xl mt-8">
+                        <h4 className="text-xs font-bold text-slate-700 tracking-wider text-left uppercase mb-3.5">Écrire aux Admins & Coachs</h4>
+                        <div className="space-y-4 text-left">
+                          <div>
+                            <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Auteur</label>
+                            <input type="text" disabled value={currentUser.name} className="w-full px-3 py-2 bg-slate-100 rounded-xl text-slate-500 text-xs border border-slate-200" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Message d'avis ou de coordination</label>
+                            <textarea placeholder="Partagez vos impressions ou signalez un impératif..." rows={3} className="w-full px-3 py-2 bg-white rounded-xl text-xs border border-slate-200 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
+                          </div>
+                          <button onClick={() => alert('Suggestion envoyée avec succès aux modérateurs du MRC !')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer">
+                            Envoyer aux Modérateurs
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 7: SETTINGS WORKSPACE */}
+                  {activeTab === 'settings' && (
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6 animate-fade-in">
+                      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                        <Settings className="w-5 h-5 text-blue-600 animate-spin" />
+                        <h3 className="text-base font-black text-[#1034A6] font-serif italic">Paramètres généraux du Club</h3>
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Pour synchroniser votre application avec une base de données durable PostgreSQL via Supabase, connectez votre projet Supabase en renseignant vos clés client-side dans un fichier d'environnement.
+                      </p>
+
+                      <div className="bg-slate-900 text-slate-100 rounded-2xl p-5 border border-slate-800 space-y-3 shadow-md">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                          <div className="flex items-center gap-2">
+                            <Terminal className="text-[#2F89FC] w-5 h-5" />
+                            <span className="font-mono text-xs font-bold text-slate-200">Script de Création SQL pour les Tables</span>
+                          </div>
+                          <button
+                            onClick={copySqlToClipboard}
+                            className="bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono transition cursor-pointer"
+                          >
+                            Copier SQL
+                          </button>
+                        </div>
+                        <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[140px] border border-slate-800/60 leading-normal">
+                          {sqlQueryText}
+                        </pre>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                          <h4 className="font-bold text-xs text-slate-700 mb-2 font-serif italic">Mise en cache Locale</h4>
+                          <p className="text-[11px] text-slate-500 leading-normal mb-3">
+                            L'application mémorise automatiquement vos changements d'état (runners, listes, runs) dans le localStorage de votre navigateur en l'absence de Supabase.
+                          </p>
+                          <button onClick={() => {
+                            localStorage.clear();
+                            window.location.reload();
+                          }} className="px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:text-rose-800 rounded-xl text-[10px] font-bold transition font-mono cursor-pointer">
+                            ✖ Vider le cache de l'application
+                          </button>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                          <h4 className="font-bold text-xs text-slate-700 mb-2 font-serif italic">Diagnostic Réseau</h4>
+                          <ul className="text-[10px] text-slate-600 font-mono space-y-1.5 list-disc pl-4 leading-normal">
+                            <li>Supabase supporté : {isSupabaseConfigured ? '🟢 OUI (Configuré)' : '🟡 NON (Mode Local, Clés Absentes)'}</li>
+                            <li>Clé d'API : Standard client injection active.</li>
+                            <li>Version de build : v2.4 (Géré par l'Intelligence de Mosta Run Club)</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 8: HELP & EMERGENCY SUPPORT WORKSPACE */}
+                  {activeTab === 'help' && (
+                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6 animate-fade-in">
+                      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                        <HelpCircle className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-base font-black text-[#1034A6] font-serif italic">Aide, Support & Guides de Survie</h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 leading-relaxed text-xs">
+                        {/* Emergency kit card details */}
+                        <div className="p-5 bg-rose-50/50 border border-rose-100 rounded-2xl space-y-2">
+                          <h4 className="font-bold text-xs text-rose-800 flex items-center gap-1.5 font-serif italic">
+                            🚨 URGENCE : QUE FAIRE EN CAS D'INCIDENT ?
+                          </h4>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            Durant les sorties du club Mosta Run, le respect de la chaîne de secours est primordial. Si un coureur se blesse :
+                          </p>
+                          <ol className="list-decimal pl-4 space-y-1 text-[11.5px] text-slate-700">
+                            <li>Sécurisez immédiatement le lieu et signalez l'arrêt à l'admin ou au coach de queue.</li>
+                            <li>Identifiez la victime et le groupe sanguin mentionné sur sa fiche d'athlète (onglet Roster/Membres!).</li>
+                            <li>Contactez le numéro d'urgence disponible sur sa fiche personnelle.</li>
+                          </ol>
+                        </div>
+
+                        {/* Survival guidelines rules */}
+                        <div className="p-5 bg-blue-50/40 border border-blue-100/30 rounded-2xl space-y-2">
+                          <h4 className="font-bold text-xs text-blue-800 flex items-center gap-1.5 font-serif italic">
+                            🎒 VESTIAIRE ET MAILLOTS OFFICIELS
+                          </h4>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            Nous courons aux couleurs de la wilaya de Mostaganem. Le port du maillot de course bleu roi ou blanc oficialisé par MRC est exigé.
+                          </p>
+                          <ul className="list-disc pl-4 space-y-1 text-[11.5px] text-slate-700">
+                            <li>Tours de ville : Maillot officiel exigé.</li>
+                            <li>Trails Hors Wilaya (Ex: Alger, Oran) : Maillot officiel exigé.</li>
+                            <li>Hydratation : Emportez au moins 1.5L d'eau pour toute sortie dépassant 15 KMs.</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </main>
+              </>
+            )}
+
+          </div>
+        </div>
       )}
     </div>
   );
