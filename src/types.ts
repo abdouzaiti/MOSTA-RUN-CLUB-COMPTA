@@ -18,6 +18,7 @@ export interface RunParticipant extends Runner {
   useTransport?: boolean;      // Transport ma3na (Oui / Non)
   useAccommodation?: boolean;  // Lmbata / Hébergement  (Oui / Non)
   accommodationType?: 'room1' | 'room2' | 'room3'; // Type de chambre (Chambre pour 1, 2, 3)
+  roomNumber?: string;         // Numéro de chambre ou groupement (ex: "Chambre 27", "A1")
   isPaid?: boolean;            // Versement / payé (Oui / Non)
   customPrice?: number;        // Prix ajusté manuellement (Algerian DA)
 }

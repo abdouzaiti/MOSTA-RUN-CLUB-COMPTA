@@ -8,6 +8,9 @@ import LoginScreen from './components/LoginScreen';
 import CustomLists from './components/CustomLists';
 import Sidebar from './components/Sidebar';
 import UserProfileSettings from './components/UserProfileSettings';
+import DashboardSocial from './components/DashboardSocial';
+import MessageriePremium from './components/MessageriePremium';
+import NotificationsPanel from './components/NotificationsPanel';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -16,11 +19,11 @@ import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
   Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe,
-  MessageSquare, Settings, HelpCircle
+  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Bell
 } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('planning');
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [language, setLanguage] = useState<Language | null>(() => {
     const saved = localStorage.getItem('mrc_language');
     return saved as Language || null;
@@ -202,7 +205,7 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setActiveTab('planning');
+    setActiveTab('dashboard');
   };
 
   const handleSaveCustomList = async (updatedList: CustomList) => {
@@ -834,7 +837,19 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                 />
 
                 {/* Main page views router */}
-                <main className="min-h-[500px]">
+                <main className="min-h-[500px] pb-24 md:pb-6">
+                  {/* TAB 0: DASHBOARD SOCIAL */}
+                  {activeTab === 'dashboard' && (
+                    <DashboardSocial
+                      runners={runners}
+                      runs={runs}
+                      currentUser={currentUser}
+                      onToggleRegister={handleToggleRegister}
+                      setActiveTab={setActiveTab}
+                      language={language || 'fr'}
+                    />
+                  )}
+
                   {/* TAB 1: PLANNING (Matches columns exact layout) */}
                   {activeTab === 'planning' && (
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -1019,37 +1034,21 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                     </div>
                   )}
 
-                  {/* TAB 6: MESSAGING WORKSPACE (Sugestions & Feedback box) */}
+                  {/* TAB 6: MESSAGING WORKSPACE */}
                   {activeTab === 'messagerie' && (
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6 animate-fade-in text-center py-12">
-                      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100 shadow-xs">
-                        <MessageSquare className="w-8 h-8" />
-                      </div>
-                      <div className="max-w-md mx-auto space-y-2">
-                        <h3 className="text-xl font-black text-[#1034A6] font-serif italic">Messagerie Interactive & Avis</h3>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          Discutez avec les admins du club, donnez votre feedback ou partagez de belles photos de vos trails ! Les notifications importantes de la Postagang N°27 sont partagées ici.
-                        </p>
-                      </div>
+                    <MessageriePremium
+                      currentUser={currentUser}
+                      runners={runners}
+                      language={language || 'fr'}
+                    />
+                  )}
 
-                      {/* Contact Suggestion form inside */}
-                      <div className="max-w-lg mx-auto bg-slate-50 border border-slate-200/50 p-6 rounded-2xl mt-8">
-                        <h4 className="text-xs font-bold text-slate-700 tracking-wider text-left uppercase mb-3.5">Écrire aux Admins & Coachs</h4>
-                        <div className="space-y-4 text-left">
-                          <div>
-                            <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Auteur</label>
-                            <input type="text" disabled value={currentUser.name} className="w-full px-3 py-2 bg-slate-100 rounded-xl text-slate-500 text-xs border border-slate-200" />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-mono font-bold text-slate-400 mb-1">Message d'avis ou de coordination</label>
-                            <textarea placeholder="Partagez vos impressions ou signalez un impératif..." rows={3} className="w-full px-3 py-2 bg-white rounded-xl text-xs border border-slate-200 focus:ring-1 focus:ring-blue-500 focus:outline-none"></textarea>
-                          </div>
-                          <button onClick={() => alert('Suggestion envoyée avec succès aux modérateurs du MRC !')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer">
-                            Envoyer aux Modérateurs
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  {/* TAB 6.5: NOTIFICATIONS */}
+                  {activeTab === 'notifications' && (
+                    <NotificationsPanel
+                      currentUser={currentUser}
+                      language={language || 'fr'}
+                    />
                   )}
 
                   {/* TAB 7: SETTINGS WORKSPACE */}
@@ -1165,6 +1164,67 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
             )}
 
           </div>
+
+          {/* Mobile Bottom Navigation Bar */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-100/90 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-3 py-2 flex items-center justify-around">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
+                activeTab === 'dashboard' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Compass className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الرئيسية' : 'Home'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('planning')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
+                activeTab === 'planning' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الخرجات' : 'Sorties'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('roster')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
+                activeTab === 'roster' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'النادي' : 'Club'}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('messagerie')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all relative cursor-pointer ${
+                activeTab === 'messagerie' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الرسائل' : 'Tchat'}</span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
+            </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all relative cursor-pointer ${
+                activeTab === 'notifications' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Bell className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'التنبيهات' : 'Alertes'}</span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
+                activeTab === 'settings' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الملف' : 'Profil'}</span>
+            </button>
+          </div>
+
         </div>
       )}
     </div>

@@ -65,6 +65,9 @@ export const translations = {
     activeAthletes: "العدائين النشطين",
     totalDistance: "المسافة الإجمالية",
     clubRecords: "سجلات النادي",
+    accommodation: "المبيت / Lmbata",
+    roomNumber: "رقم الغرفة",
+    groupByRoom: "ترتيب حسب الغرف",
   },
   fr: {
     selectLanguage: "Choisir la langue",
@@ -130,6 +133,9 @@ export const translations = {
     activeAthletes: "Athlètes actifs",
     totalDistance: "Distance totale",
     clubRecords: "Records du Club",
+    accommodation: "Hébergement / Lmbata",
+    roomNumber: "N° Chambre",
+    groupByRoom: "Grouper par chambre",
   },
   en: {
     selectLanguage: "Choose Language",
@@ -195,5 +201,8 @@ export const translations = {
     activeAthletes: "Active Athletes",
     totalDistance: "Total Distance",
     clubRecords: "Club Records",
+    accommodation: "Accommodation",
+    roomNumber: "Room Number",
+    groupByRoom: "Group by Room",
   }
 };

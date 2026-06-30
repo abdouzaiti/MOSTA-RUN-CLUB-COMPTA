@@ -72,6 +72,9 @@ export default function OutingsPlanning({
   // Success message after creating the run
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Logistics sorting state
+  const [logisticsSortBy, setLogisticsSortBy] = useState<'name' | 'room'>('name');
+
   // Participant search state
   const [participantSearchTerm, setParticipantSearchTerm] = useState('');
 
@@ -715,23 +718,48 @@ export default function OutingsPlanning({
                         ) : (
                           <>
                             {/* Search bar for participants */}
-                            <div className="mb-3 relative group">
-                              <Search className={`absolute ${language === 'ar' ? 'right-2.5' : 'left-2.5'} top-2.5 w-3.5 h-3.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
-                              <input
-                                type="text"
-                                placeholder={language === 'ar' ? 'البحث عن عداء في هذه القائمة...' : 'Rechercher un athlète dans cette liste...'}
-                                value={participantSearchTerm}
-                                onChange={(e) => setParticipantSearchTerm(e.target.value)}
-                                className={`w-full text-[10px] sm:text-[11px] ${language === 'ar' ? 'pr-8 pl-3' : 'pl-8 pr-3'} py-2 bg-natural-bone/50 border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold transition-all`}
-                              />
-                              {participantSearchTerm && (
-                                <button 
-                                  onClick={() => setParticipantSearchTerm('')}
-                                  className={`absolute ${language === 'ar' ? 'left-2' : 'right-2'} top-2 p-0.5 hover:bg-natural-divider rounded-full transition-colors`}
+                            <div className={`mb-3 flex flex-col sm:flex-row gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                              <div className="relative group flex-1">
+                                <Search className={`absolute ${language === 'ar' ? 'right-2.5' : 'left-2.5'} top-2.5 w-3.5 h-3.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
+                                <input
+                                  type="text"
+                                  placeholder={language === 'ar' ? 'البحث عن عداء في هذه القائمة...' : 'Rechercher un athlète dans cette liste...'}
+                                  value={participantSearchTerm}
+                                  onChange={(e) => setParticipantSearchTerm(e.target.value)}
+                                  className={`w-full text-[10px] sm:text-[11px] ${language === 'ar' ? 'pr-8 pl-3' : 'pl-8 pr-3'} py-2 bg-natural-bone/50 border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-olive font-semibold transition-all`}
+                                />
+                                {participantSearchTerm && (
+                                  <button 
+                                    onClick={() => setParticipantSearchTerm('')}
+                                    className={`absolute ${language === 'ar' ? 'left-2' : 'right-2'} top-2 p-0.5 hover:bg-natural-divider rounded-full transition-colors`}
+                                  >
+                                    <X className="w-3.5 h-3.5 text-natural-sage" />
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => setLogisticsSortBy('name')}
+                                  className={`px-3 py-2 text-[10px] font-bold rounded-xl border transition ${
+                                    logisticsSortBy === 'name' 
+                                      ? 'bg-natural-olive text-white border-transparent' 
+                                      : 'bg-white text-natural-olive border-natural-border'
+                                  }`}
                                 >
-                                  <X className="w-3.5 h-3.5 text-natural-sage" />
+                                  {language === 'ar' ? 'ترتيب بالاسم' : 'Par Nom'}
                                 </button>
-                              )}
+                                <button
+                                  onClick={() => setLogisticsSortBy('room')}
+                                  className={`px-3 py-2 text-[10px] font-bold rounded-xl border transition ${
+                                    logisticsSortBy === 'room' 
+                                      ? 'bg-natural-olive text-white border-transparent' 
+                                      : 'bg-white text-natural-olive border-natural-border'
+                                  }`}
+                                >
+                                  {t('groupByRoom')}
+                                </button>
+                              </div>
                             </div>
 
                             {/* Version Ordinateur / Tablette (Gros Tableau visible sur tablettes et écrans larges) */}
@@ -743,14 +771,23 @@ export default function OutingsPlanning({
                                     <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'الرقم' : 'Dossard'}</th>
                                     <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'النقل (Bus)' : 'Transport (Bus)'}</th>
                                     <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'المبيت / الليل' : 'Lmbata / Nuitée'}</th>
+                                    <th className={`py-2 ${language === 'ar' ? 'text-right' : 'text-left'}`}>{language === 'ar' ? 'الغرفة / المجموعة' : 'Chambre / Groupe'}</th>
                                     <th className={`py-2 ${language === 'ar' ? 'text-left' : 'text-right'}`}>{language === 'ar' ? 'إجمالي السعر' : 'Prix Total'}</th>
                                     <th className="py-2 text-center">{language === 'ar' ? 'التحويل' : 'Versement'}</th>
                                     <th className="py-2 text-center">{language === 'ar' ? 'إجراء' : 'Action'}</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-natural-divider">
-                                  {run.participants
+                                  {[...run.participants]
                                     .filter(p => !participantSearchTerm || p.name.toLowerCase().includes(participantSearchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(participantSearchTerm.toLowerCase())))
+                                    .sort((a, b) => {
+                                      if (logisticsSortBy === 'room') {
+                                        const roomA = a.roomNumber || 'zzz'; // Put empty at the end
+                                        const roomB = b.roomNumber || 'zzz';
+                                        if (roomA !== roomB) return roomA.localeCompare(roomB);
+                                      }
+                                      return a.name.localeCompare(b.name);
+                                    })
                                     .map(partic => {
                                       const hasTransport = partic.useTransport !== false;
                                     const hasLodging = !!partic.useAccommodation;
@@ -818,6 +855,17 @@ export default function OutingsPlanning({
                                             )}
                                           </div>
                                         </td>
+                                        <td className="py-2">
+                                          {hasLodging && (
+                                            <input
+                                              type="text"
+                                              value={partic.roomNumber || ''}
+                                              placeholder={language === 'ar' ? 'رقم الغرفة' : 'ex: G1, Ch27'}
+                                              onChange={(e) => onUpdateParticipant(run.id, partic.id, { roomNumber: e.target.value })}
+                                              className="w-20 font-mono font-bold text-center border border-emerald-200 focus:ring-1 focus:ring-emerald-500 rounded bg-emerald-50/30 px-1.5 py-1 text-[10px]"
+                                            />
+                                          )}
+                                        </td>
                                         <td className="py-2 text-right">
                                           <div className="flex flex-col items-end gap-0.5">
                                             <div className="flex items-center gap-1">
@@ -878,8 +926,16 @@ export default function OutingsPlanning({
 
                             {/* Version Téléphone Mobile (Liste de Cartes ultra-optimisée avec espacements adaptés aux doigts) */}
                             <div className="block md:hidden space-y-3">
-                              {run.participants
+                              {[...run.participants]
                                 .filter(p => !participantSearchTerm || p.name.toLowerCase().includes(participantSearchTerm.toLowerCase()) || (p.username && p.username.toLowerCase().includes(participantSearchTerm.toLowerCase())))
+                                .sort((a, b) => {
+                                  if (logisticsSortBy === 'room') {
+                                    const roomA = a.roomNumber || 'zzz';
+                                    const roomB = b.roomNumber || 'zzz';
+                                    if (roomA !== roomB) return roomA.localeCompare(roomB);
+                                  }
+                                  return a.name.localeCompare(b.name);
+                                })
                                 .map(partic => {
                                   const hasTransport = partic.useTransport !== false;
                                 const hasLodging = !!partic.useAccommodation;
@@ -970,17 +1026,31 @@ export default function OutingsPlanning({
                                     </div>
 
                                     {hasLodging && (
-                                      <div className="bg-emerald-50/55 p-2 rounded-lg border border-emerald-100">
-                                        <label className="block text-[9px] font-bold text-emerald-800 uppercase font-mono mb-1">Option de Chambre :</label>
-                                        <select
-                                          value={partic.accommodationType || 'room1'}
-                                          onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
-                                          className="w-full text-[11px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-white px-2 py-1 cursor-pointer"
-                                        >
-                                          <option value="room1">Chambre 1p ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
-                                          <option value="room2">Chambre 2p ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
-                                          <option value="room3">Chambre 3p ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
-                                        </select>
+                                      <div className="bg-emerald-50/55 p-2 rounded-lg border border-emerald-100 space-y-2">
+                                        <div>
+                                          <label className="block text-[9px] font-bold text-emerald-800 uppercase font-mono mb-1">Option de Chambre :</label>
+                                          <select
+                                            value={partic.accommodationType || 'room1'}
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { accommodationType: e.target.value as any })}
+                                            className="w-full text-[11px] font-mono font-bold border border-emerald-200 text-emerald-800 rounded bg-white px-2 py-1 cursor-pointer"
+                                          >
+                                            <option value="room1">Chambre 1p ({run.priceRoom1 !== undefined ? run.priceRoom1 : (run.accommodationPrice || 0)} DA)</option>
+                                            <option value="room2">Chambre 2p ({run.priceRoom2 !== undefined ? run.priceRoom2 : (run.accommodationPrice || 0)} DA)</option>
+                                            <option value="room3">Chambre 3p ({run.priceRoom3 !== undefined ? run.priceRoom3 : (run.accommodationPrice || 0)} DA)</option>
+                                          </select>
+                                        </div>
+                                        <div className="pt-1 border-t border-emerald-100">
+                                          <label className="block text-[9px] font-bold text-blue-800 uppercase font-mono mb-1">
+                                            {t('roomNumber')} / {language === 'ar' ? 'المجموعة' : 'Groupe'} :
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={partic.roomNumber || ''}
+                                            placeholder={language === 'ar' ? 'مثال: غرفة 5، فريق أ' : 'Ex: Ch 5, Team A'}
+                                            onChange={(e) => onUpdateParticipant(run.id, partic.id, { roomNumber: e.target.value })}
+                                            className="w-full text-[11px] font-mono font-bold border border-blue-200 text-blue-800 rounded bg-white px-2 py-1.5 focus:outline-none"
+                                          />
+                                        </div>
                                       </div>
                                     )}
 
