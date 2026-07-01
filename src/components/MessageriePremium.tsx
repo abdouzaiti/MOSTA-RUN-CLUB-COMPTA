@@ -62,6 +62,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Playback of voice states
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const activeSynthRef = useRef<{ stop: () => void } | null>(null);
+
+  // Voice Note Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Hidden file inputs refs
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock channels
   const [channels, setChannels] = useState<ChatChannel[]>([
@@ -245,6 +254,278 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
   const messages = channelMessages[activeChannelId] || [];
+
+  // Recording seconds ticking effect
+  useEffect(() => {
+    let interval: any;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  // Cleanup synthesizer on unmount
+  useEffect(() => {
+    return () => {
+      if (activeSynthRef.current) {
+        activeSynthRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Format seconds into digital clock string
+  const formatSeconds = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  // Web Audio synth for playing vocal note with beautiful synthetic running beeps
+  const playVoiceSynth = (durationSeconds: number, onStop: () => void) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        onStop();
+        return null;
+      }
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.type = 'triangle'; // smoother sound than square, warmer than sine
+      const startTime = ctx.currentTime;
+      
+      // Fun pitch patterns for speech representation
+      const pitchChanges = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
+      const step = 0.4; // pitch change every 400ms
+      const totalSteps = Math.ceil(durationSeconds / step);
+      
+      for (let i = 0; i < totalSteps; i++) {
+        const time = startTime + i * step;
+        const pitch = pitchChanges[Math.floor(Math.random() * pitchChanges.length)];
+        // Let's glide into each frequency for a fun synthesized speaking flow
+        osc.frequency.setTargetAtTime(pitch, time, 0.05);
+        
+        // Pulse gain
+        gainNode.gain.setValueAtTime(0.08, time);
+        gainNode.gain.setTargetAtTime(0, time + step - 0.05, 0.03);
+      }
+      
+      osc.start();
+      
+      const timeout = setTimeout(() => {
+        try {
+          osc.stop();
+          ctx.close();
+        } catch (err) {}
+        onStop();
+      }, durationSeconds * 1000);
+      
+      return {
+        stop: () => {
+          clearTimeout(timeout);
+          try {
+            osc.stop();
+            ctx.close();
+          } catch (err) {}
+        }
+      };
+    } catch (e) {
+      onStop();
+      return null;
+    }
+  };
+
+  // Play/Pause vocal message handler
+  const handleToggleVoicePlay = (msg: Message) => {
+    if (activeSynthRef.current) {
+      activeSynthRef.current.stop();
+      activeSynthRef.current = null;
+    }
+
+    if (playingVoiceId === msg.id) {
+      setPlayingVoiceId(null);
+    } else {
+      setPlayingVoiceId(msg.id);
+      
+      const parts = (msg.duration || '0:10').split(':');
+      let seconds = 10;
+      if (parts.length === 2) {
+        seconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      } else {
+        seconds = parseInt(parts[0], 10) || 10;
+      }
+      
+      const synth = playVoiceSynth(seconds, () => {
+        setPlayingVoiceId(null);
+        activeSynthRef.current = null;
+      });
+      if (synth) {
+        activeSynthRef.current = synth;
+      }
+    }
+  };
+
+  // Start simulated recording
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    setRecordingSeconds(0);
+    // Beep indicator for starting recording
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.05, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      }
+    } catch(e) {}
+  };
+
+  // Send the voice recording
+  const handleSendVoiceRecord = () => {
+    if (recordingSeconds < 1) {
+      setIsRecording(false);
+      return;
+    }
+    
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const durationStr = formatSeconds(recordingSeconds);
+    
+    const voiceMsg: Message = {
+      id: 'm-voice-' + Date.now(),
+      senderId: 'usr-1',
+      senderName: currentUser.name,
+      senderRole: currentUser.runClubRole || 'Membre',
+      avatarUrl: currentUser.avatarUrl || null,
+      text: '🎙️ Message Vocal',
+      time: timestamp,
+      type: 'voice',
+      duration: durationStr,
+      read: false
+    };
+    
+    setChannelMessages(prev => ({
+      ...prev,
+      [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
+    }));
+    
+    // Update channel's last message
+    setChannels(prev => prev.map(c => {
+      if (c.id === activeChannelId) {
+        return {
+          ...c,
+          lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
+          lastMessageTime: timestamp
+        };
+      }
+      return c;
+    }));
+    
+    setIsRecording(false);
+    simulateBotReply();
+  };
+
+  // Real Photo Upload handler
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      const newMsg: Message = {
+        id: 'm-photo-' + Date.now(),
+        senderId: 'usr-1',
+        senderName: currentUser.name,
+        senderRole: currentUser.runClubRole || 'Membre',
+        avatarUrl: currentUser.avatarUrl || null,
+        text: file.name,
+        time: timestamp,
+        type: 'image',
+        mediaUrl: dataUrl,
+        read: false
+      };
+
+      setChannelMessages(prev => ({
+        ...prev,
+        [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
+      }));
+
+      setChannels(prev => prev.map(c => {
+        if (c.id === activeChannelId) {
+          return {
+            ...c,
+            lastMessage: `${currentUser.name.split(' ')[0]}: 📷 Photo`,
+            lastMessageTime: timestamp
+          };
+        }
+        return c;
+      }));
+
+      simulateBotReply();
+    };
+    reader.readAsDataURL(file);
+    // Reset input value to allow selecting same photo again
+    e.target.value = '';
+  };
+
+  // Real File/Document Upload handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+    
+    const newMsg: Message = {
+      id: 'm-file-' + Date.now(),
+      senderId: 'usr-1',
+      senderName: currentUser.name,
+      senderRole: currentUser.runClubRole || 'Membre',
+      avatarUrl: currentUser.avatarUrl || null,
+      text: file.name,
+      time: timestamp,
+      type: 'file',
+      fileSize: `${sizeInMb} MB`,
+      read: false
+    };
+
+    setChannelMessages(prev => ({
+      ...prev,
+      [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
+    }));
+
+    setChannels(prev => prev.map(c => {
+      if (c.id === activeChannelId) {
+        return {
+          ...c,
+          lastMessage: `${currentUser.name.split(' ')[0]}: 📁 Document`,
+          lastMessageTime: timestamp
+        };
+      }
+      return c;
+    }));
+
+    simulateBotReply();
+    // Reset input value
+    e.target.value = '';
+  };
 
   // Scroll to bottom helper
   useEffect(() => {
@@ -636,7 +917,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   {message.type === 'voice' ? (
                     <div className="flex items-center gap-3 py-1">
                       <button 
-                        onClick={() => setPlayingVoiceId(playingVoiceId === message.id ? null : message.id)}
+                        onClick={() => handleToggleVoicePlay(message)}
                         className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
                           isMe ? 'bg-white text-[#1034A6]' : 'bg-[#1034A6] text-white'
                         }`}
@@ -782,56 +1063,116 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         )}
 
         {/* Message editor toolbar footer bar */}
-        <form 
-          onSubmit={handleSendMessage}
-          className="p-3 border-t border-slate-100 bg-white flex items-center gap-2 relative z-10"
-        >
-          {/* Quick attachment pills */}
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            <button 
-              type="button"
-              onClick={() => triggerAttachment('image')}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
-              title="Partager Image"
-            >
-              <ImageIcon className="w-4 h-4" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => triggerAttachment('file')}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
-              title="Joindre un fichier"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => triggerAttachment('voice')}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
-              title="Envoyer Vocal"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+        {isRecording ? (
+          <div className="p-3 border-t border-slate-100 bg-red-50/50 flex items-center justify-between gap-3 relative z-10 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+              </span>
+              <span className="text-xs font-bold text-red-600 font-mono">
+                {isRtl ? 'جاري التسجيل...' : 'Enregistrement...'} {formatSeconds(recordingSeconds)}
+              </span>
+              
+              {/* Animated wave bars */}
+              <div className="hidden sm:flex items-center gap-1">
+                {[4, 8, 3, 7, 5, 9, 2, 6, 4, 8, 5].map((h, i) => (
+                  <span 
+                    key={i} 
+                    className="w-1 bg-red-400 rounded-full animate-bounce" 
+                    style={{ 
+                      height: `${h * 2}px`, 
+                      animationDuration: `${0.6 + i * 0.15}s` 
+                    }} 
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => setIsRecording(false)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                {isRtl ? 'إلغاء' : 'Annuler'}
+              </button>
+              <button 
+                type="button"
+                onClick={handleSendVoiceRecord}
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black transition shadow-xs cursor-pointer"
+              >
+                {isRtl ? 'إرسال' : 'Envoyer'}
+              </button>
+            </div>
           </div>
-
-          {/* Main Text Area Field */}
-          <input
-            type="text"
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            placeholder={isRtl ? 'اكتب رسالة...' : 'Écrire un message...'}
-            className="flex-1 text-xs font-semibold py-2.5 bg-[#F8FAFC] border border-slate-200/80 rounded-xl focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 transition px-3 text-slate-800"
-          />
-
-          {/* Send Action Trigger */}
-          <button
-            type="submit"
-            disabled={!inputText.trim()}
-            className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xs rounded-xl transition cursor-pointer disabled:opacity-40"
+        ) : (
+          <form 
+            onSubmit={handleSendMessage}
+            className="p-3 border-t border-slate-100 bg-white flex items-center gap-2 relative z-10"
           >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
+            {/* Hidden native input pickers */}
+            <input 
+              type="file" 
+              ref={photoInputRef} 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handlePhotoUpload} 
+            />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              onChange={handleFileUpload} 
+            />
+
+            {/* Quick attachment pills */}
+            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+              <button 
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                title={isRtl ? 'مشاركة صورة' : 'Partager Image'}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                title={isRtl ? 'إرفاق ملف' : 'Joindre un fichier'}
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={handleStartRecording}
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                title={isRtl ? 'تسجيل صوتي' : 'Enregistrer un vocal'}
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Main Text Area Field */}
+            <input
+              type="text"
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              placeholder={isRtl ? 'اكتب رسالة...' : 'Écrire un message...'}
+              className="flex-1 text-xs font-semibold py-2.5 bg-[#F8FAFC] border border-slate-200/80 rounded-xl focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 transition px-3 text-slate-800"
+            />
+
+            {/* Send Action Trigger */}
+            <button
+              type="submit"
+              disabled={!inputText.trim()}
+              className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xs rounded-xl transition cursor-pointer disabled:opacity-40"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        )}
 
       </div>
 
