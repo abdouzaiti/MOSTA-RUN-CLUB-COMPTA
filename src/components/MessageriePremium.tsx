@@ -6,7 +6,7 @@ import {
   Smile, Image as ImageIcon, Paperclip, Mic, CheckCheck, Play, Pause,
   Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check,
   VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users,
-  Database, Wifi, WifiOff, Copy, Zap, Sparkles
+  Database, Wifi, WifiOff, Copy, Zap, Sparkles, Trash2
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AgoraManager, isAgoraConfigured } from '../lib/agora';
@@ -329,6 +329,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   })
                 };
               });
+            } else if (payload.eventType === 'DELETE') {
+              const oldRow = payload.old;
+              setChannelMessages(prev => {
+                const current = prev['chan-group-1'] || [];
+                return {
+                  ...prev,
+                  'chan-group-1': current.filter(m => m.id !== oldRow.id)
+                };
+              });
             }
           }
         )
@@ -495,7 +504,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     
     const voiceMsg: Message = {
       id: 'm-voice-' + Date.now(),
-      senderId: 'usr-1',
+      senderId: currentUser.id || 'usr-1',
       senderName: currentUser.name,
       senderRole: currentUser.runClubRole || 'Membre',
       avatarUrl: currentUser.avatarUrl || null,
@@ -541,7 +550,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       
       const newMsg: Message = {
         id: 'm-photo-' + Date.now(),
-        senderId: 'usr-1',
+        senderId: currentUser.id || 'usr-1',
         senderName: currentUser.name,
         senderRole: currentUser.runClubRole || 'Membre',
         avatarUrl: currentUser.avatarUrl || null,
@@ -587,7 +596,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     
     const newMsg: Message = {
       id: 'm-file-' + Date.now(),
-      senderId: 'usr-1',
+      senderId: currentUser.id || 'usr-1',
       senderName: currentUser.name,
       senderRole: currentUser.runClubRole || 'Membre',
       avatarUrl: currentUser.avatarUrl || null,
@@ -1028,7 +1037,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
     const newMsg: Message = {
       id: 'm-new-' + Date.now(),
-      senderId: 'usr-1',
+      senderId: currentUser.id || 'usr-1',
       senderName: currentUser.name,
       senderRole: currentUser.runClubRole || 'Membre',
       avatarUrl: currentUser.avatarUrl || null,
@@ -1062,6 +1071,52 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
     setInputText('');
     setReplyingTo(null);
+  };
+
+  // Delete / Retract a message
+  const handleDeleteMessage = (msgId: string) => {
+    // 1. Update local messages state
+    setChannelMessages(prev => {
+      const current = prev[activeChannelId] || [];
+      const updated = current.filter(m => m.id !== msgId);
+      return {
+        ...prev,
+        [activeChannelId]: updated
+      };
+    });
+
+    // 2. Delete from Supabase if active
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('mrc_messages')
+        .delete()
+        .eq('id', msgId)
+        .then(({ error }) => {
+          if (error) console.error("Error deleting message from Supabase:", error);
+        });
+    }
+
+    // 3. Update channel's last message
+    setChannels(prev => prev.map(c => {
+      if (c.id === activeChannelId) {
+        const remaining = (channelMessages[activeChannelId] || []).filter(m => m.id !== msgId);
+        if (remaining.length > 0) {
+          const last = remaining[remaining.length - 1];
+          return {
+            ...c,
+            lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+            lastMessageTime: last.time
+          };
+        } else {
+          return {
+            ...c,
+            lastMessage: isRtl ? 'لا توجد رسائل' : 'Aucun message',
+            lastMessageTime: ''
+          };
+        }
+      }
+      return c;
+    }));
   };
 
 
@@ -1112,7 +1167,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     if (type === 'voice') {
       mockMsg = {
         id: 'm-att-' + Date.now(),
-        senderId: 'usr-1',
+        senderId: currentUser.id || 'usr-1',
         senderName: currentUser.name,
         senderRole: currentUser.runClubRole || 'Membre',
         avatarUrl: currentUser.avatarUrl || null,
@@ -1125,7 +1180,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     } else if (type === 'image') {
       mockMsg = {
         id: 'm-att-' + Date.now(),
-        senderId: 'usr-1',
+        senderId: currentUser.id || 'usr-1',
         senderName: currentUser.name,
         senderRole: currentUser.runClubRole || 'Membre',
         avatarUrl: currentUser.avatarUrl || null,
@@ -1138,7 +1193,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     } else {
       mockMsg = {
         id: 'm-att-' + Date.now(),
-        senderId: 'usr-1',
+        senderId: currentUser.id || 'usr-1',
         senderName: currentUser.name,
         senderRole: currentUser.runClubRole || 'Membre',
         avatarUrl: currentUser.avatarUrl || null,
@@ -1345,7 +1400,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           </div>
 
           {messages.map((message) => {
-            const isMe = message.senderId === 'usr-1';
+            const isMe = message.senderId === (currentUser.id || 'usr-1');
             
             return (
               <div 
@@ -1361,79 +1416,123 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   </span>
                 )}
 
-                {/* Message Bubble wrapper with custom design */}
-                <div 
-                  className={`rounded-2xl p-3 shadow-3xs relative overflow-hidden transition-all ${
-                    isMe 
-                      ? 'bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white rounded-tr-none' 
-                      : 'bg-white text-slate-800 border border-slate-100 rounded-tl-none'
-                  }`}
-                >
-                  {/* Reply container inside the message */}
-                  {message.replyTo && (
-                    <div className={`p-2 rounded-lg text-[10px] mb-2 font-semibold border-l-2 ${
+                {/* Bubble & Inline actions layout */}
+                <div className={`flex items-center gap-2 max-w-full ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Message Bubble wrapper with custom design */}
+                  <div 
+                    className={`rounded-2xl p-3 shadow-3xs relative overflow-hidden transition-all ${
                       isMe 
-                        ? 'bg-white/10 text-white/95 border-white/50' 
-                        : 'bg-slate-50 text-slate-500 border-blue-500'
-                    }`}>
-                      <p className="font-extrabold">{message.replyTo.sender}</p>
-                      <p className="truncate opacity-80">{message.replyTo.text}</p>
-                    </div>
-                  )}
+                        ? 'bg-blue-600 text-white border border-blue-600 rounded-tr-none' 
+                        : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
+                    }`}
+                  >
+                    {/* Reply container inside the message */}
+                    {message.replyTo && (
+                      <div className={`p-2 rounded-lg text-[10px] mb-2 font-semibold border-l-2 ${
+                        isMe 
+                          ? 'bg-white/10 text-white/95 border-white/50' 
+                          : 'bg-slate-50 text-slate-500 border-blue-500'
+                      }`}>
+                        <p className="font-extrabold">{message.replyTo.sender}</p>
+                        <p className="truncate opacity-80">{message.replyTo.text}</p>
+                      </div>
+                    )}
 
-                  {/* Rendering based on message types */}
-                  {message.type === 'voice' ? (
-                    <div className="flex items-center gap-3 py-1">
+                    {/* Rendering based on message types */}
+                    {message.type === 'voice' ? (
+                      <div className="flex items-center gap-3 py-1">
+                        <button 
+                          onClick={() => handleToggleVoicePlay(message)}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
+                            isMe ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'
+                          }`}
+                        >
+                          {playingVoiceId === message.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                        </button>
+                        
+                        <div className="flex-1 min-w-[120px]">
+                          {/* Interactive fake wave analyzer bars */}
+                          <div className="flex items-end gap-0.5 h-6">
+                            {[2, 5, 8, 3, 6, 9, 4, 7, 5, 2, 8, 4, 6, 3, 7, 5].map((h, i) => (
+                              <span 
+                                key={i} 
+                                className={`w-0.75 rounded-full transition-all duration-300 ${
+                                  playingVoiceId === message.id ? 'animate-pulse' : ''
+                                } ${
+                                  isMe ? 'bg-white/60' : 'bg-slate-300'
+                                }`} 
+                                style={{ height: `${h * 10}%` }} 
+                              />
+                            ))}
+                          </div>
+                          <div className="flex justify-between text-[8px] opacity-75 mt-1 font-mono">
+                            <span>{playingVoiceId === message.id ? 'Lecture...' : 'Message vocal'}</span>
+                            <span>{message.duration}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : message.type === 'image' ? (
+                      <div className="space-y-2">
+                        <div className="rounded-xl overflow-hidden shadow-sm max-h-48 border border-slate-100">
+                          <img src={message.mediaUrl} alt="shared pic" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        </div>
+                        <p className="text-xs font-semibold">{message.text}</p>
+                      </div>
+                    ) : message.type === 'file' ? (
+                      <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
+                        <Paperclip className="w-5 h-5 shrink-0" />
+                        <div className="flex-1 min-w-0 text-[11px] font-bold">
+                          <p className="truncate text-slate-800">{message.text}</p>
+                          <span className="text-[9px] opacity-75 font-mono block">{message.fileSize}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs sm:text-[13px] font-semibold leading-relaxed break-words select-text">
+                        {message.text}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Inline action buttons: reactions, reply, and delete positioned elegantly next to the bubble */}
+                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all duration-200 shrink-0 z-20">
+                    <button 
+                      onClick={() => handleAddReaction(message.id, '❤️')}
+                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      title="Aimer"
+                    >
+                      ❤️
+                    </button>
+                    <button 
+                      onClick={() => handleAddReaction(message.id, '🔥')}
+                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      title="Incendier"
+                    >
+                      🔥
+                    </button>
+                    <button 
+                      onClick={() => handleAddReaction(message.id, '👍')}
+                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      title="Valider"
+                    >
+                      👍
+                    </button>
+                    <button 
+                      onClick={() => setReplyingTo(message)}
+                      className="p-1 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-full shadow-3xs border border-slate-100 transition duration-300 cursor-pointer"
+                      title={isRtl ? "رد" : "Répondre"}
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                    </button>
+                    {isMe && (
                       <button 
-                        onClick={() => handleToggleVoicePlay(message)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
-                          isMe ? 'bg-white text-[#1034A6]' : 'bg-[#1034A6] text-white'
-                        }`}
+                        onClick={() => handleDeleteMessage(message.id)}
+                        className="p-1 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-full shadow-3xs border border-slate-100 transition duration-300 cursor-pointer"
+                        title={isRtl ? "سحب الرسالة" : "Retirer le message"}
                       >
-                        {playingVoiceId === message.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                      
-                      <div className="flex-1 min-w-[120px]">
-                        {/* Interactive fake wave analyzer bars */}
-                        <div className="flex items-end gap-0.5 h-6">
-                          {[2, 5, 8, 3, 6, 9, 4, 7, 5, 2, 8, 4, 6, 3, 7, 5].map((h, i) => (
-                            <span 
-                              key={i} 
-                              className={`w-0.75 rounded-full transition-all duration-300 ${
-                                playingVoiceId === message.id ? 'animate-pulse' : ''
-                              } ${
-                                isMe ? 'bg-white/60' : 'bg-slate-300'
-                              }`} 
-                              style={{ height: `${h * 10}%` }} 
-                            />
-                          ))}
-                        </div>
-                        <div className="flex justify-between text-[8px] opacity-75 mt-1 font-mono">
-                          <span>{playingVoiceId === message.id ? 'Lecture...' : 'Message vocal'}</span>
-                          <span>{message.duration}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : message.type === 'image' ? (
-                    <div className="space-y-2">
-                      <div className="rounded-xl overflow-hidden shadow-sm max-h-48 border border-slate-100">
-                        <img src={message.mediaUrl} alt="shared pic" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      </div>
-                      <p className="text-xs font-semibold">{message.text}</p>
-                    </div>
-                  ) : message.type === 'file' ? (
-                    <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
-                      <Paperclip className="w-5 h-5 shrink-0" />
-                      <div className="flex-1 min-w-0 text-[11px] font-bold">
-                        <p className="truncate text-slate-800">{message.text}</p>
-                        <span className="text-[9px] opacity-75 font-mono block">{message.fileSize}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs sm:text-[13px] font-semibold leading-relaxed break-words select-text">
-                      {message.text}
-                    </p>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* Reactions list under bubble */}
@@ -1447,40 +1546,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                     ))}
                   </div>
                 )}
-
-                {/* Hover overlay actions: reactions and replies */}
-                <div className={`absolute top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1.5 z-20 ${
-                  isMe ? 'left-0 -translate-x-full pr-3' : 'right-0 translate-x-full pl-3'
-                }`}>
-                  <button 
-                    onClick={() => handleAddReaction(message.id, '❤️')}
-                    className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300"
-                    title="Aimer"
-                  >
-                    ❤️
-                  </button>
-                  <button 
-                    onClick={() => handleAddReaction(message.id, '🔥')}
-                    className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300"
-                    title="Incendier"
-                  >
-                    🔥
-                  </button>
-                  <button 
-                    onClick={() => handleAddReaction(message.id, '👍')}
-                    className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300"
-                    title="Valider"
-                  >
-                    👍
-                  </button>
-                  <button 
-                    onClick={() => setReplyingTo(message)}
-                    className="p-1 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-full shadow-3xs border border-slate-100 transition duration-300"
-                    title="Répondre"
-                  >
-                    <Reply className="w-3 h-3" />
-                  </button>
-                </div>
 
                 {/* Read receipt tick & time stamps */}
                 <div className={`flex items-center gap-1 text-[8px] font-mono text-slate-400 font-bold mt-1 ${
