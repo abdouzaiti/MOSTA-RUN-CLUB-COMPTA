@@ -138,10 +138,10 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
             {/* Social handles + Logout Row */}
             <div className="flex items-center justify-between text-slate-300 gap-2">
               <div className="flex items-center gap-1.5">
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-pink-400 p-1 bg-white/5 hover:bg-white/10 rounded-lg transition">
+                <a href="https://www.instagram.com/mostarunclub/" target="_blank" rel="noreferrer" className="hover:text-pink-400 p-1 bg-white/5 hover:bg-white/10 rounded-lg transition">
                   <Instagram className="w-3.5 h-3.5" />
                 </a>
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 p-1 bg-white/5 hover:bg-white/10 rounded-lg transition">
+                <a href="https://www.facebook.com/profile.php?id=100054214491761" target="_blank" rel="noreferrer" className="hover:text-blue-400 p-1 bg-white/5 hover:bg-white/10 rounded-lg transition">
                   <Facebook className="w-3.5 h-3.5" />
                 </a>
               </div>

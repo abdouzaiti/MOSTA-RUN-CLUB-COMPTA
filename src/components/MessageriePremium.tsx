@@ -4,7 +4,7 @@ import { Language, translations } from '../translations';
 import { 
   MessageSquare, Search, Send, Pin, Phone, Video, Info, 
   Smile, Image as ImageIcon, Paperclip, Mic, CheckCheck, Play, Pause,
-  Reply, ChevronRight, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check
+  Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check
 } from 'lucide-react';
 
 interface Message {
@@ -53,6 +53,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Active channel
   const [activeChannelId, setActiveChannelId] = useState('chan-group-1');
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Input States
   const [inputText, setInputText] = useState('');
@@ -453,10 +454,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   );
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-3xs overflow-hidden h-[calc(100vh-180px)] min-h-[500px] flex flex-col md:flex-row animate-fade-in relative">
+    <div className="bg-white rounded-none sm:rounded-[2.5rem] border-0 sm:border sm:border-slate-100 shadow-3xs overflow-hidden flex-1 h-full min-h-0 md:min-h-[500px] flex flex-col md:flex-row animate-fade-in relative">
       
       {/* Channels Sidebar List */}
-      <div className="w-full md:w-80 border-r border-slate-50 flex flex-col h-full bg-[#FAFBFD]/60">
+      <div className={`w-full md:w-80 border-r border-slate-50 flex flex-col h-full bg-[#FAFBFD]/60 ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         {/* Search header inside messaging */}
         <div className="p-4 border-b border-slate-100 bg-white">
           <div className="relative group">
@@ -482,6 +483,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 key={channel.id}
                 onClick={() => {
                   setActiveChannelId(channel.id);
+                  setMobileView('chat');
                   // Clear unread
                   setChannels(channels.map(c => c.id === channel.id ? { ...c, unreadCount: 0 } : c));
                 }}
@@ -540,10 +542,18 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       </div>
 
       {/* Main Chat Conversation Area */}
-      <div className="flex-1 flex flex-col h-full bg-white relative">
+      <div className={`flex-1 flex flex-col h-full bg-white relative ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
         {/* Active chat header toolbar */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between shadow-3xs bg-white/90 backdrop-blur-md relative z-10">
           <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            {mobileView === 'chat' && (
+              <button 
+                onClick={() => setMobileView('list')}
+                className="md:hidden p-1.5 hover:bg-slate-100 rounded-xl transition cursor-pointer text-slate-600"
+              >
+                {isRtl ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              </button>
+            )}
             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shadow-xs overflow-hidden">
               {activeChannel.isGroup ? 'PG' : (
                 activeChannel.avatarUrl ? (

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
 import InscriptionsAndProfile from './components/InscriptionsAndProfile';
 import OutingsPlanning from './components/OutingsPlanning';
 import ReportsSummary from './components/ReportsSummary';
@@ -753,91 +752,18 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
           />
 
           {/* Right Main Scrollable View Panel */}
-          <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 lg:p-6 space-y-6 lg:no-scrollbar relative">
+          <div className={`flex-1 flex flex-col h-full relative ${
+            activeTab === 'messagerie' 
+              ? 'overflow-hidden p-0 lg:p-6' 
+              : 'overflow-y-auto p-4 lg:p-6 lg:no-scrollbar'
+          }`}>
             
-            {/* Database setup SQL assistance Accordion (rendered at top of content when visible) */}
-            {showSqlSetup && (
-              <div className="bg-slate-900 text-slate-100 rounded-3xl p-5 border border-slate-800 space-y-3 animate-fade-in shadow-md">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="text-natural-accent w-5 h-5" />
-                    <span className="font-mono text-xs font-bold text-natural-accent">Configurateur SQL Universel</span>
-                  </div>
-                  <button
-                    onClick={copySqlToClipboard}
-                    className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono font-bold transition cursor-pointer"
-                  >
-                    {sqlCopied ? (
-                      <>
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                        Copié !
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        Copier le Script
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Pour initialiser les tables automatiquement dans votre compte Supabase, ouvrez votre projet, allez sur l'onglet <strong className="text-white font-mono bg-white/10 px-1 py-0.5 rounded">SQL Editor</strong>, cliquez sur <strong className="text-white">New Query</strong>, collez le script ci-dessous, puis cliquez sur <strong className="text-emerald-400">Run</strong> :
-                </p>
-                <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[160px] border border-slate-800/60 leading-normal">
-                  {sqlQueryText}
-                </pre>
-              </div>
-            )}
-
-            {/* Database Setup Error Notice */}
-            {dbError && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 shadow-sm space-y-3">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-bounce" />
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider font-mono">
-                      Erreur d'initialisation de la base de données
-                    </h4>
-                    <p className="text-[11px] text-rose-700 font-medium mt-0.5">
-                      La connexion Supabase a échoué car les tables nécessaires ne sont probablement pas encore générées dans votre espace. ({dbError})
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 pl-7">
-                  <button
-                    onClick={() => setShowSqlSetup(true)}
-                    className="bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold font-mono text-[10px] rounded-lg px-3 py-1.5 transition cursor-pointer border border-rose-300"
-                  >
-                    👉 Afficher le script de création SQL
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDbError(null);
-                      setIsLoadingDb(false);
-                    }}
-                    className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
-                  >
-                    Ignorer et passer en mode local
-                  </button>
-                </div>
-              </div>
-            )}
-
             {!isLoadingDb && currentUser && (
               <>
-                {/* Premium Header card layout */}
-                <Header
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  runs={runs}
-                  currentUser={currentUser}
-                  onLogout={handleLogout}
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-
                 {/* Main page views router */}
-                <main className="min-h-[500px] pb-24 md:pb-6">
+                <main className={`flex-1 flex flex-col w-full h-full ${
+                  activeTab === 'messagerie' ? 'pb-16 md:pb-6' : 'pb-24 md:pb-6'
+                }`}>
                   {/* TAB 0: DASHBOARD SOCIAL */}
                   {activeTab === 'dashboard' && (
                     <DashboardSocial
