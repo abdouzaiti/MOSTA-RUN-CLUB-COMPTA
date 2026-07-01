@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Runner } from '../types';
 import { Language } from '../translations';
 import { 
@@ -17,20 +17,23 @@ import {
   Instagram, 
   Facebook,
   Compass,
-  Bell
+  Bell,
+  Camera
 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   currentUser: Runner;
+  onUpdateCurrentUser?: (user: Runner) => void;
   onLogout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout, language, setLanguage }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdateCurrentUser, onLogout, language, setLanguage }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const menuItems = [
     { id: 'dashboard', label: language === 'ar' ? 'الرئيسية' : language === 'en' ? 'Dashboard' : 'Tableau de bord', icon: Compass },
@@ -47,6 +50,35 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
   const handleTabClick = (id: string) => {
     setActiveTab(id);
     setIsOpen(false);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpdateCurrentUser) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 150;
+        const MAX_HEIGHT = 150;
+        canvas.width = MAX_WIDTH;
+        canvas.height = MAX_HEIGHT;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          onUpdateCurrentUser({
+            ...currentUser,
+            avatarUrl: dataUrl
+          });
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const isRtl = language === 'ar';
@@ -66,6 +98,20 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Mobile Profile Photo Quick Access */}
+          <div className="relative shrink-0 group mr-1">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] overflow-hidden border border-slate-200 cursor-pointer shadow-sm hover:ring-2 ring-blue-400 transition"
+            >
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                currentUser.name.substring(0, 2).toUpperCase()
+              )}
+            </div>
+          </div>
+
           {/* Language pill */}
           <button 
             onClick={() => setLanguage(language === 'ar' ? 'fr' : language === 'fr' ? 'en' : 'ar')}
@@ -133,8 +179,39 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onLogout
             </nav>
           </div>
 
-          {/* Sidebar Footer with Social links */}
+          {/* Sidebar Footer with Profile & Social links */}
           <div className="space-y-4 pt-3 relative z-15 border-t border-white/5">
+            {/* User Profile Quick Access */}
+            <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition group ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+              <div className="relative shrink-0">
+                <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden border border-white/20">
+                  {currentUser.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    currentUser.name.substring(0, 2).toUpperCase()
+                  )}
+                </div>
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border border-white text-white opacity-0 group-hover:opacity-100 transition shadow-sm cursor-pointer hover:bg-blue-400"
+                  title={language === 'ar' ? 'تغيير الصورة' : 'Changer de photo'}
+                >
+                  <Camera className="w-2.5 h-2.5" />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold text-white truncate">{currentUser.name}</div>
+                <div className="text-[9px] text-slate-300 truncate">{currentUser.runClubRole || 'Membre'}</div>
+              </div>
+            </div>
+
             {/* Social handles + Logout Row */}
             <div className="flex items-center justify-between text-slate-300 gap-2">
               <div className="flex items-center gap-1.5">

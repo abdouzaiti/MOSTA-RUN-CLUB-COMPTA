@@ -746,6 +746,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             currentUser={currentUser}
+            onUpdateCurrentUser={handleUpdateCurrentUser}
             onLogout={handleLogout}
             language={language}
             setLanguage={setLanguage}
