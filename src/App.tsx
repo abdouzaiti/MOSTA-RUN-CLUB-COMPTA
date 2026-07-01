@@ -250,6 +250,11 @@ export default function App() {
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
+    if (targeted.completed) {
+      alert("Cette sortie est clôturée.");
+      return;
+    }
+
     const isRegistered = targeted.participants.some(p => p.id === currentUser.id);
     let updatedParticipants: Runner[];
 
@@ -277,15 +282,33 @@ export default function App() {
 
   // Update specific participant properties (bib assignment, transport, lodging)
   const handleUpdateParticipant = async (runId: string, runnerId: string, updates: any) => {
-    if (!currentUser || !isAdminOrCoach(currentUser)) {
-      alert("Accès refusé : Seuls les administrateurs et coachs peuvent modifier les informations des participants.");
+    if (!currentUser) return;
+    
+    // Normal users can only update their own details (and they can't change 'isPaid' or 'customPrice' unless we explicitly restricted it, but for simplicity we allow self-update and just restrict admin actions below).
+    // Specifically, if not admin/coach, verify runnerId === currentUser.id
+    if (!isAdminOrCoach(currentUser) && currentUser.id !== runnerId) {
+      alert("Accès refusé : Vous ne pouvez modifier que vos propres informations.");
       return;
     }
+
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
 
+    if (targeted.completed) {
+      alert("Cette sortie est clôturée. Les modifications ne sont plus autorisées.");
+      return;
+    }
+
     const updatedParticipants = targeted.participants.map(p => {
       if (p.id === runnerId) {
+        // Prevent normal users from altering financial states
+        if (!isAdminOrCoach(currentUser)) {
+          const safeUpdates = { ...updates };
+          delete safeUpdates.isPaid;
+          delete safeUpdates.customPrice;
+          delete safeUpdates.roomNumber;
+          return { ...p, ...safeUpdates };
+        }
         return { ...p, ...updates };
       }
       return p;
@@ -325,6 +348,44 @@ export default function App() {
     }
   };
 
+  const handleDeleteRun = async (runId: string) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent supprimer des sorties.");
+      return;
+    }
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette sortie ?")) {
+      setRuns(prev => prev.filter(r => r.id !== runId));
+      if (isSupabaseConfigured) {
+        try {
+          await dbService.deleteRun(runId);
+        } catch (err: any) {
+          console.error("Error deleting run:", err);
+        }
+      }
+    }
+  };
+
+  const handleCompleteRun = async (runId: string) => {
+    if (!currentUser || !isAdminOrCoach(currentUser)) {
+      alert("Accès refusé : Seuls les administrateurs et coachs peuvent clôturer des sorties.");
+      return;
+    }
+    const targeted = runs.find(r => r.id === runId);
+    if (!targeted) return;
+
+    if (window.confirm("Confirmer la clôture de la sortie ? Plus personne ne pourra s'inscrire ou se désinscrire.")) {
+      const updatedRun = { ...targeted, completed: true };
+      setRuns(prev => prev.map(r => r.id === runId ? updatedRun : r));
+      if (isSupabaseConfigured) {
+        try {
+          await dbService.upsertRun(updatedRun);
+        } catch (err: any) {
+          console.error("Error completing run in Supabase:", err);
+        }
+      }
+    }
+  };
+
   // Add athlete participant directly as administrator/coach
   const handleAddParticipantByAdmin = async (runId: string, runner: Runner) => {
     if (!currentUser || !isAdminOrCoach(currentUser)) {
@@ -333,6 +394,11 @@ export default function App() {
     }
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
+
+    if (targeted.completed) {
+      alert("Cette sortie est clôturée. Les modifications ne sont plus autorisées.");
+      return;
+    }
 
     const isAlready = targeted.participants.some(p => p.id === runner.id);
     if (isAlready) return;
@@ -366,6 +432,11 @@ export default function App() {
     }
     const targeted = runs.find(r => r.id === runId);
     if (!targeted) return;
+
+    if (targeted.completed) {
+      alert("Cette sortie est clôturée. Les modifications ne sont plus autorisées.");
+      return;
+    }
 
     const updatedParticipants = targeted.participants.filter(p => p.id !== runnerId);
     const updatedRun = { ...targeted, participants: updatedParticipants };
@@ -787,6 +858,8 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                           currentUser={currentUser}
                           onToggleRegister={handleToggleRegister}
                           onAddRun={handleAddRun}
+                          onDeleteRun={handleDeleteRun}
+                          onCompleteRun={handleCompleteRun}
                           onUpdateParticipant={handleUpdateParticipant}
                           runners={runners}
                           onAddParticipantByAdmin={handleAddParticipantByAdmin}

@@ -13,6 +13,8 @@ interface OutingsPlanningProps {
   currentUser: Runner;
   onToggleRegister: (runId: string) => void;
   onAddRun: (newRun: Omit<Run, 'participants' | 'completed'>) => void;
+  onDeleteRun?: (runId: string) => void;
+  onCompleteRun?: (runId: string) => void;
   onUpdateParticipant: (runId: string, runnerId: string, updates: Partial<RunParticipant>) => void;
   runners: Runner[];
   onAddParticipantByAdmin: (runId: string, runner: Runner) => void;
@@ -25,6 +27,8 @@ export default function OutingsPlanning({
   currentUser,
   onToggleRegister,
   onAddRun,
+  onDeleteRun,
+  onCompleteRun,
   onUpdateParticipant,
   runners = [],
   onAddParticipantByAdmin,
@@ -78,11 +82,15 @@ export default function OutingsPlanning({
   // Participant search state
   const [participantSearchTerm, setParticipantSearchTerm] = useState('');
 
-  // Get active upcoming runs only
-  const upcomingRuns = runs.filter(r => !r.completed);
+  // Sort runs: upcoming first (by date), then completed (by date desc)
+  const sortedRuns = [...runs].sort((a, b) => {
+    if (a.completed && !b.completed) return 1;
+    if (!a.completed && b.completed) return -1;
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
 
   // Process filters
-  const filteredRuns = upcomingRuns.filter(run => {
+  const filteredRuns = sortedRuns.filter(run => {
     const term = searchTerm.toLowerCase().trim();
     
     // If no search term, all runs count as matching
@@ -613,17 +621,24 @@ export default function OutingsPlanning({
                     {/* Inscription Action Button */}
                     <button
                       id={`register-btn-${run.id}`}
-                      disabled={!isUserRegistered && isFull}
-                      onClick={() => onToggleRegister(run.id)}
-                      className={`px-5 py-3 rounded-xl text-sm font-black tracking-wide transition shrink-0 flex items-center gap-1.5 shadow-md border cursor-pointer ${
-                        isUserRegistered
-                          ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200"
+                      disabled={run.completed || (!isUserRegistered && isFull)}
+                      onClick={() => !run.completed && onToggleRegister(run.id)}
+                      className={`px-5 py-3 rounded-xl text-sm font-black tracking-wide transition shrink-0 flex items-center gap-1.5 shadow-md border ${
+                        run.completed
+                          ? "bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                          : isUserRegistered
+                          ? "bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200 cursor-pointer"
                           : isFull
                           ? "bg-natural-sage-light/20 text-natural-sage cursor-not-allowed border-natural-border"
-                          : "bg-natural-olive hover:bg-natural-olive-hover text-white border-transparent"
+                          : "bg-natural-olive hover:bg-natural-olive-hover text-white border-transparent cursor-pointer"
                       }`}
                     >
-                      {isUserRegistered ? (
+                      {run.completed ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          {language === 'ar' ? 'منتهية' : 'Terminée'}
+                        </>
+                      ) : isUserRegistered ? (
                         <>
                           <X className="w-4 h-4" />
                           {t('unregister')}
@@ -677,9 +692,31 @@ export default function OutingsPlanning({
                               </p>
                             </div>
                           </div>
-                          <span className="text-[9px] bg-natural-olive text-white px-2.5 py-0.5 rounded font-mono font-bold">
-                            {language === 'ar' ? 'مساحة المسير' : 'Espace Manager'}
-                          </span>
+                          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                            <span className="text-[9px] bg-natural-olive text-white px-2.5 py-0.5 rounded font-mono font-bold whitespace-nowrap">
+                              {language === 'ar' ? 'مساحة المسير' : 'Espace Manager'}
+                            </span>
+                            {!run.completed && onCompleteRun && (
+                              <button
+                                onClick={() => onCompleteRun(run.id)}
+                                className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-1 rounded font-bold transition flex items-center gap-1 whitespace-nowrap"
+                                title={language === 'ar' ? 'إنهاء الخرجة (إغلاق التسجيلات)' : 'Clôturer la sortie (fermer les inscriptions)'}
+                              >
+                                <Check className="w-3 h-3" />
+                                {language === 'ar' ? 'إنهاء الخرجة' : 'Clôturer'}
+                              </button>
+                            )}
+                            {onDeleteRun && (
+                              <button
+                                onClick={() => onDeleteRun(run.id)}
+                                className="text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-700 px-2 py-1 rounded font-bold transition flex items-center gap-1 whitespace-nowrap"
+                                title={language === 'ar' ? 'حذف الخرجة نهائياً' : 'Supprimer la sortie définitivement'}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                {language === 'ar' ? 'حذف' : 'Supprimer'}
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Assign a new runner dropdown */}
@@ -689,6 +726,7 @@ export default function OutingsPlanning({
                             {language === 'ar' ? 'تسجيل عداء مباشرة:' : 'Inscrire un coureur directement :'}
                           </span>
                           <select
+                            disabled={run.completed}
                             onChange={(e) => {
                               const selectedId = e.target.value;
                               if (!selectedId) return;
@@ -698,7 +736,7 @@ export default function OutingsPlanning({
                               }
                               e.target.value = ''; // Reset select
                             }}
-                            className="text-[11px] font-bold px-3 py-2 bg-white text-natural-text border border-natural-border rounded-lg outline-none focus:ring-1 focus:ring-natural-olive cursor-pointer"
+                            className={`text-[11px] font-bold px-3 py-2 bg-white text-natural-text border border-natural-border rounded-lg outline-none focus:ring-1 focus:ring-natural-olive ${run.completed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             dir={language === 'ar' ? 'rtl' : 'ltr'}
                           >
                             <option value="">{language === 'ar' ? '-- اختر عداءً لإضافته --' : '-- Sélectionner un athlète à ajouter --'}</option>
@@ -904,6 +942,7 @@ export default function OutingsPlanning({
                                           <td className="py-2 text-center">
                                             <button
                                               onClick={() => {
+                                                if (run.completed) return;
                                                 const msg = language === 'ar' 
                                                   ? `هل تريد إلغاء تسجيل ${partic.name} من هذه الخرجة؟` 
                                                   : `Voulez-vous désinscrire ${partic.name} de cette sortie ?`;
@@ -911,8 +950,9 @@ export default function OutingsPlanning({
                                                   onRemoveParticipantByAdmin(run.id, partic.id);
                                                 }
                                               }}
+                                              disabled={run.completed}
                                               title={language === 'ar' ? 'إلغاء تسجيل العداء' : "Désinscrire l'athlète"}
-                                              className="p-1 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                              className={`p-1 rounded transition ${run.completed ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-rose-50 text-rose-600 hover:text-rose-800'}`}
                                             >
                                               <Trash2 className="w-3.5 h-3.5" />
                                             </button>
@@ -964,11 +1004,13 @@ export default function OutingsPlanning({
                                       </div>
                                       <button
                                         onClick={() => {
+                                          if (run.completed) return;
                                           if (confirm(`Voulez-vous désinscrire ${partic.name} de cette sortie ?`)) {
                                             onRemoveParticipantByAdmin(run.id, partic.id);
                                           }
                                         }}
-                                        className="p-1.5 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 transition"
+                                        disabled={run.completed}
+                                        className={`p-1.5 rounded transition ${run.completed ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-rose-50 text-rose-600 hover:text-rose-800'}`}
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
