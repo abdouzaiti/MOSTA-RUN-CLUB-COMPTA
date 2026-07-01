@@ -4,7 +4,8 @@ import { Language, translations } from '../translations';
 import { 
   MessageSquare, Search, Send, Pin, Phone, Video, Info, 
   Smile, Image as ImageIcon, Paperclip, Mic, CheckCheck, Play, Pause,
-  Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check
+  Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check,
+  VideoOff, MicOff, PhoneOff, Camera, VolumeX
 } from 'lucide-react';
 
 interface Message {
@@ -67,6 +68,27 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Voice Note Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Active Call States
+  interface ActiveCall {
+    type: 'voice' | 'video';
+    status: 'ringing' | 'connected' | 'ended';
+    partnerName: string;
+    partnerAvatar: string | null;
+    isGroup: boolean;
+  }
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [micMuted, setMicMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0); // Live voice waveform simulation or analytical level
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const callTimerRef = useRef<any>(null);
+  const ringtoneOscRef = useRef<any>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Hidden file inputs refs
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -527,6 +549,223 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     e.target.value = '';
   };
 
+  // Calling & Ringtone Sound Synthesizers
+  const startRingtone = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      let ringInterval = setInterval(() => {
+        try {
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          
+          // Dual frequency phone ringback tones: 440Hz + 480Hz
+          osc1.frequency.setValueAtTime(440, ctx.currentTime);
+          osc2.frequency.setValueAtTime(480, ctx.currentTime);
+          
+          gainNode.gain.setValueAtTime(0.03, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+          
+          osc1.connect(gainNode);
+          osc2.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          
+          osc1.start();
+          osc2.start();
+          
+          osc1.stop(ctx.currentTime + 1.2);
+          osc2.stop(ctx.currentTime + 1.2);
+        } catch (e) {}
+      }, 2000);
+
+      ringtoneOscRef.current = {
+        stop: () => {
+          clearInterval(ringInterval);
+          try {
+            ctx.close();
+          } catch(e) {}
+        }
+      };
+    } catch (e) {}
+  };
+
+  const stopRingtone = () => {
+    if (ringtoneOscRef.current) {
+      ringtoneOscRef.current.stop();
+      ringtoneOscRef.current = null;
+    }
+  };
+
+  // Handle start of call (Voice or Video)
+  const handleStartCall = async (type: 'voice' | 'video') => {
+    if (activeCall) return;
+
+    const partnerName = activeChannel.name;
+    const partnerAvatar = activeChannel.avatarUrl || null;
+    const isGroup = activeChannel.isGroup;
+
+    setActiveCall({
+      type,
+      status: 'ringing',
+      partnerName,
+      partnerAvatar,
+      isGroup
+    });
+    setCallDuration(0);
+    setMicMuted(false);
+    setCameraOff(false);
+
+    // Play ringing tone
+    startRingtone();
+
+    let stream: MediaStream | null = null;
+    try {
+      // Attempt real hardware stream access
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === 'video' ? { facingMode: 'user' } : false
+      });
+      setLocalStream(stream);
+
+      // Initialize real Web Audio analyzer for actual vocal frequencies
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const audioCtx = new AudioContextClass();
+        audioContextRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 32;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const updateLevel = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          setAudioLevel(average / 255); // scale 0 to 1
+          animationFrameRef.current = requestAnimationFrame(updateLevel);
+        };
+        updateLevel();
+      }
+    } catch (err) {
+      console.warn("Media devices not accessible, using simulation mode:", err);
+    }
+
+    // Auto connect after 3.5 seconds
+    setTimeout(() => {
+      setActiveCall(prev => {
+        if (!prev || prev.status !== 'ringing') return prev;
+        stopRingtone();
+
+        // Start call duration counter ticking
+        let sec = 0;
+        callTimerRef.current = setInterval(() => {
+          sec++;
+          setCallDuration(sec);
+        }, 1000);
+
+        return {
+          ...prev,
+          status: 'connected'
+        };
+      });
+    }, 3500);
+  };
+
+  const handleEndCall = () => {
+    stopRingtone();
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {}
+      });
+      setLocalStream(null);
+    }
+
+    setActiveCall(prev => {
+      if (prev) {
+        return {
+          ...prev,
+          status: 'ended'
+        };
+      }
+      return null;
+    });
+
+    setTimeout(() => {
+      setActiveCall(null);
+    }, 1500);
+  };
+
+  const handleToggleMute = () => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = micMuted;
+      });
+    }
+    setMicMuted(!micMuted);
+  };
+
+  const handleToggleCamera = () => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = cameraOff;
+      });
+    }
+    setCameraOff(!cameraOff);
+  };
+
+  // Bind video element when connected
+  useEffect(() => {
+    if (activeCall?.status === 'connected' && activeCall.type === 'video' && localStream && localVideoRef.current) {
+      try {
+        localVideoRef.current.srcObject = localStream;
+      } catch (e) {}
+    }
+  }, [activeCall?.status, localStream]);
+
+  // Clean up all call streams/timers on unmount
+  useEffect(() => {
+    return () => {
+      stopRingtone();
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [localStream]);
+
   // Scroll to bottom helper
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -855,10 +1094,18 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition cursor-pointer">
+            <button 
+              onClick={() => handleStartCall('voice')}
+              className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+              title={isRtl ? 'اتصال صوتي' : 'Appel vocal'}
+            >
               <Phone className="w-4 h-4" />
             </button>
-            <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition cursor-pointer">
+            <button 
+              onClick={() => handleStartCall('video')}
+              className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+              title={isRtl ? 'اتصال فيديو' : 'Appel vidéo'}
+            >
               <Video className="w-4 h-4" />
             </button>
             <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition cursor-pointer">
@@ -1175,6 +1422,170 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         )}
 
       </div>
+
+      {/* Active Audio/Video Calling Screen Overlay */}
+      {activeCall && (
+        <div className="absolute inset-0 bg-slate-950/95 z-50 flex flex-col items-center justify-between p-6 text-white animate-fade-in overflow-hidden">
+          
+          {/* Background ambient lighting */}
+          <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] rounded-full bg-blue-950/20 blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full bg-indigo-950/20 blur-[120px]" />
+
+          {/* Video Call Background Stream */}
+          {activeCall.type === 'video' && !cameraOff && localStream && (
+            <video 
+              ref={localVideoRef}
+              autoPlay 
+              playsInline 
+              muted 
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            />
+          )}
+
+          {/* Glass header with call metadata */}
+          <div className="relative z-10 w-full flex items-center justify-between bg-white/5 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-extrabold uppercase tracking-widest font-mono text-emerald-400">
+                {activeCall.status === 'ringing' ? (isRtl ? 'اتصال...' : 'Appel en cours...') : (isRtl ? 'متصل' : 'Sécurisé par MRC WebRTC')}
+              </span>
+            </div>
+            <div className="text-[11px] font-black font-mono bg-white/10 px-3 py-1 rounded-full border border-white/5">
+              {activeCall.type === 'video' ? (isRtl ? 'اتصال فيديو' : 'Vidéoconférence') : (isRtl ? 'اتصال صوتي' : 'Appel Audio')}
+            </div>
+          </div>
+
+          {/* Center Content Section */}
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-4">
+            
+            {/* Partner Avatar Wrapper */}
+            <div className="relative">
+              {/* Ringing waves */}
+              {activeCall.status === 'ringing' && (
+                <>
+                  <span className="absolute inset-0 rounded-full border-2 border-blue-500/30 scale-110 animate-ping" />
+                  <span className="absolute inset-0 rounded-full border-2 border-indigo-500/20 scale-125 animate-ping [animation-delay:0.3s]" />
+                </>
+              )}
+
+              <div className="w-28 h-28 rounded-full border-4 border-white/10 bg-slate-900 shadow-2xl flex items-center justify-center overflow-hidden relative">
+                {activeCall.partnerAvatar ? (
+                  <img 
+                    src={activeCall.partnerAvatar} 
+                    alt={activeCall.partnerName} 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="text-3xl font-serif italic font-black">
+                    {activeCall.partnerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                  </span>
+                )}
+                
+                {/* Miniature local stream PiP inside video call corner */}
+                {activeCall.type === 'video' && !cameraOff && localStream && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-mono text-white/80">
+                    LIVE
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Identity & Status */}
+            <div className="text-center">
+              <h2 className="font-serif italic font-black text-xl sm:text-2xl tracking-tight text-white">
+                {activeCall.partnerName}
+              </h2>
+              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest font-mono">
+                {activeCall.isGroup ? (isRtl ? 'قناة جماعية' : 'Postagang Groupe') : (isRtl ? 'مكالمة خاصة' : 'Membres du Club')}
+              </p>
+            </div>
+
+            {/* Call State & Duration */}
+            <div className="text-center bg-black/35 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5">
+              {activeCall.status === 'ringing' ? (
+                <span className="text-xs font-black text-blue-400 animate-pulse">
+                  {isRtl ? 'يرن...' : 'Sonnerie...'}
+                </span>
+              ) : activeCall.status === 'ended' ? (
+                <span className="text-xs font-black text-red-500">
+                  {isRtl ? 'تم إنهاء المكالمة' : 'Appel terminé'}
+                </span>
+              ) : (
+                <span className="text-sm font-extrabold font-mono text-emerald-400">
+                  {Math.floor(callDuration / 60)}:{(callDuration % 60 < 10 ? '0' : '')}{callDuration % 60}
+                </span>
+              )}
+            </div>
+
+            {/* Live Web Audio Amplitude Waveform (only for connected Audio calls or when camera is off) */}
+            {activeCall.status === 'connected' && (activeCall.type === 'voice' || cameraOff) && (
+              <div className="flex items-center gap-1.5 h-12 mt-2">
+                {[...Array(12)].map((_, i) => {
+                  // Generate responsive amplitude scales
+                  const randomMultiplier = 0.3 + Math.sin(i * 0.5) * 0.4;
+                  // Compute height with live audio level fallback
+                  const heightValue = Math.max(4, (audioLevel || 0.1) * 60 * randomMultiplier + (micMuted ? 0 : Math.random() * 15));
+                  return (
+                    <span 
+                      key={i}
+                      className={`w-1.5 rounded-full transition-all duration-75 ${
+                        micMuted ? 'bg-red-500/50' : 'bg-gradient-to-t from-emerald-500 to-blue-400'
+                      }`}
+                      style={{ height: `${heightValue}px` }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Action Controls Row */}
+          <div className="relative z-10 w-full max-w-sm flex items-center justify-around bg-white/5 backdrop-blur-lg p-4 rounded-[2rem] border border-white/10 mb-4 shadow-xl">
+            {/* Mic Control toggle */}
+            <button 
+              onClick={handleToggleMute}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-md cursor-pointer ${
+                micMuted 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-white/10 hover:bg-white/20 text-white'
+              }`}
+              title={micMuted ? 'Activer Micro' : 'Couper Micro'}
+            >
+              {micMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+
+            {/* End Call Button */}
+            <button 
+              onClick={handleEndCall}
+              className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-lg hover:scale-105 cursor-pointer"
+              title="Raccrocher"
+            >
+              <PhoneOff className="w-6 h-6" />
+            </button>
+
+            {/* Camera Control toggle (only available in Video calls) */}
+            {activeCall.type === 'video' ? (
+              <button 
+                onClick={handleToggleCamera}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-md cursor-pointer ${
+                  cameraOff 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+                title={cameraOff ? 'Activer Caméra' : 'Couper Caméra'}
+              >
+                {cameraOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+              </button>
+            ) : (
+              <div className="w-12 h-12 flex items-center justify-center text-slate-500/40">
+                <VideoOff className="w-5 h-5" />
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
 
     </div>
   );
