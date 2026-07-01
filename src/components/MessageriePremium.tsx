@@ -55,6 +55,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Active channel
   const [activeChannelId, setActiveChannelId] = useState('chan-group-1');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
 
   // Input States
   const [inputText, setInputText] = useState('');
@@ -106,9 +107,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const photoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Dynamic list of group members combining currentUser and all other runners from the database
+  const groupMembers = [
+    currentUser,
+    ...(runners || []).filter(r => r.id !== currentUser.id)
+  ];
+
   // Load channels and messages from localStorage to ensure realistic, fully durable storage
   const [channels, setChannels] = useState<ChatChannel[]>(() => {
-    const saved = localStorage.getItem('mrc_chat_channels');
+    const saved = localStorage.getItem('mrc_real_chat_channels');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -116,52 +123,24 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         console.error("Error parsing channels from localStorage:", e);
       }
     }
-    return [
+    const defaultChannels = [
       {
         id: 'chan-group-1',
         name: 'Postagang N°27 🏃‍♂️⚡',
         isGroup: true,
         pinned: true,
         unreadCount: 0,
-        lastMessage: 'Amine R.: La sortie de vendredi sera inoubliable !',
-        lastMessageTime: '14:32',
-        membersCount: 28
-      },
-      {
-        id: 'chan-group-2',
-        name: 'Comité de Coordination 📋',
-        isGroup: true,
-        pinned: true,
-        unreadCount: 0,
-        lastMessage: 'Abdou Zaiti: Budget bus validé pour Mosta !',
-        lastMessageTime: '10:15',
-        membersCount: 5
-      },
-      {
-        id: 'chan-private-1',
-        name: 'Coach Redouane 🏆',
-        isGroup: false,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        pinned: false,
-        unreadCount: 0,
-        lastMessage: 'Avez-vous complété votre plan de fractionnés ?',
-        lastMessageTime: 'Hier',
-      },
-      {
-        id: 'chan-private-2',
-        name: 'Yacine Runner ⚡',
-        isGroup: false,
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        pinned: false,
-        unreadCount: 1,
-        lastMessage: 'Tu as pris le maillot de taille M ?',
-        lastMessageTime: 'Mardi',
+        lastMessage: 'Pas encore de messages',
+        lastMessageTime: '--:--',
+        membersCount: groupMembers.length
       }
     ];
+    localStorage.setItem('mrc_real_chat_channels', JSON.stringify(defaultChannels));
+    return defaultChannels;
   });
 
   const [channelMessages, setChannelMessages] = useState<{ [chanId: string]: Message[] }>(() => {
-    const saved = localStorage.getItem('mrc_chat_messages');
+    const saved = localStorage.getItem('mrc_real_chat_messages');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -169,149 +148,35 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         console.error("Error parsing messages from localStorage:", e);
       }
     }
-    return {
-      'chan-group-1': [
-        {
-          id: 'm-1',
-          senderId: 'usr-coach',
-          senderName: 'Coach Redouane',
-          senderRole: 'Coach',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          text: '🔥 Bonjour à toute la Postagang ! Pour le trail de vendredi, l\'ascension finale de 300m D+ nécessite de garder des réserves. Gérez votre cardio !',
-          time: '09:12',
-          type: 'text',
-          reactions: { '🔥': 8, '💪': 5 },
-          read: true
-        },
-        {
-          id: 'm-2',
-          senderId: 'usr-yacine',
-          senderName: 'Yacine Runner',
-          senderRole: 'Membre',
-          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-          text: 'Message Vocal d\'organisation générale',
-          time: '09:45',
-          type: 'voice',
-          duration: '0:34',
-          reactions: { '👍': 4 },
-          read: true
-        },
-        {
-          id: 'm-3',
-          senderId: 'usr-1',
-          senderName: currentUser.name,
-          senderRole: 'Admin',
-          avatarUrl: currentUser.avatarUrl || null,
-          text: 'J\'ai mis en ligne les fiches d\'urgence de tout le monde. Les coureurs sans certificat médical doivent le charger dans l\'application ! 📋',
-          time: '11:20',
-          type: 'text',
-          read: true
-        },
-        {
-          id: 'm-4',
-          senderId: 'usr-sofiane',
-          senderName: 'Sofiane K.',
-          senderRole: 'Membre',
-          text: 'Notre tracé officiel pour Mosta Trail !',
-          time: '13:02',
-          type: 'image',
-          mediaUrl: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=800&q=80',
-          read: true
-        },
-        {
-          id: 'm-5',
-          senderId: 'usr-amine',
-          senderName: 'Amine R.',
-          senderRole: 'Membre',
-          text: 'La sortie de vendredi sera inoubliable !',
-          time: '14:32',
-          type: 'text',
-          reactions: { '❤️': 3 },
-          read: true
-        }
-      ],
-      'chan-group-2': [
-        {
-          id: 'mg2-1',
-          senderId: 'usr-coach',
-          senderName: 'Coach Redouane',
-          senderRole: 'Coach',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          text: 'On a combien de personnes inscrites pour l\'hébergement ? Il nous faut louer un dortoir de plus.',
-          time: '08:30',
-          type: 'text',
-          read: true
-        },
-        {
-          id: 'mg2-2',
-          senderId: 'usr-1',
-          senderName: currentUser.name,
-          senderRole: 'Admin',
-          avatarUrl: currentUser.avatarUrl || null,
-          text: 'Budget bus validé pour Mosta ! Nous avons 18 personnes avec nuitée mémorisée.',
-          time: '10:15',
-          type: 'text',
-          read: true
-        }
-      ],
-      'chan-private-1': [
-        {
-          id: 'mp1-1',
-          senderId: 'usr-coach',
-          senderName: 'Coach Redouane',
-          senderRole: 'Coach',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          text: 'Yacine m\'a dit que tu as ressenti une petite gêne au genou droit sur le dernier fractionné. Fais attention à ne pas forcer cette semaine.',
-          time: 'Hier 16:40',
-          type: 'text',
-          read: true
-        },
-        {
-          id: 'mp1-2',
-          senderId: 'usr-1',
-          senderName: currentUser.name,
-          senderRole: 'Admin',
-          avatarUrl: currentUser.avatarUrl || null,
-          text: 'Oui Coach, juste une petite fatigue de rotule, j\'ai glacé et mis de l\'argile. Tout est au top ! 💪',
-          time: 'Hier 17:05',
-          type: 'text',
-          read: true
-        },
-        {
-          id: 'mp1-3',
-          senderId: 'usr-coach',
-          senderName: 'Coach Redouane',
-          senderRole: 'Coach',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          text: 'Avez-vous complété votre plan de fractionnés ?',
-          time: 'Hier 18:20',
-          type: 'text',
-          read: true
-        }
-      ],
-      'chan-private-2': [
-        {
-          id: 'mp2-1',
-          senderId: 'usr-yacine',
-          senderName: 'Yacine Runner',
-          senderRole: 'Membre',
-          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-          text: 'Tu as pris le maillot de taille M ?',
-          time: 'Mardi 15:45',
-          type: 'text',
-          read: false
-        }
-      ]
+    const defaultMessages = {
+      'chan-group-1': []
     };
+    localStorage.setItem('mrc_real_chat_messages', JSON.stringify(defaultMessages));
+    return defaultMessages;
   });
 
-  // Keep localStorage updated
+  // Keep localStorage updated and enforce single group setup on start
   useEffect(() => {
-    localStorage.setItem('mrc_chat_channels', JSON.stringify(channels));
-  }, [channels]);
+    const defaultChannels = [
+      {
+        id: 'chan-group-1',
+        name: 'Postagang N°27 🏃‍♂️⚡',
+        isGroup: true,
+        pinned: true,
+        unreadCount: 0,
+        lastMessage: channels[0]?.lastMessage || 'Pas encore de messages',
+        lastMessageTime: channels[0]?.lastMessageTime || '--:--',
+        membersCount: groupMembers.length
+      }
+    ];
+    localStorage.setItem('mrc_real_chat_channels', JSON.stringify(defaultChannels));
+    if (channels.length !== 1 || channels[0]?.id !== 'chan-group-1' || channels[0]?.membersCount !== groupMembers.length) {
+      setChannels(defaultChannels);
+    }
+  }, [groupMembers.length]);
 
   useEffect(() => {
-    localStorage.setItem('mrc_chat_messages', JSON.stringify(channelMessages));
+    localStorage.setItem('mrc_real_chat_messages', JSON.stringify(channelMessages));
   }, [channelMessages]);
 
   const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
@@ -1181,7 +1046,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             >
               <Video className="w-4 h-4" />
             </button>
-            <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition cursor-pointer">
+            <button 
+              onClick={() => setShowInfoPanel(!showInfoPanel)}
+              className={`p-2.5 rounded-xl transition cursor-pointer ${showInfoPanel ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+              title={isRtl ? 'معلومات المجموعة' : 'Membres & Infos'}
+            >
               <Info className="w-4 h-4" />
             </button>
           </div>
@@ -1495,6 +1364,92 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         )}
 
       </div>
+
+      {/* Right Sidebar: Members & Group Info Panel */}
+      {showInfoPanel && (
+        <div className={`w-full md:w-80 border-l border-slate-100 flex flex-col h-full bg-white relative z-20 animate-fade-in shrink-0 ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
+          {/* Header */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
+            <h4 className="font-serif italic font-black text-sm text-slate-800">
+              {isRtl ? 'أعضاء المجموعة' : 'Membres & Infos'}
+            </h4>
+            <button 
+              onClick={() => setShowInfoPanel(false)}
+              className="p-1.5 hover:bg-slate-100 rounded-xl transition cursor-pointer text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Group Meta Info */}
+          <div className="p-4 border-b border-slate-100 text-center">
+            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-md mx-auto mb-3">
+              PG
+            </div>
+            <h5 className="font-serif italic font-black text-base text-slate-800">
+              Postagang N°27 🏃‍♂️⚡
+            </h5>
+            <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider mt-1">
+              {groupMembers.length} {isRtl ? 'عضو نشط' : 'membres actifs'}
+            </p>
+            <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-3 px-1 text-center">
+              {isRtl 
+                ? 'القناة الرسمية للتواصل، تنظيم التدريبات، ومشاركة تفاصيل رحلات النادي اللوجستية.' 
+                : 'Canal de communication officiel pour la Postagang. Coordination des sorties, hébergements et entraînements.'}
+            </p>
+          </div>
+
+          {/* Members List Section */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            <div className="px-1 text-[10px] font-extrabold text-slate-400 font-mono uppercase tracking-wider">
+              {isRtl ? 'قائمة الأعضاء' : 'Membres du Club'} ({groupMembers.length})
+            </div>
+
+            <div className="space-y-2">
+              {groupMembers.map((member) => {
+                const isMe = member.id === currentUser.id;
+                return (
+                  <div 
+                    key={member.id}
+                    className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition"
+                  >
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-600">
+                        {member.avatarUrl ? (
+                          <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                        )}
+                      </div>
+                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white bg-emerald-500" />
+                    </div>
+
+                    {/* Member info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <p className="text-xs font-bold text-slate-800 truncate">
+                          {member.name} {isMe && <span className="text-[9px] text-blue-600 font-mono font-bold">({isRtl ? 'أنت' : 'Moi'})</span>}
+                        </p>
+                      </div>
+                      <p className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">
+                        {member.runClubRole || 'Membre'}
+                      </p>
+                    </div>
+
+                    {/* Meta Action */}
+                    {member.bloodType && (
+                      <span className="bg-red-50 text-red-600 border border-red-100 text-[9px] font-black font-mono px-1.5 py-0.5 rounded-lg shadow-3xs shrink-0">
+                        {member.bloodType}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Audio/Video Calling Screen Overlay */}
       {activeCall && (
