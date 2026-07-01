@@ -88,12 +88,12 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
       {/* Mobile Top Header (Sits on top for screens below lg) */}
       <div className="lg:hidden w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0 relative z-40">
         <div className="flex items-center gap-2">
-          <div className="bg-white p-1 rounded-xl border border-slate-100 shadow-3xs shrink-0">
-            <img src="/logo.png" alt="Mosta Run Club Logo" className="w-7 h-7 object-contain" referrerPolicy="no-referrer" />
+          <div className="p-1 shrink-0">
+            <img src="/logo.png" alt="Mosta Run Club Logo" className="w-8 h-8 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />
           </div>
           <div>
             <span className="font-serif italic font-black text-xs text-[#1034A6] tracking-widest block leading-none">MOSTA RUN CLUB</span>
-            <span className="text-[8px] font-mono tracking-widest text-[#2F89FC] uppercase font-bold">PostaGang N°27</span>
+            <span className="text-[8px] font-mono tracking-widest text-[#2F89FC] uppercase font-bold">MRC Team</span>
           </div>
         </div>
         
@@ -134,8 +134,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
           {/* Top Header & Logo stacked */}
           <div className="space-y-6">
             <div className="flex flex-col items-center pt-2 text-center relative z-15">
-              <div className="bg-white p-2 rounded-[1.5rem] shadow-xl flex items-center justify-center w-20 h-20 border border-blue-100/50 transform hover:scale-[1.05] transition duration-300 overflow-hidden">
-                <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              <div className="p-2 flex items-center justify-center w-24 h-24 transform hover:scale-[1.05] transition duration-300 overflow-hidden">
+                <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain drop-shadow-lg brightness-0 invert" referrerPolicy="no-referrer" />
               </div>
             </div>
 
