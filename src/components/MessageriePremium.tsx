@@ -576,7 +576,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       // Setup the final stop callback
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
         
         // Stop all tracks in stream to release microphone icon/hardware
         if (mediaRecorderRef.current?.stream) {
@@ -586,39 +585,46 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const durationStr = formatSeconds(durationSeconds);
         
-        const voiceMsg: Message = {
-          id: 'm-voice-' + Date.now(),
-          senderId: currentUser.id || 'usr-1',
-          senderName: currentUser.name,
-          senderRole: currentUser.runClubRole || 'Membre',
-          avatarUrl: currentUser.avatarUrl || null,
-          text: '🎙️ Message Vocal',
-          time: timestamp,
-          type: 'voice',
-          duration: durationStr,
-          mediaUrl: audioUrl, // Pass real audio URL
-          read: false
+        // Convert Blob to Base64 data URL to store durably in Supabase
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64AudioUrl = reader.result as string;
+          
+          const voiceMsg: Message = {
+            id: 'm-voice-' + Date.now(),
+            senderId: currentUser.id || 'usr-1',
+            senderName: currentUser.name,
+            senderRole: currentUser.runClubRole || 'Membre',
+            avatarUrl: currentUser.avatarUrl || null,
+            text: '🎙️ Message Vocal',
+            time: timestamp,
+            type: 'voice',
+            duration: durationStr,
+            mediaUrl: base64AudioUrl, // Pass real Base64 audio URL
+            read: false
+          };
+          
+          setChannelMessages(prev => ({
+            ...prev,
+            [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
+          }));
+          
+          syncMessageToSupabase(voiceMsg);
+          
+          setChannels(prev => prev.map(c => {
+            if (c.id === activeChannelId) {
+              return {
+                ...c,
+                lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
+                lastMessageTime: timestamp
+              };
+            }
+            return c;
+          }));
+          
+          setIsRecording(false);
         };
-        
-        setChannelMessages(prev => ({
-          ...prev,
-          [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
-        }));
-        
-        syncMessageToSupabase(voiceMsg);
-        
-        setChannels(prev => prev.map(c => {
-          if (c.id === activeChannelId) {
-            return {
-              ...c,
-              lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
-              lastMessageTime: timestamp
-            };
-          }
-          return c;
-        }));
-        
-        setIsRecording(false);
+        reader.readAsDataURL(audioBlob);
       };
       
       mediaRecorderRef.current.stop();
