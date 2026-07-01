@@ -122,8 +122,8 @@ export default function DashboardSocial({
       
       {/* Top Welcome / Hero Banner Banner Section */}
       <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-[#1034A6] via-[#1E56A0] to-[#2F89FC] text-white p-6 sm:p-8 shadow-xl border border-white/10">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none transform translate-x-8 -translate-y-8">
-          <Zap className="w-64 h-64 text-white" />
+        <div className="absolute top-0 right-0 p-8 opacity-40 pointer-events-none transform translate-x-8 -translate-y-12 blur-[2px]">
+          <img src="/logo.png" alt="Logo" className="w-80 h-80 object-contain drop-shadow-xl brightness-0 invert" />
         </div>
         <div className="relative z-10 max-w-xl space-y-4">
           <div className="flex items-center gap-2 bg-white/15 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase backdrop-blur-xs w-fit">
@@ -135,8 +135,8 @@ export default function DashboardSocial({
           </h2>
           <p className="text-white/80 text-xs sm:text-sm leading-relaxed font-medium">
             {isRtl 
-              ? 'مجموعة "PostaGang N°27" هنا لمتابعة تقدمك، الانضمام إلى التدريبات والتواصل المباشر مع بقية الأبطال والمدربين.' 
-              : 'La PostaGang N°27 vous accueille sur votre espace social interactif de running. Gérez vos sorties, suivez vos statistiques et restez en contact permanent !'
+              ? 'مجموعة "MRC team" هنا لمتابعة تقدمك، الانضمام إلى التدريبات والتواصل المباشر مع بقية الأبطال والمدربين.'
+              : 'MRC team vous accueille sur votre espace social interactif de running. Gérez vos sorties, suivez vos statistiques et restez en contact permanent !'
             }
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
