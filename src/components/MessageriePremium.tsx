@@ -5,7 +5,7 @@ import {
   MessageSquare, Search, Send, Pin, Phone, Video, Info, 
   Smile, Image as ImageIcon, Paperclip, Mic, CheckCheck, Play, Pause,
   Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check,
-  VideoOff, MicOff, PhoneOff, Camera, VolumeX
+  VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users
 } from 'lucide-react';
 
 interface Message {
@@ -77,7 +77,19 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     partnerAvatar: string | null;
     isGroup: boolean;
   }
+
+  interface CallParticipant {
+    id: string;
+    name: string;
+    role: string;
+    avatarUrl: string | null;
+    isMuted: boolean;
+    isSpeaking: boolean;
+    isLocal: boolean;
+  }
+
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [callParticipants, setCallParticipants] = useState<CallParticipant[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
@@ -94,185 +106,213 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const photoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mock channels
-  const [channels, setChannels] = useState<ChatChannel[]>([
-    {
-      id: 'chan-group-1',
-      name: 'Postagang N°27 🏃‍♂️⚡',
-      isGroup: true,
-      pinned: true,
-      unreadCount: 0,
-      lastMessage: 'Amine R.: La sortie de vendredi sera inoubliable !',
-      lastMessageTime: '14:32',
-      membersCount: 28
-    },
-    {
-      id: 'chan-group-2',
-      name: 'Comité de Coordination 📋',
-      isGroup: true,
-      pinned: true,
-      unreadCount: 0,
-      lastMessage: 'Abdou Zaiti: Budget bus validé pour Mosta !',
-      lastMessageTime: '10:15',
-      membersCount: 5
-    },
-    {
-      id: 'chan-private-1',
-      name: 'Coach Redouane 🏆',
-      isGroup: false,
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-      pinned: false,
-      unreadCount: 0,
-      lastMessage: 'Avez-vous complété votre plan de fractionnés ?',
-      lastMessageTime: 'Hier',
-    },
-    {
-      id: 'chan-private-2',
-      name: 'Yacine Runner ⚡',
-      isGroup: false,
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-      pinned: false,
-      unreadCount: 1,
-      lastMessage: 'Tu as pris le maillot de taille M ?',
-      lastMessageTime: 'Mardi',
+  // Load channels and messages from localStorage to ensure realistic, fully durable storage
+  const [channels, setChannels] = useState<ChatChannel[]>(() => {
+    const saved = localStorage.getItem('mrc_chat_channels');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing channels from localStorage:", e);
+      }
     }
-  ]);
-
-  // Initial messages state index by channelId
-  const [channelMessages, setChannelMessages] = useState<{ [chanId: string]: Message[] }>({
-    'chan-group-1': [
+    return [
       {
-        id: 'm-1',
-        senderId: 'usr-coach',
-        senderName: 'Coach Redouane',
-        senderRole: 'Coach',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        text: '🔥 Bonjour à toute la Postagang ! Pour le trail de vendredi, l\'ascension finale de 300m D+ nécessite de garder des réserves. Gérez votre cardio !',
-        time: '09:12',
-        type: 'text',
-        reactions: { '🔥': 8, '💪': 5 },
-        read: true
+        id: 'chan-group-1',
+        name: 'Postagang N°27 🏃‍♂️⚡',
+        isGroup: true,
+        pinned: true,
+        unreadCount: 0,
+        lastMessage: 'Amine R.: La sortie de vendredi sera inoubliable !',
+        lastMessageTime: '14:32',
+        membersCount: 28
       },
       {
-        id: 'm-2',
-        senderId: 'usr-yacine',
-        senderName: 'Yacine Runner',
-        senderRole: 'Membre',
+        id: 'chan-group-2',
+        name: 'Comité de Coordination 📋',
+        isGroup: true,
+        pinned: true,
+        unreadCount: 0,
+        lastMessage: 'Abdou Zaiti: Budget bus validé pour Mosta !',
+        lastMessageTime: '10:15',
+        membersCount: 5
+      },
+      {
+        id: 'chan-private-1',
+        name: 'Coach Redouane 🏆',
+        isGroup: false,
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        pinned: false,
+        unreadCount: 0,
+        lastMessage: 'Avez-vous complété votre plan de fractionnés ?',
+        lastMessageTime: 'Hier',
+      },
+      {
+        id: 'chan-private-2',
+        name: 'Yacine Runner ⚡',
+        isGroup: false,
         avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        text: 'Message Vocal d\'organisation générale',
-        time: '09:45',
-        type: 'voice',
-        duration: '0:34',
-        reactions: { '👍': 4 },
-        read: true
-      },
-      {
-        id: 'm-3',
-        senderId: 'usr-1',
-        senderName: currentUser.name,
-        senderRole: 'Admin',
-        avatarUrl: currentUser.avatarUrl || null,
-        text: 'J\'ai mis en ligne les fiches d\'urgence de tout le monde. Les coureurs sans certificat médical doivent le charger dans l\'application ! 📋',
-        time: '11:20',
-        type: 'text',
-        read: true
-      },
-      {
-        id: 'm-4',
-        senderId: 'usr-sofiane',
-        senderName: 'Sofiane K.',
-        senderRole: 'Membre',
-        text: 'Notre tracé officiel pour Mosta Trail !',
-        time: '13:02',
-        type: 'image',
-        mediaUrl: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=800&q=80',
-        read: true
-      },
-      {
-        id: 'm-5',
-        senderId: 'usr-amine',
-        senderName: 'Amine R.',
-        senderRole: 'Membre',
-        text: 'La sortie de vendredi sera inoubliable !',
-        time: '14:32',
-        type: 'text',
-        reactions: { '❤️': 3 },
-        read: true
+        pinned: false,
+        unreadCount: 1,
+        lastMessage: 'Tu as pris le maillot de taille M ?',
+        lastMessageTime: 'Mardi',
       }
-    ],
-    'chan-group-2': [
-      {
-        id: 'mg2-1',
-        senderId: 'usr-coach',
-        senderName: 'Coach Redouane',
-        senderRole: 'Coach',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        text: 'On a combien de personnes inscrites pour l\'hébergement ? Il nous faut louer un dortoir de plus.',
-        time: '08:30',
-        type: 'text',
-        read: true
-      },
-      {
-        id: 'mg2-2',
-        senderId: 'usr-1',
-        senderName: currentUser.name,
-        senderRole: 'Admin',
-        avatarUrl: currentUser.avatarUrl || null,
-        text: 'Budget bus validé pour Mosta ! Nous avons 18 personnes avec nuitée mémorisée.',
-        time: '10:15',
-        type: 'text',
-        read: true
-      }
-    ],
-    'chan-private-1': [
-      {
-        id: 'mp1-1',
-        senderId: 'usr-coach',
-        senderName: 'Coach Redouane',
-        senderRole: 'Coach',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        text: 'Yacine m\'a dit que tu as ressenti une petite gêne au genou droit sur le dernier fractionné. Fais attention à ne pas forcer cette semaine.',
-        time: 'Hier 16:40',
-        type: 'text',
-        read: true
-      },
-      {
-        id: 'mp1-2',
-        senderId: 'usr-1',
-        senderName: currentUser.name,
-        senderRole: 'Admin',
-        avatarUrl: currentUser.avatarUrl || null,
-        text: 'Oui Coach, juste une petite fatigue de rotule, j\'ai glacé et mis de l\'argile. Tout est au top ! 💪',
-        time: 'Hier 17:05',
-        type: 'text',
-        read: true
-      },
-      {
-        id: 'mp1-3',
-        senderId: 'usr-coach',
-        senderName: 'Coach Redouane',
-        senderRole: 'Coach',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        text: 'Avez-vous complété votre plan de fractionnés ?',
-        time: 'Hier 18:20',
-        type: 'text',
-        read: true
-      }
-    ],
-    'chan-private-2': [
-      {
-        id: 'mp2-1',
-        senderId: 'usr-yacine',
-        senderName: 'Yacine Runner',
-        senderRole: 'Membre',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-        text: 'Tu as pris le maillot de taille M ?',
-        time: 'Mardi 15:45',
-        type: 'text',
-        read: false
-      }
-    ]
+    ];
   });
+
+  const [channelMessages, setChannelMessages] = useState<{ [chanId: string]: Message[] }>(() => {
+    const saved = localStorage.getItem('mrc_chat_messages');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing messages from localStorage:", e);
+      }
+    }
+    return {
+      'chan-group-1': [
+        {
+          id: 'm-1',
+          senderId: 'usr-coach',
+          senderName: 'Coach Redouane',
+          senderRole: 'Coach',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          text: '🔥 Bonjour à toute la Postagang ! Pour le trail de vendredi, l\'ascension finale de 300m D+ nécessite de garder des réserves. Gérez votre cardio !',
+          time: '09:12',
+          type: 'text',
+          reactions: { '🔥': 8, '💪': 5 },
+          read: true
+        },
+        {
+          id: 'm-2',
+          senderId: 'usr-yacine',
+          senderName: 'Yacine Runner',
+          senderRole: 'Membre',
+          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          text: 'Message Vocal d\'organisation générale',
+          time: '09:45',
+          type: 'voice',
+          duration: '0:34',
+          reactions: { '👍': 4 },
+          read: true
+        },
+        {
+          id: 'm-3',
+          senderId: 'usr-1',
+          senderName: currentUser.name,
+          senderRole: 'Admin',
+          avatarUrl: currentUser.avatarUrl || null,
+          text: 'J\'ai mis en ligne les fiches d\'urgence de tout le monde. Les coureurs sans certificat médical doivent le charger dans l\'application ! 📋',
+          time: '11:20',
+          type: 'text',
+          read: true
+        },
+        {
+          id: 'm-4',
+          senderId: 'usr-sofiane',
+          senderName: 'Sofiane K.',
+          senderRole: 'Membre',
+          text: 'Notre tracé officiel pour Mosta Trail !',
+          time: '13:02',
+          type: 'image',
+          mediaUrl: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=800&q=80',
+          read: true
+        },
+        {
+          id: 'm-5',
+          senderId: 'usr-amine',
+          senderName: 'Amine R.',
+          senderRole: 'Membre',
+          text: 'La sortie de vendredi sera inoubliable !',
+          time: '14:32',
+          type: 'text',
+          reactions: { '❤️': 3 },
+          read: true
+        }
+      ],
+      'chan-group-2': [
+        {
+          id: 'mg2-1',
+          senderId: 'usr-coach',
+          senderName: 'Coach Redouane',
+          senderRole: 'Coach',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          text: 'On a combien de personnes inscrites pour l\'hébergement ? Il nous faut louer un dortoir de plus.',
+          time: '08:30',
+          type: 'text',
+          read: true
+        },
+        {
+          id: 'mg2-2',
+          senderId: 'usr-1',
+          senderName: currentUser.name,
+          senderRole: 'Admin',
+          avatarUrl: currentUser.avatarUrl || null,
+          text: 'Budget bus validé pour Mosta ! Nous avons 18 personnes avec nuitée mémorisée.',
+          time: '10:15',
+          type: 'text',
+          read: true
+        }
+      ],
+      'chan-private-1': [
+        {
+          id: 'mp1-1',
+          senderId: 'usr-coach',
+          senderName: 'Coach Redouane',
+          senderRole: 'Coach',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          text: 'Yacine m\'a dit que tu as ressenti une petite gêne au genou droit sur le dernier fractionné. Fais attention à ne pas forcer cette semaine.',
+          time: 'Hier 16:40',
+          type: 'text',
+          read: true
+        },
+        {
+          id: 'mp1-2',
+          senderId: 'usr-1',
+          senderName: currentUser.name,
+          senderRole: 'Admin',
+          avatarUrl: currentUser.avatarUrl || null,
+          text: 'Oui Coach, juste une petite fatigue de rotule, j\'ai glacé et mis de l\'argile. Tout est au top ! 💪',
+          time: 'Hier 17:05',
+          type: 'text',
+          read: true
+        },
+        {
+          id: 'mp1-3',
+          senderId: 'usr-coach',
+          senderName: 'Coach Redouane',
+          senderRole: 'Coach',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          text: 'Avez-vous complété votre plan de fractionnés ?',
+          time: 'Hier 18:20',
+          type: 'text',
+          read: true
+        }
+      ],
+      'chan-private-2': [
+        {
+          id: 'mp2-1',
+          senderId: 'usr-yacine',
+          senderName: 'Yacine Runner',
+          senderRole: 'Membre',
+          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          text: 'Tu as pris le maillot de taille M ?',
+          time: 'Mardi 15:45',
+          type: 'text',
+          read: false
+        }
+      ]
+    };
+  });
+
+  // Keep localStorage updated
+  useEffect(() => {
+    localStorage.setItem('mrc_chat_channels', JSON.stringify(channels));
+  }, [channels]);
+
+  useEffect(() => {
+    localStorage.setItem('mrc_chat_messages', JSON.stringify(channelMessages));
+  }, [channelMessages]);
 
   const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
   const messages = channelMessages[activeChannelId] || [];
@@ -458,7 +498,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     }));
     
     setIsRecording(false);
-    simulateBotReply();
   };
 
   // Real Photo Upload handler
@@ -500,7 +539,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         return c;
       }));
 
-      simulateBotReply();
     };
     reader.readAsDataURL(file);
     // Reset input value to allow selecting same photo again
@@ -544,7 +582,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       return c;
     }));
 
-    simulateBotReply();
     // Reset input value
     e.target.value = '';
   };
@@ -621,6 +658,78 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     setMicMuted(false);
     setCameraOff(false);
 
+    // Initialize call participants list dynamically
+    if (isGroup) {
+      setCallParticipants([
+        {
+          id: 'usr-1',
+          name: currentUser.name,
+          role: currentUser.runClubRole || 'Admin',
+          avatarUrl: currentUser.avatarUrl || null,
+          isMuted: false,
+          isSpeaking: false,
+          isLocal: true
+        },
+        {
+          id: 'usr-coach',
+          name: 'Coach Redouane 🏆',
+          role: 'Coach',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          isMuted: false,
+          isSpeaking: true,
+          isLocal: false
+        },
+        {
+          id: 'usr-yacine',
+          name: 'Yacine Runner ⚡',
+          role: 'Membre',
+          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          isMuted: false,
+          isSpeaking: false,
+          isLocal: false
+        },
+        {
+          id: 'usr-sofiane',
+          name: 'Sofiane K.',
+          role: 'Membre',
+          avatarUrl: null,
+          isMuted: false,
+          isSpeaking: true,
+          isLocal: false
+        },
+        {
+          id: 'usr-amine',
+          name: 'Amine R.',
+          role: 'Membre',
+          avatarUrl: null,
+          isMuted: true,
+          isSpeaking: false,
+          isLocal: false
+        }
+      ]);
+    } else {
+      setCallParticipants([
+        {
+          id: 'usr-1',
+          name: currentUser.name,
+          role: currentUser.runClubRole || 'Admin',
+          avatarUrl: currentUser.avatarUrl || null,
+          isMuted: false,
+          isSpeaking: false,
+          isLocal: true
+        },
+        {
+          id: 'partner',
+          name: partnerName,
+          role: 'Membre',
+          avatarUrl: partnerAvatar,
+          isMuted: false,
+          isSpeaking: true,
+          isLocal: false
+        }
+      ]);
+    }
+
     // Play ringing tone
     startRingtone();
 
@@ -683,6 +792,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         };
       });
     }, 3500);
+  };
+
+  const handleToggleParticipantMute = (participantId: string) => {
+    setCallParticipants(prev => prev.map(p => {
+      if (p.id === participantId && !p.isLocal) {
+        return { ...p, isMuted: !p.isMuted, isSpeaking: p.isMuted ? p.isSpeaking : false };
+      }
+      return p;
+    }));
   };
 
   const handleEndCall = () => {
@@ -754,6 +872,36 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     }
   }, [activeCall?.status, localStream]);
 
+  // Fluctuate participant voice activity and speaking indicator states during a call
+  useEffect(() => {
+    let speakInterval: any;
+    if (activeCall?.status === 'connected') {
+      speakInterval = setInterval(() => {
+        setCallParticipants(prev => prev.map(p => {
+          if (p.isLocal) {
+            // Local user is speaking if microphone is not muted and vocal audio level is detected
+            return { 
+              ...p, 
+              isMuted: micMuted,
+              isSpeaking: !micMuted && (audioLevel > 0.05 || Math.random() > 0.7) 
+            };
+          }
+          // Randomly fluctuate speaking state of other unmuted participants to represent group talk
+          if (!p.isMuted) {
+            return {
+              ...p,
+              isSpeaking: Math.random() > 0.4
+            };
+          }
+          return { ...p, isSpeaking: false };
+        }));
+      }, 1200);
+    }
+    return () => {
+      if (speakInterval) clearInterval(speakInterval);
+    };
+  }, [activeCall?.status, micMuted, audioLevel]);
+
   // Clean up all call streams/timers on unmount
   useEffect(() => {
     return () => {
@@ -811,84 +959,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
     setInputText('');
     setReplyingTo(null);
-
-    // Simulate smart reply from running partners
-    simulateBotReply();
   };
 
-  // Bot Simulator Response
-  const simulateBotReply = () => {
-    setTypingChannel(activeChannelId);
 
-    setTimeout(() => {
-      const answersGroup = [
-        "Force à nous l'équipe ! On va cartonner vendredi. 🔥🏃‍♂️",
-        "Abdou, n'oublie pas de vérifier si la glacière de fruits est prête pour l'arrivée !",
-        "Magnifique ! Mosta Run Club va encore dominer les sentiers.",
-        "Est-ce qu'on s'arrête boire un thé à l'arrivée ? 🍵",
-        "Parfait, merci pour les précisions !"
-      ];
-
-      const answersPrivate = [
-        "Super Abdou ! Tiens-moi au courant si tu as besoin d'aide pour le fichier d'hébergement.",
-        "Reçu ! On reste connectés pour organiser le départ.",
-        "Parfait, je prépare mes affaires ce soir.",
-        "Est-ce qu'il reste de la place dans le bus principal ?"
-      ];
-
-      const chosenAnswer = activeChannel.isGroup 
-        ? answersGroup[Math.floor(Math.random() * answersGroup.length)]
-        : answersPrivate[Math.floor(Math.random() * answersPrivate.length)];
-
-      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      // Determine sender
-      let senderName = 'Yacine Runner';
-      let senderAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80';
-      let senderRole = 'Membre';
-
-      if (activeChannelId === 'chan-private-1') {
-        senderName = 'Coach Redouane';
-        senderAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-        senderRole = 'Coach';
-      } else if (activeChannelId === 'chan-group-1' && Math.random() > 0.5) {
-        senderName = 'Coach Redouane';
-        senderAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-        senderRole = 'Coach';
-      }
-
-      const botMsg: Message = {
-        id: 'm-bot-' + Date.now(),
-        senderId: 'bot-sender',
-        senderName,
-        senderRole,
-        avatarUrl: senderAvatar,
-        text: chosenAnswer,
-        time: timestamp,
-        type: 'text',
-        read: true
-      };
-
-      setChannelMessages(prev => ({
-        ...prev,
-        [activeChannelId]: [...(prev[activeChannelId] || []), botMsg]
-      }));
-
-      // Update channel info
-      setChannels(prev => prev.map(c => {
-        if (c.id === activeChannelId) {
-          return {
-            ...c,
-            lastMessage: `${senderName.split(' ')[0]}: ${chosenAnswer}`,
-            lastMessageTime: timestamp
-          };
-        }
-        return c;
-      }));
-
-      setTypingChannel(null);
-    }, 2000);
-  };
 
   // React to a message
   const handleAddReaction = (msgId: string, emoji: string) => {
@@ -1456,50 +1529,178 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           </div>
 
           {/* Center Content Section */}
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="relative z-10 flex-1 w-full max-w-4xl flex flex-col items-center justify-center gap-6 px-4">
             
-            {/* Partner Avatar Wrapper */}
-            <div className="relative">
-              {/* Ringing waves */}
-              {activeCall.status === 'ringing' && (
-                <>
+            {activeCall.status === 'ringing' ? (
+              <div className="flex flex-col items-center gap-4">
+                {/* Partner Avatar Wrapper */}
+                <div className="relative">
+                  {/* Ringing waves */}
                   <span className="absolute inset-0 rounded-full border-2 border-blue-500/30 scale-110 animate-ping" />
                   <span className="absolute inset-0 rounded-full border-2 border-indigo-500/20 scale-125 animate-ping [animation-delay:0.3s]" />
-                </>
-              )}
 
-              <div className="w-28 h-28 rounded-full border-4 border-white/10 bg-slate-900 shadow-2xl flex items-center justify-center overflow-hidden relative">
-                {activeCall.partnerAvatar ? (
-                  <img 
-                    src={activeCall.partnerAvatar} 
-                    alt={activeCall.partnerName} 
-                    className="w-full h-full object-cover" 
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span className="text-3xl font-serif italic font-black">
-                    {activeCall.partnerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-                  </span>
-                )}
-                
-                {/* Miniature local stream PiP inside video call corner */}
-                {activeCall.type === 'video' && !cameraOff && localStream && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-mono text-white/80">
-                    LIVE
+                  <div className="w-28 h-28 rounded-full border-4 border-white/10 bg-slate-900 shadow-2xl flex items-center justify-center overflow-hidden relative">
+                    {activeCall.partnerAvatar ? (
+                      <img 
+                        src={activeCall.partnerAvatar} 
+                        alt={activeCall.partnerName} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-3xl font-serif italic font-black">
+                        {activeCall.partnerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Identity & Status */}
-            <div className="text-center">
-              <h2 className="font-serif italic font-black text-xl sm:text-2xl tracking-tight text-white">
-                {activeCall.partnerName}
-              </h2>
-              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest font-mono">
-                {activeCall.isGroup ? (isRtl ? 'قناة جماعية' : 'Postagang Groupe') : (isRtl ? 'مكالمة خاصة' : 'Membres du Club')}
-              </p>
-            </div>
+                {/* Identity & Status */}
+                <div className="text-center">
+                  <h2 className="font-serif italic font-black text-xl sm:text-2xl tracking-tight text-white">
+                    {activeCall.partnerName}
+                  </h2>
+                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest font-mono">
+                    {activeCall.isGroup ? (isRtl ? 'قناة جماعية' : 'Postagang Groupe') : (isRtl ? 'مكالمة خاصة' : 'Membres du Club')}
+                  </p>
+                </div>
+              </div>
+            ) : activeCall.isGroup ? (
+              // Multi-User Connected Group Call Grid
+              <div className="w-full flex-1 flex flex-col justify-center py-2">
+                <div className="text-center mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[11px] font-black font-mono text-emerald-400 uppercase tracking-wider animate-pulse">
+                    <Users className="w-3.5 h-3.5" />
+                    {isRtl ? 'مكالمة جماعية مباشرة' : 'Conférence Groupe Live'} ({callParticipants.filter(p => !p.isMuted && p.isSpeaking).length} {isRtl ? 'يتحدثون' : 'actifs'})
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-h-[50vh] overflow-y-auto pr-1">
+                  {callParticipants.map((p) => (
+                    <div 
+                      key={p.id}
+                      className={`relative bg-white/5 backdrop-blur-md border rounded-2xl p-4 flex flex-col items-center justify-center transition-all duration-300 ${
+                        p.isSpeaking && !p.isMuted
+                          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)] bg-emerald-950/10 scale-[1.02]' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      {/* Avatar with speaking wave */}
+                      <div className="relative mb-2">
+                        {p.isSpeaking && !p.isMuted && (
+                          <span className="absolute inset-0 rounded-full border-2 border-emerald-500/40 animate-ping scale-110" />
+                        )}
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center overflow-hidden border-2 bg-slate-900 ${
+                          p.isSpeaking && !p.isMuted ? 'border-emerald-500' : 'border-white/10'
+                        }`}>
+                          {p.avatarUrl ? (
+                            <img 
+                              src={p.avatarUrl} 
+                              alt={p.name} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span className="text-lg font-serif italic font-extrabold text-slate-300">
+                              {p.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Local/Admin tag */}
+                        {p.isLocal && (
+                          <span className="absolute -bottom-1 -right-1 bg-blue-600 text-[8px] font-extrabold px-1 py-0.5 rounded text-white font-mono uppercase tracking-widest">
+                            {isRtl ? 'أنت' : 'Moi'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Participant Meta */}
+                      <div className="text-center w-full min-w-0">
+                        <p className="text-xs font-bold truncate text-white">{p.name}</p>
+                        <p className="text-[9px] font-mono font-extrabold text-slate-400 mt-0.5 uppercase tracking-wider">{p.role}</p>
+                      </div>
+
+                      {/* Interactive Individual Mute / Controls */}
+                      {!p.isLocal && (
+                        <button 
+                          onClick={() => handleToggleParticipantMute(p.id)}
+                          className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition cursor-pointer ${
+                            p.isMuted 
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                              : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
+                          }`}
+                          title={p.isMuted ? (isRtl ? 'إلغاء كتم الصوت' : 'Activer audio') : (isRtl ? 'كتم الصوت' : 'Couper le son')}
+                        >
+                          {p.isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+
+                      {/* Participant audio status badge */}
+                      {p.isMuted && (
+                        <span className="absolute top-2 left-2 bg-red-600/10 border border-red-600/20 rounded px-1 text-[7px] font-extrabold font-mono text-red-400 tracking-wider">
+                          MUTED
+                        </span>
+                      )}
+
+                      {/* Live speaking equalizer waveform for active group talker */}
+                      {p.isSpeaking && !p.isMuted && (
+                        <div className="flex gap-0.5 items-center justify-center mt-2 h-3">
+                          {[...Array(4)].map((_, idx) => (
+                            <span 
+                              key={idx} 
+                              className="w-0.5 bg-emerald-400 rounded-full animate-pulse"
+                              style={{ 
+                                height: `${4 + Math.random() * 8}px`,
+                                animationDelay: `${idx * 150}ms`
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // 1-to-1 Connected Call (Minimal Clean Display)
+              <div className="flex flex-col items-center gap-4">
+                {/* Partner Avatar Wrapper */}
+                <div className="relative">
+                  <div className="w-28 h-28 rounded-full border-4 border-white/10 bg-slate-900 shadow-2xl flex items-center justify-center overflow-hidden relative">
+                    {activeCall.partnerAvatar ? (
+                      <img 
+                        src={activeCall.partnerAvatar} 
+                        alt={activeCall.partnerName} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-3xl font-serif italic font-black">
+                        {activeCall.partnerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                      </span>
+                    )}
+                    
+                    {/* Miniature local stream PiP inside video call corner */}
+                    {activeCall.type === 'video' && !cameraOff && localStream && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-mono text-white/80">
+                        LIVE
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Identity & Status */}
+                <div className="text-center">
+                  <h2 className="font-serif italic font-black text-xl sm:text-2xl tracking-tight text-white">
+                    {activeCall.partnerName}
+                  </h2>
+                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest font-mono">
+                    {isRtl ? 'مكالمة خاصة متصلة' : 'Membres du Club'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Call State & Duration */}
             <div className="text-center bg-black/35 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5">
@@ -1518,8 +1719,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               )}
             </div>
 
-            {/* Live Web Audio Amplitude Waveform (only for connected Audio calls or when camera is off) */}
-            {activeCall.status === 'connected' && (activeCall.type === 'voice' || cameraOff) && (
+            {/* Live Web Audio Amplitude Waveform (only for connected private calls or when camera is off) */}
+            {activeCall.status === 'connected' && (!activeCall.isGroup) && (activeCall.type === 'voice' || cameraOff) && (
               <div className="flex items-center gap-1.5 h-12 mt-2">
                 {[...Array(12)].map((_, i) => {
                   // Generate responsive amplitude scales
