@@ -74,10 +74,20 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Playback of voice states
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const activeSynthRef = useRef<{ stop: () => void } | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Voice Note Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Mobile/Touch Gestures & Options Modal States
+  const [selectedMobileMsg, setSelectedMobileMsg] = useState<Message | null>(null);
+  const touchTimerRefMap = useRef<{ [msgId: string]: any }>({});
+  const lastTapTimeRef = useRef<{ [msgId: string]: number }>({});
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
 
   // Active Call States
   interface ActiveCall {
@@ -365,11 +375,14 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  // Cleanup synthesizer on unmount
+  // Cleanup synthesizer and audio on unmount
   useEffect(() => {
     return () => {
       if (activeSynthRef.current) {
         activeSynthRef.current.stop();
+      }
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
       }
     };
   }, []);
@@ -442,6 +455,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Play/Pause vocal message handler
   const handleToggleVoicePlay = (msg: Message) => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
     if (activeSynthRef.current) {
       activeSynthRef.current.stop();
       activeSynthRef.current = null;
@@ -452,29 +469,49 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     } else {
       setPlayingVoiceId(msg.id);
       
-      const parts = (msg.duration || '0:10').split(':');
-      let seconds = 10;
-      if (parts.length === 2) {
-        seconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      if (msg.mediaUrl) {
+        // Play real recorded voice message
+        const audio = new Audio(msg.mediaUrl);
+        activeAudioRef.current = audio;
+        audio.play().catch(err => {
+          console.error("Failed to play real audio:", err);
+          // Fallback to synthetic synth play if audio loading failed
+          playVoiceSynthFallback(msg);
+        });
+        
+        audio.onended = () => {
+          setPlayingVoiceId(null);
+          activeAudioRef.current = null;
+        };
       } else {
-        seconds = parseInt(parts[0], 10) || 10;
-      }
-      
-      const synth = playVoiceSynth(seconds, () => {
-        setPlayingVoiceId(null);
-        activeSynthRef.current = null;
-      });
-      if (synth) {
-        activeSynthRef.current = synth;
+        playVoiceSynthFallback(msg);
       }
     }
   };
 
-  // Start simulated recording
+  const playVoiceSynthFallback = (msg: Message) => {
+    const parts = (msg.duration || '0:10').split(':');
+    let seconds = 10;
+    if (parts.length === 2) {
+      seconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    } else {
+      seconds = parseInt(parts[0], 10) || 10;
+    }
+    
+    const synth = playVoiceSynth(seconds, () => {
+      setPlayingVoiceId(null);
+      activeSynthRef.current = null;
+    });
+    if (synth) {
+      activeSynthRef.current = synth;
+    }
+  };
+
+  // Start real microphone recording with MediaRecorder
   const handleStartRecording = () => {
-    setIsRecording(true);
-    setRecordingSeconds(0);
-    // Beep indicator for starting recording
+    audioChunksRef.current = [];
+    
+    // Play sweet startup beep indicator
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
@@ -490,52 +527,199 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         osc.stop(ctx.currentTime + 0.15);
       }
     } catch(e) {}
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          const recorder = new MediaRecorder(stream);
+          mediaRecorderRef.current = recorder;
+          
+          recorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunksRef.current.push(event.data);
+            }
+          };
+          
+          recorder.start();
+          setIsRecording(true);
+          setRecordingSeconds(0);
+        })
+        .catch(err => {
+          console.warn("Microphone access blocked/not available, falling back to simulated recording:", err);
+          setIsRecording(true);
+          setRecordingSeconds(0);
+        });
+    } else {
+      // Fallback
+      setIsRecording(true);
+      setRecordingSeconds(0);
+    }
   };
 
-  // Send the voice recording
-  const handleSendVoiceRecord = () => {
-    if (recordingSeconds < 1) {
-      setIsRecording(false);
-      return;
-    }
-    
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const durationStr = formatSeconds(recordingSeconds);
-    
-    const voiceMsg: Message = {
-      id: 'm-voice-' + Date.now(),
-      senderId: currentUser.id || 'usr-1',
-      senderName: currentUser.name,
-      senderRole: currentUser.runClubRole || 'Membre',
-      avatarUrl: currentUser.avatarUrl || null,
-      text: '🎙️ Message Vocal',
-      time: timestamp,
-      type: 'voice',
-      duration: durationStr,
-      read: false
-    };
-    
-    setChannelMessages(prev => ({
-      ...prev,
-      [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
-    }));
-    
-    // Sync to Supabase
-    syncMessageToSupabase(voiceMsg);
-    
-    // Update channel's last message
-    setChannels(prev => prev.map(c => {
-      if (c.id === activeChannelId) {
-        return {
-          ...c,
-          lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
-          lastMessageTime: timestamp
-        };
+  // Cancel ongoing recording
+  const handleCancelRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.onstop = null; // discard callbacks
+      mediaRecorderRef.current.stop();
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       }
-      return c;
-    }));
-    
+    }
     setIsRecording(false);
+  };
+
+  // Send the voice recording (real or simulated)
+  const handleSendVoiceRecord = () => {
+    const durationSeconds = recordingSeconds;
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      // Setup the final stop callback
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Stop all tracks in stream to release microphone icon/hardware
+        if (mediaRecorderRef.current?.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const durationStr = formatSeconds(durationSeconds);
+        
+        const voiceMsg: Message = {
+          id: 'm-voice-' + Date.now(),
+          senderId: currentUser.id || 'usr-1',
+          senderName: currentUser.name,
+          senderRole: currentUser.runClubRole || 'Membre',
+          avatarUrl: currentUser.avatarUrl || null,
+          text: '🎙️ Message Vocal',
+          time: timestamp,
+          type: 'voice',
+          duration: durationStr,
+          mediaUrl: audioUrl, // Pass real audio URL
+          read: false
+        };
+        
+        setChannelMessages(prev => ({
+          ...prev,
+          [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
+        }));
+        
+        syncMessageToSupabase(voiceMsg);
+        
+        setChannels(prev => prev.map(c => {
+          if (c.id === activeChannelId) {
+            return {
+              ...c,
+              lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
+              lastMessageTime: timestamp
+            };
+          }
+          return c;
+        }));
+        
+        setIsRecording(false);
+      };
+      
+      mediaRecorderRef.current.stop();
+    } else {
+      // Simulated voice fallback
+      if (durationSeconds < 1) {
+        setIsRecording(false);
+        return;
+      }
+      
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const durationStr = formatSeconds(durationSeconds);
+      
+      const voiceMsg: Message = {
+        id: 'm-voice-' + Date.now(),
+        senderId: currentUser.id || 'usr-1',
+        senderName: currentUser.name,
+        senderRole: currentUser.runClubRole || 'Membre',
+        avatarUrl: currentUser.avatarUrl || null,
+        text: '🎙️ Message Vocal (Simulé)',
+        time: timestamp,
+        type: 'voice',
+        duration: durationStr,
+        read: false
+      };
+      
+      setChannelMessages(prev => ({
+        ...prev,
+        [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
+      }));
+      
+      syncMessageToSupabase(voiceMsg);
+      
+      setChannels(prev => prev.map(c => {
+        if (c.id === activeChannelId) {
+          return {
+            ...c,
+            lastMessage: `${currentUser.name.split(' ')[0]}: 🎙️ Message Vocal (${durationStr})`,
+            lastMessageTime: timestamp
+          };
+        }
+        return c;
+      }));
+      
+      setIsRecording(false);
+    }
+  };
+
+  // Touch Gestures for mobile (Double Tap -> Heart, Long Press -> Action Options)
+  const handleMessageTouchStart = (e: React.TouchEvent, msg: Message) => {
+    const msgId = msg.id;
+    // Store touch coordinates
+    const touch = e.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+
+    // Long press detection: 500ms
+    if (touchTimerRefMap.current[msgId]) {
+      clearTimeout(touchTimerRefMap.current[msgId]);
+    }
+    touchTimerRefMap.current[msgId] = setTimeout(() => {
+      setSelectedMobileMsg(msg);
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
+    }, 500);
+  };
+
+  const handleMessageTouchMove = (e: React.TouchEvent, msgId: string) => {
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartXRef.current);
+    const dy = Math.abs(touch.clientY - touchStartYRef.current);
+    // If finger moves more than 10px, treat as scroll, cancel long press
+    if (dx > 10 || dy > 10) {
+      if (touchTimerRefMap.current[msgId]) {
+        clearTimeout(touchTimerRefMap.current[msgId]);
+        delete touchTimerRefMap.current[msgId];
+      }
+    }
+  };
+
+  const handleMessageTouchEnd = (e: React.TouchEvent, msg: Message) => {
+    const msgId = msg.id;
+    if (touchTimerRefMap.current[msgId]) {
+      clearTimeout(touchTimerRefMap.current[msgId]);
+      delete touchTimerRefMap.current[msgId];
+    }
+
+    // Double tap detection
+    const now = Date.now();
+    const lastTap = lastTapTimeRef.current[msgId] || 0;
+    const delay = 300;
+    if (now - lastTap < delay) {
+      handleAddReaction(msgId, '❤️');
+      if (navigator.vibrate) {
+        navigator.vibrate([45, 45]);
+      }
+      delete lastTapTimeRef.current[msgId];
+    } else {
+      lastTapTimeRef.current[msgId] = now;
+    }
   };
 
   // Real Photo Upload handler
@@ -1420,7 +1604,14 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 <div className={`flex items-center gap-2 max-w-full ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Message Bubble wrapper with custom design */}
                   <div 
-                    className={`rounded-2xl p-3 shadow-3xs relative overflow-hidden transition-all ${
+                    onTouchStart={(e) => handleMessageTouchStart(e, message)}
+                    onTouchMove={(e) => handleMessageTouchMove(e, message.id)}
+                    onTouchEnd={(e) => handleMessageTouchEnd(e, message)}
+                    onDoubleClick={() => {
+                      handleAddReaction(message.id, '❤️');
+                      if (navigator.vibrate) navigator.vibrate([45, 45]);
+                    }}
+                    className={`rounded-2xl p-3 shadow-3xs relative overflow-hidden transition-all select-none cursor-pointer active:scale-[0.98] ${
                       isMe 
                         ? 'bg-blue-600 text-white border border-blue-600 rounded-tr-none' 
                         : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
@@ -1625,7 +1816,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             <div className="flex items-center gap-2">
               <button 
                 type="button"
-                onClick={() => setIsRecording(false)}
+                onClick={handleCancelRecording}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer"
               >
                 {isRtl ? 'إلغاء' : 'Annuler'}
@@ -2236,6 +2427,116 @@ alter publication supabase_realtime add table public.mrc_messages;`}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black transition cursor-pointer"
               >
                 {isRtl ? 'موافق' : 'Compris !'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile/Touch Long Press Action Options Drawer */}
+      {selectedMobileMsg && (
+        <div 
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 transition-opacity duration-300 animate-fade-in flex items-end sm:items-center justify-center p-4"
+          onClick={() => setSelectedMobileMsg(null)}
+        >
+          {/* Menu Card */}
+          <div 
+            className="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] max-w-sm w-full p-6 pb-8 sm:pb-6 space-y-5 shadow-2xl relative border border-slate-100 animate-slide-up select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Grab Handle for mobile */}
+            <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto sm:hidden" />
+
+            {/* Title / Info */}
+            <div className={`text-center space-y-1 ${isRtl ? 'text-right' : ''}`}>
+              <h4 className="text-[10px] uppercase font-mono font-bold tracking-widest text-slate-400">
+                {isRtl ? 'خيارات الرسالة' : 'Options du message'}
+              </h4>
+              <p className="text-xs font-serif italic font-extrabold text-slate-800 truncate">
+                {selectedMobileMsg.senderName} : {
+                  selectedMobileMsg.type === 'voice' 
+                    ? '🎙️ Message Vocal' 
+                    : selectedMobileMsg.type === 'image' 
+                      ? '📷 Photo' 
+                      : selectedMobileMsg.type === 'file' 
+                        ? '📁 Fichier' 
+                        : selectedMobileMsg.text
+                }
+              </p>
+            </div>
+
+            {/* Quick Reactions Grid */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 block tracking-wider uppercase">
+                {isRtl ? 'تفاعل سريع' : 'Réaction rapide'}
+              </span>
+              <div className="grid grid-cols-8 gap-1 p-1 bg-slate-50 rounded-2xl border border-slate-100/85">
+                {['❤️', '🔥', '👍', '😂', '😮', '😢', '👏', '🎉'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      handleAddReaction(selectedMobileMsg.id, emoji);
+                      if (navigator.vibrate) navigator.vibrate(40);
+                      setSelectedMobileMsg(null);
+                    }}
+                    className="h-9 text-lg hover:scale-125 hover:-rotate-12 active:scale-95 transition cursor-pointer flex items-center justify-center"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons list */}
+            <div className="space-y-2">
+              {/* Reply */}
+              <button
+                onClick={() => {
+                  setReplyingTo(selectedMobileMsg);
+                  setSelectedMobileMsg(null);
+                }}
+                className={`w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+              >
+                <Reply className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="flex-1">{isRtl ? 'رد على الرسالة' : 'Répondre au message'}</span>
+              </button>
+
+              {/* Copy (only for text type) */}
+              {selectedMobileMsg.type !== 'voice' && selectedMobileMsg.type !== 'image' && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedMobileMsg.text || '');
+                    if (navigator.vibrate) navigator.vibrate(40);
+                    setSelectedMobileMsg(null);
+                  }}
+                  className={`w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                >
+                  <Copy className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="flex-1">{isRtl ? 'نسخ النص' : 'Copier le texte'}</span>
+                </button>
+              )}
+
+              {/* Delete / Retirer (if is Me) */}
+              {(selectedMobileMsg.senderId === currentUser.id || selectedMobileMsg.senderId === 'usr-1') && (
+                <button
+                  onClick={() => {
+                    handleDeleteMessage(selectedMobileMsg.id);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    setSelectedMobileMsg(null);
+                  }}
+                  className={`w-full flex items-center gap-3 p-3 hover:bg-rose-50 border border-rose-100 rounded-2xl transition cursor-pointer text-xs font-bold text-rose-600 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                >
+                  <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span className="flex-1">{isRtl ? 'سحب الرسالة (حذف)' : 'Retirer le message (Supprimer)'}</span>
+                </button>
+              )}
+
+              {/* Close/Cancel */}
+              <button
+                onClick={() => setSelectedMobileMsg(null)}
+                className="w-full text-center p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-500"
+              >
+                {isRtl ? 'إلغاء' : 'Annuler'}
               </button>
             </div>
           </div>
