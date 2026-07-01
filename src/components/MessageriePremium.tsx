@@ -5,8 +5,12 @@ import {
   MessageSquare, Search, Send, Pin, Phone, Video, Info, 
   Smile, Image as ImageIcon, Paperclip, Mic, CheckCheck, Play, Pause,
   Reply, ChevronRight, ChevronLeft, X, Heart, ThumbsUp, Flame, Star, Volume2, Film, Check,
-  VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users
+  VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users,
+  Database, Wifi, WifiOff, Copy, Zap, Sparkles
 } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { AgoraManager, isAgoraConfigured } from '../lib/agora';
+
 
 interface Message {
   id: string;
@@ -56,11 +60,16 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const [activeChannelId, setActiveChannelId] = useState('chan-group-1');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Input States
   const [inputText, setInputText] = useState('');
   const [typingChannel, setTypingChannel] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
+  // Agora Manager Ref
+  const agoraManagerRef = useRef<AgoraManager | null>(null);
 
   // Playback of voice states
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
@@ -178,6 +187,158 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   useEffect(() => {
     localStorage.setItem('mrc_real_chat_messages', JSON.stringify(channelMessages));
   }, [channelMessages]);
+
+  // Sync a single message to Supabase if configured
+  const syncMessageToSupabase = (msg: Message) => {
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('mrc_messages')
+        .insert([{
+          id: msg.id,
+          sender_id: msg.senderId,
+          sender_name: msg.senderName,
+          sender_role: msg.senderRole || 'Membre',
+          avatar_url: msg.avatarUrl || null,
+          text: msg.text,
+          time: msg.time,
+          type: msg.type || 'text',
+          media_url: msg.mediaUrl || null,
+          file_size: msg.fileSize || null,
+          duration: msg.duration || null,
+          reply_to: msg.replyTo || null,
+          reactions: msg.reactions || {},
+          read: msg.read || false
+        }])
+        .then(({ error }) => {
+          if (error) console.error("Error inserting to Supabase:", error);
+        });
+    }
+  };
+
+  // Supabase Realtime synchronization effect
+  useEffect(() => {
+    if (isSupabaseConfigured && supabase) {
+      // 1. Fetch existing messages from Supabase
+      supabase
+        .from('mrc_messages')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Error loading messages from Supabase:", error);
+          } else if (data) {
+            const formatted: Message[] = data.map(item => ({
+              id: item.id,
+              senderId: item.sender_id,
+              senderName: item.sender_name,
+              senderRole: item.sender_role,
+              avatarUrl: item.avatar_url,
+              text: item.text || '',
+              time: item.time,
+              type: item.type as any,
+              mediaUrl: item.media_url,
+              fileSize: item.file_size,
+              duration: item.duration,
+              replyTo: item.reply_to,
+              reactions: item.reactions || {},
+              read: item.read
+            }));
+            
+            setChannelMessages(prev => ({
+              ...prev,
+              'chan-group-1': formatted
+            }));
+
+            // Update channel last message
+            if (formatted.length > 0) {
+              const last = formatted[formatted.length - 1];
+              setChannels(prev => prev.map(c => {
+                if (c.id === 'chan-group-1') {
+                  return {
+                    ...c,
+                    lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+                    lastMessageTime: last.time
+                  };
+                }
+                return c;
+              }));
+            }
+          }
+        });
+
+      // 2. Subscribe to real-time additions/reactions in Supabase
+      const channel = supabase
+        .channel('mrc_messages_realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'mrc_messages' },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              const newRow = payload.new;
+              const newMsg: Message = {
+                id: newRow.id,
+                senderId: newRow.sender_id,
+                senderName: newRow.sender_name,
+                senderRole: newRow.sender_role,
+                avatarUrl: newRow.avatar_url,
+                text: newRow.text || '',
+                time: newRow.time,
+                type: newRow.type as any,
+                mediaUrl: newRow.media_url,
+                fileSize: newRow.file_size,
+                duration: newRow.duration,
+                replyTo: newRow.reply_to,
+                reactions: newRow.reactions || {},
+                read: newRow.read
+              };
+
+              setChannelMessages(prev => {
+                const current = prev['chan-group-1'] || [];
+                if (current.some(m => m.id === newMsg.id)) return prev;
+                return {
+                  ...prev,
+                  'chan-group-1': [...current, newMsg]
+                };
+              });
+
+              setChannels(prev => prev.map(c => {
+                if (c.id === 'chan-group-1') {
+                  return {
+                    ...c,
+                    lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+                    lastMessageTime: newRow.time
+                  };
+                }
+                return c;
+              }));
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedRow = payload.new;
+              setChannelMessages(prev => {
+                const current = prev['chan-group-1'] || [];
+                return {
+                  ...prev,
+                  'chan-group-1': current.map(m => {
+                    if (m.id === updatedRow.id) {
+                      return {
+                        ...m,
+                        reactions: updatedRow.reactions || {},
+                        read: updatedRow.read
+                      };
+                    }
+                    return m;
+                  })
+                };
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [isSupabaseConfigured]);
 
   const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
   const messages = channelMessages[activeChannelId] || [];
@@ -350,6 +511,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       [activeChannelId]: [...(prev[activeChannelId] || []), voiceMsg]
     }));
     
+    // Sync to Supabase
+    syncMessageToSupabase(voiceMsg);
+    
     // Update channel's last message
     setChannels(prev => prev.map(c => {
       if (c.id === activeChannelId) {
@@ -393,6 +557,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
       }));
 
+      // Sync to Supabase
+      syncMessageToSupabase(newMsg);
+
       setChannels(prev => prev.map(c => {
         if (c.id === activeChannelId) {
           return {
@@ -435,6 +602,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       ...prev,
       [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
     }));
+
+    // Sync to Supabase
+    syncMessageToSupabase(newMsg);
 
     setChannels(prev => prev.map(c => {
       if (c.id === activeChannelId) {
@@ -598,9 +768,60 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     // Play ringing tone
     startRingtone();
 
+    // Setup Agora call if configured
+    if (isAgoraConfigured) {
+      const manager = new AgoraManager();
+      agoraManagerRef.current = manager;
+      manager.joinCall({
+        channelName: `mrc-call-${activeChannelId}`,
+        type,
+        onUserPublished: (user, mediaType) => {
+          if (mediaType === 'audio') {
+            user.audioTrack?.play();
+          } else if (mediaType === 'video') {
+            setTimeout(() => {
+              const container = document.getElementById(`agora-remote-${user.uid}`);
+              if (container) {
+                user.videoTrack?.play(container);
+              }
+            }, 500);
+          }
+          // Dynamically append remote user
+          setCallParticipants(prev => {
+            if (prev.some(p => p.id === String(user.uid))) return prev;
+            return [
+              ...prev,
+              {
+                id: String(user.uid),
+                name: `Runner #${user.uid}`,
+                role: 'Membre Live',
+                avatarUrl: null,
+                isMuted: false,
+                isSpeaking: false,
+                isLocal: false
+              }
+            ];
+          });
+        },
+        onUserUnpublished: (user) => {
+          setCallParticipants(prev => prev.filter(p => p.id !== String(user.uid)));
+        }
+      }).then(agoraRes => {
+        if (agoraRes && type === 'video' && agoraRes.localVideoTrack) {
+          setTimeout(() => {
+            if (localVideoRef.current) {
+              agoraRes.localVideoTrack?.play(localVideoRef.current);
+            }
+          }, 500);
+        }
+      }).catch(err => {
+        console.error("Agora joinCall failed:", err);
+      });
+    }
+
     let stream: MediaStream | null = null;
     try {
-      // Attempt real hardware stream access
+      // Attempt real hardware stream access for visual waveform rendering
       stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: type === 'video' ? { facingMode: 'user' } : false
@@ -695,6 +916,12 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       setLocalStream(null);
     }
 
+    // Disconnect Agora client
+    if (agoraManagerRef.current) {
+      agoraManagerRef.current.leaveCall();
+      agoraManagerRef.current = null;
+    }
+
     setActiveCall(prev => {
       if (prev) {
         return {
@@ -711,21 +938,29 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   };
 
   const handleToggleMute = () => {
+    const nextState = !micMuted;
     if (localStream) {
       localStream.getAudioTracks().forEach(track => {
-        track.enabled = micMuted;
+        track.enabled = !nextState;
       });
     }
-    setMicMuted(!micMuted);
+    if (agoraManagerRef.current) {
+      agoraManagerRef.current.setMuteMicrophone(nextState);
+    }
+    setMicMuted(nextState);
   };
 
   const handleToggleCamera = () => {
+    const nextState = !cameraOff;
     if (localStream) {
       localStream.getVideoTracks().forEach(track => {
-        track.enabled = cameraOff;
+        track.enabled = !nextState;
       });
     }
-    setCameraOff(!cameraOff);
+    if (agoraManagerRef.current) {
+      agoraManagerRef.current.setCameraEnabled(!nextState);
+    }
+    setCameraOff(nextState);
   };
 
   // Bind video element when connected
@@ -810,6 +1045,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       [activeChannelId]: updatedMsgs
     });
 
+    // Sync to Supabase
+    syncMessageToSupabase(newMsg);
+
     // Update channel's last message
     setChannels(channels.map(c => {
       if (c.id === activeChannelId) {
@@ -836,12 +1074,25 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         if (m.id === msgId) {
           const currentReactions = m.reactions || {};
           const val = currentReactions[emoji] || 0;
+          const newReactions = {
+            ...currentReactions,
+            [emoji]: val + 1
+          };
+
+          // Update real Supabase if configured
+          if (isSupabaseConfigured && supabase) {
+            supabase
+              .from('mrc_messages')
+              .update({ reactions: newReactions })
+              .eq('id', msgId)
+              .then(({ error }) => {
+                if (error) console.error("Error updating reactions in Supabase:", error);
+              });
+          }
+
           return {
             ...m,
-            reactions: {
-              ...currentReactions,
-              [emoji]: val + 1
-            }
+            reactions: newReactions
           };
         }
         return m;
@@ -1032,6 +1283,34 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Supabase & Agora Connection status and config wizard trigger */}
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-xl text-[10px] font-mono font-bold transition cursor-pointer text-slate-600"
+              title="Connecteurs Supabase Realtime & Agora"
+            >
+              <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
+              <span className="opacity-80">Supabase:</span>
+              <span className={isSupabaseConfigured ? 'text-emerald-600 font-extrabold' : 'text-amber-600'}>
+                {isSupabaseConfigured ? 'LIVE 🟢' : 'DÉMO 🟡'}
+              </span>
+              <span className="text-slate-300">|</span>
+              <Zap className={`w-3 h-3 ${isAgoraConfigured ? 'text-blue-500' : 'text-slate-400'}`} />
+              <span className="opacity-80">Agora:</span>
+              <span className={isAgoraConfigured ? 'text-blue-600 font-extrabold' : 'text-slate-500 font-normal'}>
+                {isAgoraConfigured ? 'LIVE 🔵' : 'DÉMO 🟡'}
+              </span>
+            </button>
+
+            {/* Mobile small status indicator */}
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="sm:hidden p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+              title="Status Supabase & Agora"
+            >
+              <Database className={`w-4 h-4 ${isSupabaseConfigured ? 'text-emerald-500' : 'text-slate-400'}`} />
+            </button>
+
             <button 
               onClick={() => handleStartCall('voice')}
               className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
@@ -1740,6 +2019,161 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Supabase & Agora Setup and Instructions Modal */}
+      {showSetupModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-5 h-5 text-blue-600" />
+                <h3 className="font-serif italic font-black text-lg text-slate-800">
+                  {isRtl ? 'إعدادات الاتصال وقاعدة البيانات' : 'Configuration Supabase & Agora'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSetupModal(false)}
+                className="p-2 hover:bg-slate-200/60 rounded-xl transition cursor-pointer text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-700">
+              {/* Status checklist cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Supabase Status Card */}
+                <div className={`p-4 rounded-2xl border ${isSupabaseConfigured ? 'bg-emerald-50/40 border-emerald-100' : 'bg-amber-50/40 border-amber-100'} transition`}>
+                  <div className="flex items-center gap-2 justify-between">
+                    <span className="text-xs font-mono font-bold tracking-wider uppercase text-slate-400">SUPABASE REALTIME</span>
+                    <span className={`px-2 py-0.5 text-[9px] font-black font-mono uppercase rounded-md shadow-3xs ${isSupabaseConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isSupabaseConfigured ? 'Connecté' : 'Simulation'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-600 mt-2">
+                    {isSupabaseConfigured 
+                      ? '✓ La synchronisation en temps réel des messages est active avec votre base de données Supabase.'
+                      : 'ℹ️ Fonctionne actuellement avec localStorage. Configurez vos clés secrets pour activer la base en direct !'}
+                  </p>
+                </div>
+
+                {/* Agora Status Card */}
+                <div className={`p-4 rounded-2xl border ${isAgoraConfigured ? 'bg-emerald-50/40 border-emerald-100' : 'bg-amber-50/40 border-amber-100'} transition`}>
+                  <div className="flex items-center gap-2 justify-between">
+                    <span className="text-xs font-mono font-bold tracking-wider uppercase text-slate-400">AGORA RTC CALLS</span>
+                    <span className={`px-2 py-0.5 text-[9px] font-black font-mono uppercase rounded-md shadow-3xs ${isAgoraConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isAgoraConfigured ? 'Connecté' : 'Simulation'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-600 mt-2">
+                    {isAgoraConfigured 
+                      ? '✓ Les appels vocaux et caméra utilisent de vraies connexions Agora WebRTC.'
+                      : 'ℹ️ Mode démo actif avec flux caméra locaux. Ajoutez un ID Agora pour des connexions de groupe réelles !'}
+                  </p>
+                </div>
+              </div>
+
+              {/* SQL script for Supabase Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-serif italic font-black text-sm text-slate-800">
+                    {isRtl ? 'كود SQL الخاص بـ Supabase SQL Editor' : 'Script SQL pour l\'Éditeur Supabase'}
+                  </h4>
+                  <button
+                    onClick={() => {
+                      const sqlCode = `-- 1. Créer la table des messages de la Postagang\ncreate table if not exists public.mrc_messages (\n  id text primary key,\n  sender_id text not null,\n  sender_name text not null,\n  sender_role text not null,\n  avatar_url text,\n  text text,\n  time text not null,\n  type text not null default 'text',\n  media_url text,\n  file_size text,\n  duration text,\n  reply_to jsonb,\n  reactions jsonb default '{}'::jsonb,\n  read boolean default false,\n  created_at timestamp with time zone default timezone('utc'::text, now()) not null\n);\n\n-- 2. Activer la sécurité au niveau des lignes (RLS)\nalter table public.mrc_messages enable row level security;\n\n-- 3. Créer une règle d'accès publique pour tester (lecture/écriture pour tous)\ncreate policy "Accès public complet" on public.mrc_messages\n  for all using (true) with check (true);\n\n-- 4. Activer la réplication Realtime pour cette table afin de recevoir les messages en direct !\nalter publication supabase_realtime add table public.mrc_messages;`;
+                      navigator.clipboard.writeText(sqlCode);
+                      setCopiedSql(true);
+                      setTimeout(() => setCopiedSql(false), 2000);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-[10px] font-mono font-extrabold transition cursor-pointer shadow-3xs border border-blue-100"
+                  >
+                    {copiedSql ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    {copiedSql ? (isRtl ? 'تم النسخ!' : 'Copié !') : (isRtl ? 'نسخ كود SQL' : 'Copier le Code SQL')}
+                  </button>
+                </div>
+                <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+                  {isRtl 
+                    ? 'انسخ هذا الرمز البرمجي وألصقه في محرر SQL (SQL Editor) الخاص بمشروع Supabase لإنشاء الجدول وتفعيل التحديثات المباشرة Realtime.' 
+                    : 'Copiez et collez ce script dans l\'éditeur SQL de votre tableau de bord Supabase pour créer la table et activer la réplication temps réel.'}
+                </p>
+
+                <div className="relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-950 p-4">
+                  <pre className="text-[10px] sm:text-xs font-mono text-slate-300 overflow-x-auto max-h-48 leading-relaxed">
+{`-- 1. Créer la table des messages de la Postagang
+create table if not exists public.mrc_messages (
+  id text primary key,
+  sender_id text not null,
+  sender_name text not null,
+  sender_role text not null,
+  avatar_url text,
+  text text,
+  time text not null,
+  type text not null default 'text',
+  media_url text,
+  file_size text,
+  duration text,
+  reply_to jsonb,
+  reactions jsonb default '{}'::jsonb,
+  read boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. Activer la sécurité RLS
+alter table public.mrc_messages enable row level security;
+
+-- 3. Créer une règle d'accès publique pour tester
+create policy "Accès public complet" on public.mrc_messages
+  for all using (true) with check (true);
+
+-- 4. Activer le Realtime de Supabase sur cette table
+alter publication supabase_realtime add table public.mrc_messages;`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Secret keys setup documentation */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2.5">
+                <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+                  {isRtl ? 'كيفية تفعيل الاتصال الحقيقي' : 'COMMENT ACTIVER LES CONNEXIONS RÉELLES'}
+                </h5>
+                <ol className="text-xs font-semibold text-slate-600 space-y-2 list-decimal pl-4 leading-relaxed">
+                  <li>
+                    {isRtl 
+                      ? 'افتح قائمة الإعدادات (Settings / Secrets) في شريط AI Studio الجانبي.' 
+                      : 'Accédez à l\'onglet des Secrets / Paramètres dans votre interface AI Studio.'}
+                  </li>
+                  <li>
+                    Ajoutez les variables suivantes avec les identifiants de vos projets :
+                    <div className="bg-white/80 p-2 rounded-xl font-mono text-[10px] border border-slate-200/50 mt-1 space-y-0.5 text-slate-700">
+                      <div>VITE_SUPABASE_URL = <span className="text-slate-400">"votre_url_supabase"</span></div>
+                      <div>VITE_SUPABASE_ANON_KEY = <span className="text-slate-400">"votre_cle_anon_key"</span></div>
+                      <div>VITE_AGORA_APP_ID = <span className="text-slate-400">"votre_id_agora_rtc"</span></div>
+                    </div>
+                  </li>
+                  <li>
+                    {isRtl 
+                      ? 'أعد تحميل الصفحة أو خادم التطوير لتطبيق التعديلات والتمتع باتصال حي بالكامل!' 
+                      : 'Rechargez l\'application pour appliquer les secrets et communiquer en direct !'}
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                onClick={() => setShowSetupModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black transition cursor-pointer"
+              >
+                {isRtl ? 'موافق' : 'Compris !'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
