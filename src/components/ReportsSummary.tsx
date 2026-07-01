@@ -149,24 +149,24 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
                 {language === 'ar' ? 'البطاقة التقنية النهائية' : 'Fiche Technique Finale'}
               </span>
               <h3 className="text-lg font-serif italic font-black text-white leading-tight">
-                {activeReport.title}
+                {associatedRun ? associatedRun.title : activeReport.title}
               </h3>
-              <p className="text-[11px] text-natural-sage-light mt-0.5 font-mono">{language === 'ar' ? 'خرجة يوم' : 'Sortie du'} {new Date(activeReport.date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : language === 'en' ? 'en-US' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-[11px] text-natural-sage-light mt-0.5 font-mono">{language === 'ar' ? 'خرجة يوم' : 'Sortie du'} {new Date(associatedRun ? associatedRun.date : activeReport.date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : language === 'en' ? 'en-US' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
               <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-white/10">
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
                   <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{t('distance')}</span>
-                  <p className="text-md font-bold text-white">{activeReport.totalDistanceKm} {language === 'ar' ? 'كلم' : 'KM'}</p>
+                  <p className="text-md font-bold text-white">{associatedRun ? associatedRun.distance : activeReport.totalDistanceKm} {language === 'ar' ? 'كلم' : 'KM'}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
                   <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{language === 'ar' ? 'متوسط الوتيرة' : 'Cadence Moyenne'}</span>
-                  <p className="text-md font-bold text-natural-accent">{activeReport.averagePace}</p>
+                  <p className="text-md font-bold text-natural-accent">{associatedRun ? associatedRun.pace : activeReport.averagePace}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
                   <span className="text-natural-sage-light text-[9px] block uppercase font-mono">{t('participants')}</span>
                   <p className="text-md font-bold text-white flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-natural-sage-light" />
-                    {activeReport.participantsCount} {language === 'ar' ? 'عداء' : 'coureurs'}
+                    {associatedRun ? associatedRun.participants.length : activeReport.participantsCount} {language === 'ar' ? 'عداء' : 'coureurs'}
                   </p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
@@ -178,11 +178,11 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
                 </div>
               </div>
 
-              {activeReport.routeMapDescription && (
+              {(associatedRun ? associatedRun.description : activeReport.routeMapDescription) && (
                 <div className="mt-4 pt-3 border-t border-white/10 text-[11px]">
                   <span className="text-natural-sage-light text-[9px] block uppercase font-mono mb-1">Itinéraire Remporté</span>
                   <div className="p-2 bg-white/15 text-natural-accent rounded-lg border border-white/10 font-mono leading-relaxed font-bold">
-                    👣 {activeReport.routeMapDescription}
+                    👣 {associatedRun ? associatedRun.description : activeReport.routeMapDescription}
                   </div>
                 </div>
               )}

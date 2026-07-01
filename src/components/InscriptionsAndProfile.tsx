@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Runner, Run } from '../types';
 import { translations, Language } from '../translations';
-import { User, Shield, Phone, Mail, Check, Sparkles, HeartPulse, Users, Trophy, MapPin, Award, X, Settings } from 'lucide-react';
+import { User, Shield, Phone, Mail, Check, Sparkles, HeartPulse, Users, Trophy, MapPin, Award, X, Settings, Camera } from 'lucide-react';
 
 interface InscriptionsAndProfileProps {
   currentUser: Runner;
@@ -19,6 +19,38 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
   const [email, setEmail] = useState(currentUser.email);
   const [bloodType, setBloodType] = useState(currentUser.bloodType || 'O+');
   const [savedMsg, setSavedMsg] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        canvas.width = MAX_WIDTH;
+        canvas.height = MAX_HEIGHT;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setCurrentUser({
+            ...currentUser,
+            avatarUrl: dataUrl
+          });
+          setSavedMsg(true);
+          setTimeout(() => setSavedMsg(false), 3000);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const registeredRuns = runs.filter(
     r => !r.completed && r.participants.some(p => p.id === currentUser.id)
@@ -29,6 +61,15 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
   ).length;
 
   const totalDistancePlanned = registeredRuns.reduce((acc, curr) => acc + curr.distance, 0);
+
+  // Compute real club stats
+  const totalClubDistance = runs.reduce((acc, run) => acc + (run.completed ? run.distance : 0), 0);
+  const uniqueWilayas = new Set(
+    runs
+      .filter(r => r.isOrWilaya && r.destinationWilaya)
+      .map(r => r.destinationWilaya?.trim().toLowerCase())
+  );
+  const totalVilayas = uniqueWilayas.size + 1; // +1 for local Mostaganem
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +91,47 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
     <div className="space-y-6">
       {/* 1. MON PROFIL CARD */}
       <div id="right-mon-profil" className="bg-white rounded-[2rem] p-6 shadow-xs border border-blue-50/50 flex flex-col gap-6">
-        <h3 className={`text-xs font-bold text-blue-600 uppercase tracking-widest ${isRtl ? 'text-right' : ''}`}>
-          {isRtl ? 'ملفي الشخصي' : 'MON PROFIL'}
-        </h3>
+        <div className={`flex items-start justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest">
+            {isRtl ? 'ملفي الشخصي' : 'MON PROFIL'}
+          </h3>
+        </div>
+
+        {/* Profile Info & Avatar */}
+        <div className={`flex items-center gap-4 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+          <div className="relative group shrink-0">
+            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden border-4 border-white shadow-md">
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                currentUser.name.substring(0, 2).toUpperCase()
+              )}
+            </div>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 w-7 h-7 bg-white text-blue-600 hover:text-blue-700 hover:bg-slate-50 rounded-full flex items-center justify-center border border-slate-200 shadow-sm transition cursor-pointer"
+              title={isRtl ? 'تغيير الصورة' : 'Changer de photo'}
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleAvatarUpload} 
+              accept="image/*" 
+              className="hidden" 
+            />
+          </div>
+          <div>
+            <h4 className="text-xl font-serif italic font-black text-[#1034A6]">{currentUser.name}</h4>
+            <p className="text-xs font-semibold text-slate-500 font-mono mt-0.5">@{currentUser.username || 'user'}</p>
+            {currentUser.runClubRole && (
+              <span className="inline-block mt-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-bold uppercase rounded-md">
+                {currentUser.runClubRole}
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* 3 Metrics Boxes */}
         <div className="grid grid-cols-3 gap-3">
@@ -196,7 +275,7 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
             <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'المسافة' : 'KM'}</span>
             <div className="flex items-center justify-center gap-1">
               <Trophy className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">1 284</span>
+              <span className="text-base font-black text-white">{totalClubDistance}</span>
             </div>
           </div>
 
@@ -204,7 +283,7 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
             <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الولايات' : 'VILAYAS'}</span>
             <div className="flex items-center justify-center gap-1">
               <MapPin className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">8</span>
+              <span className="text-base font-black text-white">{totalVilayas}</span>
             </div>
           </div>
         </div>
