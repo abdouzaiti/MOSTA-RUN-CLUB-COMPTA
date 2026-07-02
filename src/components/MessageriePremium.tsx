@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AgoraManager, isAgoraConfigured } from '../lib/agora';
+import MountainVistaBackground from './MountainVistaBackground';
 
 
 interface Message {
@@ -1496,7 +1497,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       </div>
 
       {/* Main Chat Conversation Area */}
-      <div className={`flex-1 flex flex-col h-full bg-white relative ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col h-full bg-white relative overflow-hidden ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
+        {/* Parallax Background */}
+        <MountainVistaBackground />
+        
         {/* Active chat header toolbar */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between shadow-3xs bg-white/90 backdrop-blur-md relative z-10">
           <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -1581,23 +1585,24 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         </div>
 
         {/* Message Bubble Scroll view */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#FAFBFD]/30 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 bg-transparent space-y-4 relative z-10">
           
           {/* Pinned system instructions banner info */}
-          <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50 text-center text-[11px] font-semibold text-slate-500 max-w-lg mx-auto flex items-center gap-2">
+          <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50 text-center text-[11px] font-semibold text-slate-500 max-w-lg mx-auto flex items-center gap-2 relative z-10">
             <Pin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span>Masta Messagerie : Vos messages sont synchronisés en direct avec la Postagang. Cliquez sur un message pour y réagir ou répondre !</span>
           </div>
 
-          {messages.map((message) => {
-            const isMe = message.senderId === (currentUser.id || 'usr-1');
-            
-            return (
-              <div 
-                key={message.id} 
-                className={`flex flex-col max-w-[85%] sm:max-w-[70%] group relative ${
-                  isMe ? 'ml-auto items-end' : 'mr-auto items-start'
-                }`}
+          <div className="relative z-10 space-y-4">
+            {messages.map((message) => {
+              const isMe = message.senderId === (currentUser.id || 'usr-1');
+              
+              return (
+                <div 
+                  key={message.id} 
+                  className={`flex flex-col max-w-[85%] sm:max-w-[70%] group relative ${
+                    isMe ? 'ml-auto items-end' : 'mr-auto items-start'
+                  }`}
               >
                 {/* Sender Title meta */}
                 {!isMe && (
@@ -1771,6 +1776,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           )}
 
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Replying Banner wrapper above input toolbar */}

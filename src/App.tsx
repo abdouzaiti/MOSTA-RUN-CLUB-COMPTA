@@ -826,7 +826,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
           {/* Right Main Scrollable View Panel */}
           <div className={`flex-1 flex flex-col h-full relative ${
             activeTab === 'messagerie' 
-              ? 'overflow-hidden p-0 lg:p-6' 
+              ? 'overflow-hidden p-0' 
               : 'overflow-y-auto p-4 lg:p-6 lg:no-scrollbar'
           }`}>
             
@@ -834,7 +834,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
               <>
                 {/* Main page views router */}
                 <main className={`flex-1 flex flex-col w-full h-full ${
-                  activeTab === 'messagerie' ? 'pb-16 md:pb-6' : 'pb-24 md:pb-6'
+                  activeTab === 'messagerie' ? 'pb-16 md:pb-0' : 'pb-24 md:pb-6'
                 }`}>
                   {/* TAB 0: DASHBOARD SOCIAL */}
                   {activeTab === 'dashboard' && (
