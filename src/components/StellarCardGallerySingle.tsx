@@ -14,22 +14,22 @@ import {
 import { Download, Heart, X, Trophy, Mountain, Globe, Zap, Footprints, Activity, Star, Dumbbell, Award, Flame } from "lucide-react"
 
 // Import all album images so Vite bundles and resolves them automatically
-import pic1 from "../assets/album/pic1.jpg"
-import pic2 from "../assets/album/pic2.jpg"
-import pic3 from "../assets/album/pic3.jpg"
-import pic4 from "../assets/album/pic4.jpg"
-import pic5 from "../assets/album/pic5.jpg"
-import pic6 from "../assets/album/pic6.jpg"
-import pic7 from "../assets/album/pic7.jpg"
-import pic8 from "../assets/album/pic8.jpg"
-import pic9 from "../assets/album/pic9.jpg"
-import pic10 from "../assets/album/pic10.jpg"
-import pic11 from "../assets/album/pic11.jpg"
-import pic12 from "../assets/album/pic12.jpg"
-import pic13 from "../assets/album/pic13.jpg"
-import pic14 from "../assets/album/pic14.jpg"
-import pic15 from "../assets/album/pic15.jpg"
-import pic16 from "../assets/album/pic16.jpg"
+import pic1 from "../assets/album/pic1.png"
+import pic2 from "../assets/album/pic2.png"
+import pic3 from "../assets/album/pic3.png"
+import pic4 from "../assets/album/pic4.png"
+import pic5 from "../assets/album/pic5.png"
+import pic6 from "../assets/album/pic6.png"
+import pic7 from "../assets/album/pic7.png"
+import pic8 from "../assets/album/pic8.png"
+import pic9 from "../assets/album/pic9.png"
+import pic10 from "../assets/album/pic10.png"
+import pic11 from "../assets/album/pic11.png"
+import pic12 from "../assets/album/pic12.png"
+import pic13 from "../assets/album/pic13.png"
+import pic14 from "../assets/album/pic14.png"
+import pic15 from "../assets/album/pic15.png"
+import pic16 from "../assets/album/pic16.png"
 /* =========================
    Helper Design Mapper for Fallback Cards
    ========================= */
@@ -608,7 +608,6 @@ export default function StellarCardGallerySingle() {
         <CardModal />
 
         <div className="absolute top-4 left-4 z-20 text-white pointer-events-none">
-          <h1 className="text-2xl font-bold mb-2">3D Stellar Card Gallery</h1>
           <p className="text-sm opacity-70">Drag to look around • Scroll to zoom • Click cards to view details</p>
         </div>
       </div>
