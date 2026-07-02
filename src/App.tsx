@@ -10,6 +10,7 @@ import UserProfileSettings from './components/UserProfileSettings';
 import DashboardSocial from './components/DashboardSocial';
 import MessageriePremium from './components/MessageriePremium';
 import NotificationsPanel from './components/NotificationsPanel';
+import StellarCardGallerySingle from './components/StellarCardGallerySingle';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -825,7 +826,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
 
           {/* Right Main Scrollable View Panel */}
           <div className={`flex-1 flex flex-col h-full relative ${
-            activeTab === 'messagerie' 
+            activeTab === 'messagerie' || activeTab === 'album'
               ? 'overflow-hidden p-0' 
               : 'overflow-y-auto p-4 lg:p-6 lg:no-scrollbar'
           }`}>
@@ -846,6 +847,11 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                       setActiveTab={setActiveTab}
                       language={language || 'fr'}
                     />
+                  )}
+
+                  {/* ALBUM TAB */}
+                  {activeTab === 'album' && (
+                    <StellarCardGallerySingle />
                   )}
 
                   {/* TAB 1: PLANNING (Matches columns exact layout) */}
@@ -935,7 +941,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                                       <span className="text-lg">{medals[index]}</span>
                                       <div>
                                         <p className="font-bold text-xs text-slate-800">{athlete.name}</p>
-                                        <p className="text-[10px] font-medium text-slate-400 uppercase font-mono">{athlete.role || 'Membre'}</p>
+                                        <p className="text-[10px] font-medium text-slate-400 uppercase font-mono">{athlete.runClubRole || 'Membre'}</p>
                                       </div>
                                     </div>
                                     <div className="text-right">
