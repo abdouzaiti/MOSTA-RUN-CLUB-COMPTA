@@ -10,7 +10,104 @@ import {
   Plane,
   Sphere,
 } from "@react-three/drei"
-import { Download, Heart, X } from "lucide-react"
+import { Download, Heart, X, Trophy, Mountain, Globe, Zap, Footprints, Activity, Star, Dumbbell, Award, Flame } from "lucide-react"
+
+/* =========================
+   Helper Design Mapper for Fallback Cards
+   ========================= */
+
+function getCardDesign(title: string) {
+  const t = title.toLowerCase()
+  if (t.includes("rose")) {
+    return {
+      gradient: "from-pink-500 via-rose-600 to-red-700",
+      accent: "#f472b6",
+      icon: "heart",
+      label: "OCTOBRE ROSE",
+      badge: "Charity Run"
+    }
+  }
+  if (t.includes("chiffa") || t.includes("trail")) {
+    return {
+      gradient: "from-emerald-600 via-teal-700 to-slate-900",
+      accent: "#2dd4bf",
+      icon: "mountain",
+      label: "TRAIL CHIFFA",
+      badge: "Nature Trail"
+    }
+  }
+  if (t.includes("bejaia") || t.includes("semi")) {
+    return {
+      gradient: "from-cyan-500 via-blue-600 to-indigo-900",
+      accent: "#22d3ee",
+      icon: "trophy",
+      label: t.includes("bejaia") ? "SEMI BEJAIA" : "SEMI MARATHON",
+      badge: t.includes("alger") ? "ALGER 21K" : "BEJAIA 21K"
+    }
+  }
+  if (t.includes("madrid")) {
+    return {
+      gradient: "from-amber-500 via-orange-600 to-red-800",
+      accent: "#fbbf24",
+      icon: "globe",
+      label: "SEMI MADRID",
+      badge: "International"
+    }
+  }
+  if (t.includes("bola")) {
+    return {
+      gradient: "from-yellow-400 via-amber-500 to-orange-700",
+      accent: "#facc15",
+      icon: "zap",
+      label: "BOLA 24",
+      badge: "Special Edition"
+    }
+  }
+  if (t.includes("montagne") || t.includes("everest")) {
+    return {
+      gradient: "from-violet-600 via-purple-700 to-slate-900",
+      accent: "#c084fc",
+      icon: "mountain",
+      label: title.toUpperCase(),
+      badge: "Altitude"
+    }
+  }
+  if (t.includes("aut")) {
+    return {
+      gradient: "from-lime-500 via-green-600 to-neutral-900",
+      accent: "#a3e635",
+      icon: "footprints",
+      label: "AUT ULTRA",
+      badge: "Ultra Trail"
+    }
+  }
+  // Default MRC
+  return {
+    gradient: "from-blue-600 via-indigo-700 to-slate-900",
+    accent: "#60a5fa",
+    icon: "activity",
+    label: "MRC ATHLETE",
+    badge: "Official Club"
+  }
+}
+
+function DesignIcon({ name, className }: { name: string; className?: string }) {
+  const props = { className: className || "w-10 h-10 text-white/90", strokeWidth: 1.5 }
+  switch (name) {
+    case "heart": return <Heart {...props} fill="currentColor" />
+    case "mountain": return <Mountain {...props} />
+    case "trophy": return <Trophy {...props} />
+    case "globe": return <Globe {...props} />
+    case "zap": return <Zap {...props} fill="currentColor" />
+    case "footprints": return <Footprints {...props} />
+    case "star": return <Star {...props} fill="currentColor" />
+    case "dumbbell": return <Dumbbell {...props} />
+    case "award": return <Award {...props} />
+    case "activity":
+    default:
+      return <Activity {...props} />
+  }
+}
 
 /**
  * Single-file Stellar Card Gallery
@@ -158,6 +255,7 @@ function FloatingCard({
   const meshRef = useRef<THREE.Mesh>(null)
   const groupRef = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const { setSelectedCard } = useCard()
 
   useFrame(({ camera }) => {
@@ -180,6 +278,8 @@ function FloatingCard({
     setHovered(false)
     document.body.style.cursor = "auto"
   }
+
+  const design = getCardDesign(card.title)
 
   return (
     <group ref={groupRef} position={[position.x, position.y, position.z]}>
@@ -204,7 +304,7 @@ function FloatingCard({
         }}
       >
         <div
-          className="w-40 h-52 rounded-lg overflow-hidden shadow-2xl bg-[#1F2121] p-3 select-none"
+          className="w-40 h-52 rounded-lg overflow-hidden shadow-2xl bg-[#1D1E1E] p-2.5 select-none flex flex-col justify-between"
           style={{
             boxShadow: hovered
               ? "0 25px 50px rgba(49, 184, 198, 0.5), 0 0 30px rgba(49, 184, 198, 0.3)"
@@ -212,15 +312,39 @@ function FloatingCard({
             border: hovered ? "2px solid rgba(49, 184, 198, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
-          <img
-            src={card.imageUrl || "/placeholder.svg"}
-            alt={card.alt}
-            className="w-full h-40 object-cover rounded-md"
-            loading="lazy"
-            draggable={false}
-          />
-          <div className="mt-1 text-center">
-            <p className="text-white text-xs font-medium truncate">{card.title}</p>
+          {!imageError ? (
+            <div className="relative w-full h-[145px] rounded-md overflow-hidden bg-black/40">
+              <img
+                src={card.imageUrl || "/placeholder.svg"}
+                alt={card.alt}
+                className="w-full h-full object-cover rounded-md"
+                loading="lazy"
+                draggable={false}
+                onError={() => setImageError(true)}
+              />
+            </div>
+          ) : (
+            <div className={`relative w-full h-[145px] rounded-md overflow-hidden bg-gradient-to-br ${design.gradient} flex flex-col items-center justify-center p-2 text-center`}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
+              <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(0,0,0,0.15)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.15)_50%,rgba(0,0,0,0.15)_75%,transparent_75%,transparent)] bg-[length:12px_12px] opacity-10 pointer-events-none" />
+              
+              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider uppercase bg-black/40 text-white/90">
+                {design.badge}
+              </span>
+              
+              <div className="my-auto transform transition-transform duration-300 hover:scale-110">
+                <DesignIcon name={design.icon} className="w-8 h-8 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+              </div>
+              
+              <div className="absolute bottom-1.5 left-1 right-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] truncate">
+                  {design.label}
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="text-center py-1 bg-black/10 rounded-sm mt-1">
+            <p className="text-white text-[11px] font-bold tracking-wide truncate">{card.title}</p>
           </div>
         </div>
       </Html>
@@ -235,9 +359,16 @@ function FloatingCard({
 function CardModal() {
   const { selectedCard, setSelectedCard } = useCard()
   const [isFavorited, setIsFavorited] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    setImageError(false)
+  }, [selectedCard])
+
   if (!selectedCard) return null
+
+  const design = getCardDesign(selectedCard.title)
 
   const handleMouseMove: React.MouseEventHandler<HTMLDivElement> = (e) => {
     if (!cardRef.current) return
@@ -286,13 +417,46 @@ function CardModal() {
             onMouseLeave={handleMouseLeave}
           >
             <div className="relative w-full mb-4" style={{ aspectRatio: "3 / 4" }}>
-              <img
-                loading="lazy"
-                className="absolute inset-0 h-full w-full rounded-[16px] bg-[#000000] object-cover"
-                alt={selectedCard.alt}
-                src={selectedCard.imageUrl || "/placeholder.svg"}
-                style={{ boxShadow: "rgba(0, 0, 0, 0.05) 0px 5px 6px 0px", opacity: 1 }}
-              />
+              {!imageError ? (
+                <img
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full rounded-[16px] bg-[#000000] object-cover"
+                  alt={selectedCard.alt}
+                  src={selectedCard.imageUrl || "/placeholder.svg"}
+                  onError={() => setImageError(true)}
+                  style={{ boxShadow: "rgba(0, 0, 0, 0.05) 0px 5px 6px 0px", opacity: 1 }}
+                />
+              ) : (
+                <div className="absolute inset-0 h-full w-full rounded-[16px] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, ${design.accent}20, #1F2121), bg-gradient-to-br ${design.gradient}`,
+                    boxShadow: "rgba(0, 0, 0, 0.2) 0px 10px 30px"
+                  }}
+                >
+                  {/* Premium backgrounds and visual shapes */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${design.gradient} opacity-85 z-0`} />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.15),transparent)] pointer-events-none z-10" />
+                  <div className="absolute inset-0 bg-[linear-gradient(30deg,rgba(0,0,0,0.25)_25%,transparent_25%,transparent_50%,rgba(0,0,0,0.25)_50%,rgba(0,0,0,0.25)_75%,transparent_75%,transparent)] bg-[length:24px_24px] opacity-15 pointer-events-none z-10" />
+                  <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full bg-white/5 blur-xl pointer-events-none z-10" />
+                  
+                  <span className="px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase bg-black/50 text-white/95 border border-white/10 mb-6 z-20 shadow-lg animate-pulse">
+                    {design.badge}
+                  </span>
+                  
+                  <div className="p-5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-inner my-auto z-20 transform hover:scale-110 transition-transform duration-300">
+                    <DesignIcon name={design.icon} className="w-16 h-16 text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]" />
+                  </div>
+                  
+                  <div className="mt-auto mb-4 z-20">
+                    <h2 className="text-xl font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] tracking-wider">
+                      {design.label}
+                    </h2>
+                    <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mt-1">
+                      MARMOTTE RUNNING CLUB
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <h3 className="text-white text-lg font-semibold mb-4 text-center">{selectedCard.title}</h3>
