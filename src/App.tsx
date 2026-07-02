@@ -1223,7 +1223,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
               }`}
             >
               <Camera className="w-5 h-5" />
-              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الألبوم' : 'Album'}</span>
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'المجتمع' : 'Community'}</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}

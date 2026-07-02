@@ -37,7 +37,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
 
   const menuItems = [
     { id: 'dashboard', label: language === 'ar' ? 'الرئيسية' : language === 'en' ? 'Dashboard' : 'Tableau de bord', icon: Compass },
-    { id: 'album', label: language === 'ar' ? 'الألبوم' : language === 'en' ? 'Album' : 'Album', icon: Camera },
+    { id: 'album', label: language === 'ar' ? 'المجتمع' : 'Community', icon: Camera },
     { id: 'planning', label: language === 'ar' ? 'التخطيط' : language === 'en' ? 'Planning' : 'Planning', icon: Calendar },
     { id: 'reports', label: language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'List of Runs' : 'Liste des Runs', icon: Map },
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },
@@ -87,7 +87,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
   return (
     <>
       {/* Mobile Top Header (Sits on top for screens below lg) */}
-      <div className="lg:hidden w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0 relative z-40">
+      <div className={`lg:hidden w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0 relative z-40 ${
+        activeTab === 'messagerie' ? 'hidden' : ''
+      }`}>
         <div className="flex items-center gap-2">
           <div className="p-1 shrink-0">
             <img src="/logo.png" alt="Mosta Run Club Logo" className="w-8 h-8 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />

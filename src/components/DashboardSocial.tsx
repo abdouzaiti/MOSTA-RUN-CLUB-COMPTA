@@ -4,8 +4,10 @@ import { Language, translations } from '../translations';
 import { 
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
-  UserPlus, ArrowRight, Zap, Award, Target, TrendingUp
+  UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
+  ShoppingBag, ExternalLink
 } from 'lucide-react';
+import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
 interface DashboardSocialProps {
   runners: Runner[];
@@ -26,6 +28,9 @@ export default function DashboardSocial({
 }: DashboardSocialProps) {
   const isRtl = language === 'ar';
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
+
+  // Live screenshot of the real vercel website with a mockup fallback
+  const [shopImgSrc, setShopImgSrc] = useState('https://api.microlink.io?url=https%3A%2F%2Fmrc-shop.vercel.app&screenshot=true&embed=screenshot.url');
 
   // Mock social feed posts
   const [posts, setPosts] = useState([
@@ -246,7 +251,7 @@ export default function DashboardSocial({
           {/* Create New Post Card */}
           <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs mt-auto sticky bottom-6 z-10">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 font-mono">
-              {isRtl ? 'المجتمع 👥💬' : 'COMMUNITY 👥💬'}
+              {isRtl ? 'المجتمع' : 'community'}
             </h3>
             <form onSubmit={handleCreatePost} className="space-y-4">
               <div className="flex gap-3">
@@ -310,6 +315,72 @@ export default function DashboardSocial({
                 <span>Humidité: 55%</span>
               </div>
             </div>
+          </div>
+
+          {/* MRC SHOP Section Card */}
+          <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs space-y-4 overflow-hidden relative group transition duration-300 hover:shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-blue-600 shrink-0" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
+                  {isRtl ? 'متجر النادي • MRC SHOP' : 'MRC SHOP • BOUTIQUE'}
+                </h3>
+              </div>
+              <span className="text-[9px] bg-blue-50 text-blue-600 font-black px-2.5 py-0.5 rounded-full border border-blue-100 uppercase tracking-wider">
+                {isRtl ? 'جديد' : 'NEW'}
+              </span>
+            </div>
+
+            {/* Shop Mockup Preview Image with hover scale */}
+            <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-50 border border-slate-100">
+              <img 
+                src={shopImgSrc} 
+                alt="MRC SHOP Preview" 
+                className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+                onError={() => {
+                  if (shopImgSrc !== mrcShopPreview) {
+                    setShopImgSrc(mrcShopPreview);
+                  }
+                }}
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                <span className="text-[10px] text-white font-bold bg-blue-600 px-2 py-1 rounded-lg flex items-center gap-1">
+                  {isRtl ? 'اطلب الآن' : 'Commander en ligne'} <ExternalLink className="w-2.5 h-2.5" />
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                {isRtl 
+                  ? 'اكتشف متجر النادي الرسمي! تأنق بقمصان الجري التقنية الرسمية، السترات الرياضية الفاخرة والمعدات الرياضية المصممة للأبطال.'
+                  : 'Découvrez la boutique officielle du club ! Équipez-vous avec nos maillots techniques officiels, hoodies premiums et accessoires de performance.'
+                }
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  👕 {isRtl ? 'قمصان النادي' : 'Maillots officiels'}
+                </span>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                  🧢 {isRtl ? 'اكسسوارات' : 'Accessoires'}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                  📦 {isRtl ? 'توصيل متوفر' : 'Livraison dispo'}
+                </span>
+              </div>
+            </div>
+
+            {/* Call to action anchor styled as button */}
+            <a 
+              href="https://mrc-shop.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full py-3 bg-[#1034A6] hover:bg-[#1E56A0] text-white text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
+            >
+              <span>{isRtl ? 'زيارة المتجر الإلكتروني' : 'Visiter MRC SHOP'}</span>
+              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+            </a>
           </div>
 
           {/* Upcoming Training Highlight */}

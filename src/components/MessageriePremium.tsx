@@ -146,7 +146,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     const defaultChannels = [
       {
         id: 'chan-group-1',
-        name: 'Postagang N°27 🏃‍♂️⚡',
+        name: 'community',
         isGroup: true,
         pinned: true,
         unreadCount: 0,
@@ -180,7 +180,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     const defaultChannels = [
       {
         id: 'chan-group-1',
-        name: 'Postagang N°27 🏃‍♂️⚡',
+        name: 'community',
         isGroup: true,
         pinned: true,
         unreadCount: 0,
@@ -190,7 +190,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       }
     ];
     localStorage.setItem('mrc_real_chat_channels', JSON.stringify(defaultChannels));
-    if (channels.length !== 1 || channels[0]?.id !== 'chan-group-1' || channels[0]?.membersCount !== groupMembers.length) {
+    if (channels.length !== 1 || channels[0]?.id !== 'chan-group-1' || channels[0]?.membersCount !== groupMembers.length || channels[0]?.name !== 'community') {
       setChannels(defaultChannels);
     }
   }, [groupMembers.length]);
@@ -1454,7 +1454,12 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                     isActive ? 'bg-blue-600 text-white border-blue-400' : 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}>
                     {channel.isGroup ? (
-                      <span className="text-sm font-black font-serif italic">PG</span>
+                      <img 
+                        src="/logo.png" 
+                        alt={channel.name} 
+                        className={`w-full h-full object-contain p-2 ${isActive ? 'brightness-0 invert' : ''}`} 
+                        referrerPolicy="no-referrer" 
+                      />
                     ) : channel.avatarUrl ? (
                       <img src={channel.avatarUrl} alt={channel.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
@@ -1513,7 +1518,9 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               </button>
             )}
             <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shadow-xs overflow-hidden">
-              {activeChannel.isGroup ? 'PG' : (
+              {activeChannel.isGroup ? (
+                <img src="/logo.png" alt={activeChannel.name} className="w-full h-full object-contain p-2 brightness-0 invert" referrerPolicy="no-referrer" />
+              ) : (
                 activeChannel.avatarUrl ? (
                   <img src={activeChannel.avatarUrl} alt={activeChannel.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -1590,7 +1597,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           {/* Pinned system instructions banner info */}
           <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50 text-center text-[11px] font-semibold text-slate-500 max-w-lg mx-auto flex items-center gap-2 relative z-10">
             <Pin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-            <span>Masta Messagerie : Vos messages sont synchronisés en direct avec la Postagang. Cliquez sur un message pour y réagir ou répondre !</span>
+            <span>Masta Messagerie : Vos messages sont synchronisés en direct avec la community. Cliquez sur un message pour y réagir ou répondre !</span>
           </div>
 
           <div className="relative z-10 space-y-4">
@@ -1930,11 +1937,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
           {/* Group Meta Info */}
           <div className="p-4 border-b border-slate-100 text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-md mx-auto mb-3">
-              PG
+            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-md mx-auto mb-3 overflow-hidden">
+              <img src="/logo.png" alt="community" className="w-full h-full object-contain p-3 brightness-0 invert" referrerPolicy="no-referrer" />
             </div>
             <h5 className="font-serif italic font-black text-base text-slate-800">
-              Postagang N°27 🏃‍♂️⚡
+              community
             </h5>
             <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider mt-1">
               {groupMembers.length} {isRtl ? 'عضو نشط' : 'membres actifs'}
@@ -1942,7 +1949,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-3 px-1 text-center">
               {isRtl 
                 ? 'القناة الرسمية للتواصل، تنظيم التدريبات، ومشاركة تفاصيل رحلات النادي اللوجستية.' 
-                : 'Canal de communication officiel pour la Postagang. Coordination des sorties, hébergements et entraînements.'}
+                : 'Canal de communication officiel pour la community. Coordination des sorties, hébergements et entraînements.'}
             </p>
           </div>
 
@@ -2063,7 +2070,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                     {activeCall.partnerName}
                   </h2>
                   <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest font-mono">
-                    {activeCall.isGroup ? (isRtl ? 'قناة جماعية' : 'Postagang Groupe') : (isRtl ? 'مكالمة خاصة' : 'Membres du Club')}
+                    {activeCall.isGroup ? (isRtl ? 'قناة جماعية' : 'Community Groupe') : (isRtl ? 'مكالمة خاصة' : 'Membres du Club')}
                   </p>
                 </div>
               </div>
