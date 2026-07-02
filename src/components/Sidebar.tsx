@@ -99,6 +99,19 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Notifications Trigger */}
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`relative p-2 rounded-full border cursor-pointer transition ${
+              activeTab === 'notifications' 
+                ? 'bg-blue-50 border-blue-200 text-blue-600' 
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+          </button>
+
           {/* Mobile Profile Photo Quick Access */}
           <div className="relative shrink-0 group mr-1">
             <div 

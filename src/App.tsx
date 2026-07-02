@@ -19,7 +19,7 @@ import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
   Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe,
-  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Bell
+  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Bell, Camera
 } from 'lucide-react';
 
 export default function App() {
@@ -1211,14 +1211,13 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
             </button>
             <button
-              onClick={() => setActiveTab('notifications')}
+              onClick={() => setActiveTab('album')}
               className={`flex flex-col items-center gap-1 p-2 transition-all relative cursor-pointer ${
-                activeTab === 'notifications' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+                activeTab === 'album' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Bell className="w-5 h-5" />
-              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'التنبيهات' : 'Alertes'}</span>
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+              <Camera className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الألبوم' : 'Album'}</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
