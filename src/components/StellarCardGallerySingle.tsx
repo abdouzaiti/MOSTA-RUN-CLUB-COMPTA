@@ -13,7 +13,7 @@ import {
 } from "@react-three/drei"
 import { Download, Heart, X, Trophy, Mountain, Globe, Zap, Footprints, Activity, Star, Dumbbell, Award, Flame } from "lucide-react"
 
-// Album images are served statically from the public folder (/album/*.png)
+// Album images are served statically from the public folder (/*.png)
 /* =========================
    Helper Design Mapper for Fallback Cards
    ========================= */
@@ -145,22 +145,22 @@ function CardProvider({ children }: { children: React.ReactNode }) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
 
   const cards: Card[] = [
-    { id: "1", imageUrl: "/album/pic1.png", alt: "MRC", title: "MRC" },
-    { id: "2", imageUrl: "/album/pic2.png", alt: "octobre rose", title: "octobre rose" },
-    { id: "3", imageUrl: "/album/pic3.png", alt: "semi bejaia", title: "semi bejaia" },
-    { id: "4", imageUrl: "/album/pic4.png", alt: "semi bejaia", title: "semi bejaia" },
-    { id: "5", imageUrl: "/album/pic5.png", alt: "AUT", title: "AUT" },
-    { id: "6", imageUrl: "/album/pic6.png", alt: "MRC", title: "MRC" },
-    { id: "7", imageUrl: "/album/pic7.png", alt: "trail chiffa", title: "trail chiffa" },
-    { id: "8", imageUrl: "/album/pic8.png", alt: "everest X MRC", title: "everest X MRC" },
-    { id: "9", imageUrl: "/album/pic9.png", alt: "semi madrid", title: "semi madrid" },
-    { id: "10", imageUrl: "/album/pic10.png", alt: "MRC", title: "MRC" },
-    { id: "11", imageUrl: "/album/pic11.png", alt: "MRC", title: "MRC" },
-    { id: "12", imageUrl: "/album/pic12.png", alt: "semi d'alger", title: "semi d'alger" },
-    { id: "13", imageUrl: "/album/pic13.png", alt: "MRC", title: "MRC" },
-    { id: "14", imageUrl: "/album/pic14.png", alt: "Bola 24", title: "Bola 24" },
-    { id: "15", imageUrl: "/album/pic15.png", alt: "montagne 10", title: "montagne 10" },
-    { id: "16", imageUrl: "/album/pic16.png", alt: "MRC", title: "MRC" },
+    { id: "1", imageUrl: "/pic1.png", alt: "MRC", title: "MRC" },
+    { id: "2", imageUrl: "/pic2.png", alt: "octobre rose", title: "octobre rose" },
+    { id: "3", imageUrl: "/pic3.png", alt: "semi bejaia", title: "semi bejaia" },
+    { id: "4", imageUrl: "/pic4.png", alt: "semi bejaia", title: "semi bejaia" },
+    { id: "5", imageUrl: "/pic5.png", alt: "AUT", title: "AUT" },
+    { id: "6", imageUrl: "/pic6.png", alt: "MRC", title: "MRC" },
+    { id: "7", imageUrl: "/pic7.png", alt: "trail chiffa", title: "trail chiffa" },
+    { id: "8", imageUrl: "/pic8.png", alt: "everest X MRC", title: "everest X MRC" },
+    { id: "9", imageUrl: "/pic9.png", alt: "semi madrid", title: "semi madrid" },
+    { id: "10", imageUrl: "/pic10.png", alt: "MRC", title: "MRC" },
+    { id: "11", imageUrl: "/pic11.png", alt: "MRC", title: "MRC" },
+    { id: "12", imageUrl: "/pic12.png", alt: "semi d'alger", title: "semi d'alger" },
+    { id: "13", imageUrl: "/pic13.png", alt: "MRC", title: "MRC" },
+    { id: "14", imageUrl: "/pic14.png", alt: "Bola 24", title: "Bola 24" },
+    { id: "15", imageUrl: "/pic15.png", alt: "montagne 10", title: "montagne 10" },
+    { id: "16", imageUrl: "/pic16.png", alt: "MRC", title: "MRC" },
   ]
 
   return (
