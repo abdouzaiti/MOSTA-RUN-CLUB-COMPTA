@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Runner, Run } from '../types';
 import { Language, translations } from '../translations';
 import { 
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
-  ShoppingBag, ExternalLink
+  ShoppingBag, ExternalLink, Clock
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -31,6 +31,118 @@ export default function DashboardSocial({
 
   // Live screenshot of the real vercel website with a mockup fallback
   const [shopImgSrc, setShopImgSrc] = useState('https://api.microlink.io?url=https%3A%2F%2Fmrc-shop.vercel.app&screenshot=true&embed=screenshot.url');
+
+  // Real-time info states
+  const [timeString, setTimeString] = useState('');
+  const [temp, setTemp] = useState(24.2);
+  const [wind, setWind] = useState(12.4);
+  const [shopViews, setShopViews] = useState(14);
+  const [recentOrderIdx, setRecentOrderIdx] = useState(0);
+  const [countdownStr, setCountdownStr] = useState('');
+
+  const recentOrders = [
+    { name: 'Abdou Zaiti', item: isRtl ? 'القميص التقني الرسمي' : 'Maillot Technique Noir - M', time: isRtl ? 'منذ دقيقة' : 'il y a 1 min' },
+    { name: 'Coach Redouane', item: isRtl ? 'قبعة الجري الفاخرة' : 'Casquette Performance', time: isRtl ? 'منذ 3 دقائق' : 'il y a 3 min' },
+    { name: 'Amine R.', item: isRtl ? 'سترة النادي الشتوية' : 'Hoodie Club Premium', time: isRtl ? 'منذ 8 دقائق' : 'il y a 8 min' },
+    { name: 'Sofiane K.', item: isRtl ? 'حقيبة الظهر الرياضية' : 'Sac de sport MRC', time: isRtl ? 'منذ 15 دقيقة' : 'il y a 15 min' },
+  ];
+
+  // Calculate upcoming runs here so they can be referenced in useEffect countdown
+  const upcomingRuns = runs.filter(r => !r.completed).slice(0, 2);
+
+  useEffect(() => {
+    // 1. Clock timer
+    const updateClock = () => {
+      const now = new Date();
+      setTimeString(now.toLocaleTimeString(language === 'ar' ? 'ar-DZ' : 'fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }));
+    };
+    updateClock();
+    const clockInterval = setInterval(updateClock, 1000);
+
+    // 2. Weather & Shop Views fluctuation timer
+    const fluctuationInterval = setInterval(() => {
+      setTemp(prev => {
+        const delta = (Math.random() - 0.5) * 0.4;
+        const next = prev + delta;
+        return parseFloat(Math.min(Math.max(next, 23.5), 24.8).toFixed(1));
+      });
+      setWind(prev => {
+        const delta = (Math.random() - 0.5) * 0.8;
+        const next = prev + delta;
+        return parseFloat(Math.min(Math.max(next, 10.5), 14.5).toFixed(1));
+      });
+      setShopViews(prev => {
+        const delta = Math.random() > 0.5 ? 1 : -1;
+        const next = prev + delta;
+        return Math.min(Math.max(next, 8), 22);
+      });
+    }, 4000);
+
+    // 3. Shop orders ticker interval
+    const orderInterval = setInterval(() => {
+      setRecentOrderIdx(prev => (prev + 1) % recentOrders.length);
+    }, 5000);
+
+    // 4. Countdown to the next run
+    const updateCountdown = () => {
+      let targetDate: Date | null = null;
+      if (upcomingRuns.length > 0) {
+        const firstRun = upcomingRuns[0];
+        const dateStr = firstRun.date;
+        const timeStr = firstRun.time || '06:00';
+        try {
+          const parsed = new Date(`${dateStr}T${timeStr}`);
+          if (!isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+            targetDate = parsed;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // If no valid upcoming runs date is found, target the upcoming Friday at 6:00 AM
+      if (!targetDate) {
+        const now = new Date();
+        const nextFriday = new Date();
+        nextFriday.setHours(6, 0, 0, 0);
+        const day = nextFriday.getDay();
+        const daysToAdd = (5 - day + 7) % 7 || 7; // Friday is 5
+        nextFriday.setDate(now.getDate() + daysToAdd);
+        targetDate = nextFriday;
+      }
+
+      const diff = targetDate.getTime() - Date.now();
+      if (diff <= 0) {
+        setCountdownStr(isRtl ? 'جاري الآن ! 🏃' : 'En cours ! 🏃');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (isRtl) {
+        setCountdownStr(`متبقي: ${days} يوم، ${hours} ساعة، ${minutes} دقيقة، ${seconds} ثانية`);
+      } else {
+        setCountdownStr(`Dans ${days}j ${hours}h ${minutes}m ${seconds}s`);
+      }
+    };
+    updateCountdown();
+    const countdownInterval = setInterval(updateCountdown, 1000);
+
+    return () => {
+      clearInterval(clockInterval);
+      clearInterval(fluctuationInterval);
+      clearInterval(orderInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [upcomingRuns, language, isRtl]);
 
   // Mock social feed posts
   const [posts, setPosts] = useState([
@@ -113,9 +225,6 @@ export default function DashboardSocial({
     setPosts([newPost, ...posts]);
     setNewPostText('');
   };
-
-  // Get active upcoming runs
-  const upcomingRuns = runs.filter(r => !r.completed).slice(0, 2);
 
   // Stats summaries
   const totalRunnersCount = runners.length;
@@ -291,24 +400,36 @@ export default function DashboardSocial({
         <div className="lg:col-span-4 space-y-6">
 
           {/* Premium Weather / Vibe Card */}
-          <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] text-slate-100 rounded-[2rem] p-5 shadow-lg border border-slate-800 space-y-4">
+          <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] text-slate-100 rounded-[2rem] p-5 shadow-lg border border-slate-800 space-y-4 relative overflow-hidden">
+            {/* Ambient animated bg aura */}
+            <div className="absolute -right-12 -top-12 w-28 h-28 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-blue-400 font-mono block uppercase">MÉTÉO RUNNING</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black tracking-widest text-blue-400 font-mono block uppercase">MÉTÉO RUNNING</span>
+                  <span className="inline-flex items-center gap-1 text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    {isRtl ? 'مباشر' : 'LIVE'}
+                  </span>
+                </div>
                 <h4 className="text-sm font-serif italic font-extrabold text-white mt-0.5">Mostaganem, DZ</h4>
               </div>
-              <Sun className="w-7 h-7 text-amber-400 animate-spin-slow" />
+              <div className="text-right">
+                <Sun className="w-7 h-7 text-amber-400 animate-spin-slow ml-auto" />
+                <span className="text-[9px] font-mono text-slate-400 font-bold block mt-1">{timeString || '00:00:00'}</span>
+              </div>
             </div>
             
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black font-mono">24°C</span>
+              <span className="text-3xl font-black font-mono tracking-tighter transition-all duration-300">{temp}°C</span>
               <span className="text-xs text-emerald-400 font-extrabold">Parfait pour courir !</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-[10px] font-bold font-mono text-slate-400 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
               <div className="flex items-center gap-1.5">
                 <Wind className="w-3.5 h-3.5 text-blue-400" />
-                <span>12 km/h</span>
+                <span className="transition-all duration-300">{wind} km/h</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CloudRain className="w-3.5 h-3.5 text-[#2F89FC]" />
@@ -326,9 +447,12 @@ export default function DashboardSocial({
                   {isRtl ? 'متجر النادي • MRC SHOP' : 'MRC SHOP • BOUTIQUE'}
                 </h3>
               </div>
-              <span className="text-[9px] bg-blue-50 text-blue-600 font-black px-2.5 py-0.5 rounded-full border border-blue-100 uppercase tracking-wider">
-                {isRtl ? 'جديد' : 'NEW'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
+                <span className="text-[9px] text-blue-600 font-bold font-mono">
+                  {shopViews} {isRtl ? 'نشط الآن' : 'actifs'}
+                </span>
+              </div>
             </div>
 
             {/* Shop Mockup Preview Image with hover scale */}
@@ -348,6 +472,21 @@ export default function DashboardSocial({
                 <span className="text-[10px] text-white font-bold bg-blue-600 px-2 py-1 rounded-lg flex items-center gap-1">
                   {isRtl ? 'اطلب الآن' : 'Commander en ligne'} <ExternalLink className="w-2.5 h-2.5" />
                 </span>
+              </div>
+            </div>
+
+            {/* Live activity ticker marquee style */}
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden relative min-h-12 flex items-center">
+              <div key={recentOrderIdx} className="w-full animate-fade-in flex items-center gap-2 text-[10px]">
+                <span className="text-base shrink-0 animate-bounce">🛍️</span>
+                <div className="truncate">
+                  <span className="font-extrabold text-slate-800 block truncate">
+                    {recentOrders[recentOrderIdx].name}
+                  </span>
+                  <span className="text-slate-500 block truncate text-[9px]">
+                    {isRtl ? 'طلب:' : 'A commandé :'} <span className="font-bold text-blue-600">{recentOrders[recentOrderIdx].item}</span> • <span className="text-[8px] font-mono">{recentOrders[recentOrderIdx].time}</span>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -389,7 +528,25 @@ export default function DashboardSocial({
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">
                 {isRtl ? 'التدريب المقبل' : 'PROCHAIN RUN'}
               </h3>
-              <Calendar className="w-4 h-4 text-blue-500" />
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                <span className="text-[9px] text-rose-500 font-black font-mono">COUNTDOWN</span>
+              </div>
+            </div>
+
+            {/* LIVE COUNTDOWN TIMER BLOCK */}
+            <div className="bg-gradient-to-r from-rose-500/10 to-orange-500/10 border border-rose-500/15 p-3 rounded-2xl flex items-center gap-2.5">
+              <div className="p-2 bg-rose-500 text-white rounded-xl animate-pulse">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] text-rose-700 font-black block uppercase tracking-wider">
+                  {isRtl ? 'العد التنازلي المباشر' : 'DÉCOMPTE EN DIRECT'}
+                </span>
+                <span className="text-[11px] font-mono font-black text-slate-800 block tracking-tight truncate">
+                  {countdownStr}
+                </span>
+              </div>
             </div>
 
             {upcomingRuns.length > 0 ? (
@@ -431,34 +588,7 @@ export default function DashboardSocial({
             )}
           </div>
 
-          {/* Quick Hall of Fame Awards Box */}
-          <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent rounded-[2rem] p-5 border border-amber-500/15 shadow-3xs space-y-4">
-            <div className="flex items-center gap-2 text-amber-800">
-              <Award className="w-5 h-5 text-amber-500 animate-bounce" />
-              <h4 className="font-serif italic font-black text-xs sm:text-sm uppercase tracking-wider">{isRtl ? 'أبطال الأسبوع' : 'Tableau d\'Honneur'}</h4>
-            </div>
-            
-            <p className="text-[11px] text-amber-800/80 leading-relaxed font-semibold">
-              Félicitations collectives aux athlètes ayant le plus grand engagement cette semaine dans la PostaGang !
-            </p>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-500/10 shadow-3xs text-[11px]">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🥇</span>
-                  <span className="font-bold text-slate-800">Abdou Zaiti</span>
-                </div>
-                <span className="font-mono text-amber-700 font-black">28.4 km / sem</span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-500/10 shadow-3xs text-[11px]">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🥈</span>
-                  <span className="font-bold text-slate-800">Coach Redouane</span>
-                </div>
-                <span className="font-mono text-amber-700 font-black">21.0 km / sem</span>
-              </div>
-            </div>
-          </div>
 
         </div>
 

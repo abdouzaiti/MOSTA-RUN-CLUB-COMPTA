@@ -37,7 +37,6 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
 
   const menuItems = [
     { id: 'dashboard', label: language === 'ar' ? 'الرئيسية' : language === 'en' ? 'Dashboard' : 'Tableau de bord', icon: Compass },
-    { id: 'album', label: language === 'ar' ? 'المجتمع' : 'Community', icon: Camera },
     { id: 'planning', label: language === 'ar' ? 'التخطيط' : language === 'en' ? 'Planning' : 'Planning', icon: Calendar },
     { id: 'reports', label: language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'List of Runs' : 'Liste des Runs', icon: Map },
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },

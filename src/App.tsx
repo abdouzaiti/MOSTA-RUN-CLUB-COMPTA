@@ -10,7 +10,6 @@ import UserProfileSettings from './components/UserProfileSettings';
 import DashboardSocial from './components/DashboardSocial';
 import MessageriePremium from './components/MessageriePremium';
 import NotificationsPanel from './components/NotificationsPanel';
-import StellarCardGallerySingle from './components/StellarCardGallerySingle';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -826,7 +825,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
 
           {/* Right Main Scrollable View Panel */}
           <div className={`flex-1 flex flex-col h-full relative ${
-            activeTab === 'messagerie' || activeTab === 'album'
+            activeTab === 'messagerie'
               ? 'overflow-hidden p-0' 
               : 'overflow-y-auto p-4 lg:p-6 lg:no-scrollbar'
           }`}>
@@ -836,7 +835,6 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                 {/* Main page views router */}
                 <main className={`flex-1 flex flex-col w-full h-full ${
                   activeTab === 'messagerie' ? 'pb-16 lg:pb-0' :
-                  activeTab === 'album' ? 'pb-16 lg:pb-0 bg-black' :
                   'pb-24 lg:pb-6'
                 }`}>
                   {/* TAB 0: DASHBOARD SOCIAL */}
@@ -849,11 +847,6 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
                       setActiveTab={setActiveTab}
                       language={language || 'fr'}
                     />
-                  )}
-
-                  {/* ALBUM TAB */}
-                  {activeTab === 'album' && (
-                    <StellarCardGallerySingle />
                   )}
 
                   {/* TAB 1: PLANNING (Matches columns exact layout) */}
@@ -1174,15 +1167,11 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
           </div>
 
           {/* Mobile Bottom Navigation Bar */}
-          <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-3 py-2 flex items-center justify-around ${
-            activeTab === 'album'
-              ? 'bg-black/95 border-slate-800'
-              : 'bg-white/95 border-slate-100/90'
-          }`}>
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-3 py-2 flex items-center justify-around bg-white/95 border-slate-100/90">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
-                activeTab === 'dashboard' ? 'text-blue-600 font-extrabold scale-110' : (activeTab === 'album' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                activeTab === 'dashboard' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Compass className="w-5 h-5" />
@@ -1191,7 +1180,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
             <button
               onClick={() => setActiveTab('planning')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
-                activeTab === 'planning' ? 'text-blue-600 font-extrabold scale-110' : (activeTab === 'album' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                activeTab === 'planning' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Calendar className="w-5 h-5" />
@@ -1200,7 +1189,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
             <button
               onClick={() => setActiveTab('roster')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
-                activeTab === 'roster' ? 'text-blue-600 font-extrabold scale-110' : (activeTab === 'album' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                activeTab === 'roster' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Users className="w-5 h-5" />
@@ -1209,7 +1198,7 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
             <button
               onClick={() => setActiveTab('messagerie')}
               className={`flex flex-col items-center gap-1 p-2 transition-all relative cursor-pointer ${
-                activeTab === 'messagerie' ? 'text-blue-600 font-extrabold scale-110' : (activeTab === 'album' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                activeTab === 'messagerie' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <MessageSquare className="w-5 h-5" />
@@ -1217,18 +1206,9 @@ CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
             </button>
             <button
-              onClick={() => setActiveTab('album')}
-              className={`flex flex-col items-center gap-1 p-2 transition-all relative cursor-pointer ${
-                activeTab === 'album' ? 'text-[#31b8c6] font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Camera className="w-5 h-5" />
-              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'المجتمع' : 'Community'}</span>
-            </button>
-            <button
               onClick={() => setActiveTab('settings')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
-                activeTab === 'settings' ? 'text-blue-600 font-extrabold scale-110' : (activeTab === 'album' ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                activeTab === 'settings' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Settings className="w-5 h-5" />
