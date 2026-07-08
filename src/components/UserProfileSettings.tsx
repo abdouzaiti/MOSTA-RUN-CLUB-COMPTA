@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, User, Phone, Mail, Droplet, Globe, Check, Shield, Lock, Image as ImageIcon } from 'lucide-react';
+import { Camera, User, Phone, Mail, Droplet, Globe, Check, Shield, Lock, Image as ImageIcon, Sliders, Maximize2, Move, RotateCw } from 'lucide-react';
 import { Runner } from '../types';
 import { Language } from '../translations';
 
@@ -11,12 +11,14 @@ interface UserProfileSettingsProps {
 }
 
 const PRESET_AVATARS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80"
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Felix&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Aneka&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Lilou&backgroundColor=c0aede",
+  "https://api.dicebear.com/7.x/avataaars/png?seed=Milo&backgroundColor=d1f4ff",
+  "https://api.dicebear.com/7.x/avataaars/png?seed=Sophia&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/7.x/bottts/png?seed=Marcus&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/lorelei/png?seed=Lily&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Spark&backgroundColor=d1f4ff"
 ];
 
 const dict = {
@@ -35,7 +37,15 @@ const dict = {
     uploadCustom: "تحميل صورة من الهاتف",
     saveBtn: "تأكيد وتحديث حسابي",
     successMsg: "برافو! تم تحديث ملفك الشخصي وعرضه بنجاح.",
-    saving: "جاري الحفظ..."
+    saving: "جاري الحفظ...",
+    editorTitle: "معدل الإطار والتكبير (Instagram Style)",
+    zoomLabel: "التكبير / القياس",
+    rotationLabel: "التدوير",
+    panXLabel: "الإزاحة الأفقية",
+    panYLabel: "الإزاحة العمودية",
+    borderWidthLabel: "سمك الإطار",
+    borderColorLabel: "نمط ولون الإطار",
+    shapeLabel: "شكل الصورة"
   },
   fr: {
     sectionTitle: "Éditer Mon Profil & Paramètres",
@@ -52,7 +62,15 @@ const dict = {
     uploadCustom: "Importer une photo depuis vos fichiers",
     saveBtn: "Enregistrer mon profil",
     successMsg: "Super ! Vos informations de profil ont été mises à jour.",
-    saving: "Enregistrement en cours..."
+    saving: "Enregistrement en cours...",
+    editorTitle: "Ajuster la photo et la bordure",
+    zoomLabel: "Zoom / Taille",
+    rotationLabel: "Rotation",
+    panXLabel: "Position Horizontale (X)",
+    panYLabel: "Position Verticale (Y)",
+    borderWidthLabel: "Épaisseur Bordure",
+    borderColorLabel: "Style & Couleur de Bordure",
+    shapeLabel: "Forme de Découpe"
   },
   en: {
     sectionTitle: "Edit My Profile & Preferences",
@@ -69,7 +87,15 @@ const dict = {
     uploadCustom: "Upload a photo from your device",
     saveBtn: "Save Profile Preferences",
     successMsg: "Awesome! Your profile has been updated successfully.",
-    saving: "Saving..."
+    saving: "Saving...",
+    editorTitle: "Adjust Photo & Border Styles",
+    zoomLabel: "Zoom / Scale",
+    rotationLabel: "Rotation",
+    panXLabel: "Horizontal Position (X)",
+    panYLabel: "Vertical Position (Y)",
+    borderWidthLabel: "Border Thickness",
+    borderColorLabel: "Border Style & Color",
+    shapeLabel: "Crop Shape"
   }
 };
 
@@ -87,11 +113,206 @@ export default function UserProfileSettings({
   const [formPassword, setFormPassword] = useState(currentUser.password || '');
   const [formAvatar, setFormAvatar] = useState(currentUser.avatarUrl || '');
   
+  // Customizer state
+  const [editorSourceImage, setEditorSourceImage] = useState<string>(currentUser.avatarUrl || '');
+  const [zoom, setZoom] = useState<number>(1);
+  const [panX, setPanX] = useState<number>(0);
+  const [panY, setPanY] = useState<number>(0);
+  const [rotation, setRotation] = useState<number>(0);
+  const [borderColor, setBorderColor] = useState<string>('none');
+  const [borderWidth, setBorderWidth] = useState<number>(3);
+  const [shape, setShape] = useState<'circle' | 'square' | 'hexagon' | 'octagon'>('circle');
+
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = dict[language] || dict['fr'];
   const isRtl = language === 'ar';
+
+  const updateBakedAvatar = (
+    srcUrl: string, 
+    z: number, 
+    px: number, 
+    py: number, 
+    bColor: string, 
+    bWidth: number, 
+    s: 'circle' | 'square' | 'hexagon' | 'octagon',
+    rot: number
+  ) => {
+    if (!srcUrl) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 300;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, 300, 300);
+
+      // 1. Clip path
+      ctx.save();
+      const cx = 150;
+      const cy = 150;
+      const r = 150 - bWidth / 2;
+
+      if (s === 'circle') {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.clip();
+      } else if (s === 'square') {
+        const size = r * 2;
+        const x = cx - r;
+        const y = cy - r;
+        const radius = 30;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + size - radius, y);
+        ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+        ctx.lineTo(x + size, y + size - radius);
+        ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+        ctx.lineTo(x + radius, y + size);
+        ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.clip();
+      } else if (s === 'hexagon') {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 6;
+          const x = cx + r * Math.cos(angle);
+          const y = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.clip();
+      } else if (s === 'octagon') {
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI / 4) * i - Math.PI / 8;
+          const x = cx + r * Math.cos(angle);
+          const y = cy + r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.clip();
+      }
+
+      // 2. Transform & Draw Image
+      ctx.save();
+      ctx.translate(cx + px, cy + py);
+      ctx.rotate((rot * Math.PI) / 180);
+
+      const imgRatio = img.width / img.height;
+      let drawW = 300;
+      let drawH = 300;
+      if (imgRatio > 1) {
+        drawW = 300 * imgRatio;
+        drawH = 300;
+      } else {
+        drawW = 300;
+        drawH = 300 / imgRatio;
+      }
+
+      drawW *= z;
+      drawH *= z;
+
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+      ctx.restore();
+
+      // 3. Stroke Border
+      if (bWidth > 0 && bColor !== 'none') {
+        ctx.save();
+        ctx.lineWidth = bWidth;
+        ctx.beginPath();
+
+        if (s === 'circle') {
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        } else if (s === 'square') {
+          const size = r * 2;
+          const x = cx - r;
+          const y = cy - r;
+          const radius = 30;
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + size - radius, y);
+          ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
+          ctx.lineTo(x + size, y + size - radius);
+          ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+          ctx.lineTo(x + radius, y + size);
+          ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.closePath();
+        } else if (s === 'hexagon') {
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 6;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+        } else if (s === 'octagon') {
+          for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI / 4) * i - Math.PI / 8;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+        }
+
+        if (bColor === 'gradient') {
+          const grad = ctx.createLinearGradient(0, 0, 300, 300);
+          grad.addColorStop(0, '#f9ce34');
+          grad.addColorStop(0.5, '#ee2a7b');
+          grad.addColorStop(1, '#6228d7');
+          ctx.strokeStyle = grad;
+        } else if (bColor === 'neon') {
+          const grad = ctx.createLinearGradient(0, 300, 300, 0);
+          grad.addColorStop(0, '#00f2fe');
+          grad.addColorStop(1, '#4facfe');
+          ctx.strokeStyle = grad;
+        } else if (bColor === 'gold') {
+          ctx.strokeStyle = '#D4AF37';
+        } else if (bColor === 'blue') {
+          ctx.strokeStyle = '#1034A6';
+        } else if (bColor === 'red') {
+          ctx.strokeStyle = '#EF4444';
+        } else if (bColor === 'emerald') {
+          ctx.strokeStyle = '#10B981';
+        } else {
+          ctx.strokeStyle = bColor;
+        }
+
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      try {
+        const bakedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        setFormAvatar(bakedDataUrl);
+      } catch (err) {
+        console.error("Failed to bake image to data URL:", err);
+      }
+    };
+    img.src = srcUrl;
+  };
+
+  React.useEffect(() => {
+    if (editorSourceImage) {
+      const timer = setTimeout(() => {
+        updateBakedAvatar(editorSourceImage, zoom, panX, panY, borderColor, borderWidth, shape, rotation);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [editorSourceImage, zoom, panX, panY, borderColor, borderWidth, shape, rotation]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,21 +320,13 @@ export default function UserProfileSettings({
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 150;
-        const MAX_HEIGHT = 150;
-        canvas.width = MAX_WIDTH;
-        canvas.height = MAX_HEIGHT;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, MAX_WIDTH, MAX_HEIGHT);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setFormAvatar(dataUrl);
-        }
-      };
-      img.src = event.target?.result as string;
+      const dataUrl = event.target?.result as string;
+      setEditorSourceImage(dataUrl);
+      // Reset sliders
+      setZoom(1);
+      setPanX(0);
+      setPanY(0);
+      setRotation(0);
     };
     reader.readAsDataURL(file);
   };
@@ -191,10 +404,10 @@ export default function UserProfileSettings({
       <form onSubmit={handleSave} className="space-y-6">
         
         {/* Profile photo block customization */}
-        <div className={`flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
+        <div className={`flex flex-col sm:flex-row items-start gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
           
           {/* Avatar Preview */}
-          <div className="relative group shrink-0">
+          <div className="relative group shrink-0 self-center sm:self-start">
             <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-black border-4 border-white shadow-md overflow-hidden relative">
               {formAvatar ? (
                 <img src={formAvatar} alt={formName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -206,7 +419,7 @@ export default function UserProfileSettings({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-1.5 bg-[#1034A6] hover:bg-blue-700 text-white rounded-full border-2 border-white shadow-sm transition"
+              className="absolute bottom-0 right-0 p-1.5 bg-[#1034A6] hover:bg-blue-700 text-white rounded-full border-2 border-white shadow-sm transition cursor-pointer"
               title={t.uploadCustom}
             >
               <Camera className="w-3.5 h-3.5" />
@@ -220,7 +433,7 @@ export default function UserProfileSettings({
             />
           </div>
 
-          <div className="flex-1 space-y-3 w-full">
+          <div className="flex-1 space-y-4 w-full">
             <label className="block text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
               {t.avatar}
             </label>
@@ -233,9 +446,15 @@ export default function UserProfileSettings({
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setFormAvatar(url)}
-                    className={`w-8 h-8 rounded-full border-2 transition ${
-                      formAvatar === url ? 'border-[#1034A6] scale-110 shadow-3xs' : 'border-transparent hover:scale-105'
+                    onClick={() => {
+                      setEditorSourceImage(url);
+                      setZoom(1);
+                      setPanX(0);
+                      setPanY(0);
+                      setRotation(0);
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 transition cursor-pointer ${
+                      editorSourceImage === url ? 'border-[#1034A6] scale-110 shadow-3xs' : 'border-transparent hover:scale-105'
                     } overflow-hidden`}
                   >
                     <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -243,11 +462,14 @@ export default function UserProfileSettings({
                 ))}
                 
                 {/* Clear custom avatar */}
-                {formAvatar && (
+                {(formAvatar || editorSourceImage) && (
                   <button
                     type="button"
-                    onClick={() => setFormAvatar('')}
-                    className="text-[9px] font-mono font-bold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg px-2 py-1 transition"
+                    onClick={() => {
+                      setFormAvatar('');
+                      setEditorSourceImage('');
+                    }}
+                    className="text-[9px] font-mono font-bold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg px-2 py-1 transition cursor-pointer"
                   >
                     {isRtl ? 'حذف الصورة' : 'Retirer'}
                   </button>
@@ -262,6 +484,226 @@ export default function UserProfileSettings({
             </div>
           </div>
         </div>
+
+        {/* Photo Customizer Section (Instagram & Facebook style sliders) */}
+        {editorSourceImage && (
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 space-y-4 animate-fade-in">
+            <div className={`flex items-center gap-2 pb-2 border-b border-slate-200/50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <Sliders className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-bold text-slate-800">{t.editorTitle || "Ajuster la photo et la bordure"}</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Live Interactive Preview Container */}
+              <div className="md:col-span-4 flex flex-col items-center justify-center bg-white p-4 rounded-xl border border-slate-200/40 shadow-3xs">
+                <div 
+                  className="w-32 h-32 relative overflow-hidden transition-all duration-300 shadow-md flex items-center justify-center bg-slate-100"
+                  style={{
+                    borderRadius: shape === 'circle' ? '50%' : shape === 'square' ? '1.5rem' : '0px',
+                    clipPath: shape === 'hexagon' ? 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' : shape === 'octagon' ? 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' : 'none',
+                    border: borderWidth > 0 && borderColor !== 'none' && (shape === 'circle' || shape === 'square') ? `${borderWidth * 0.426}px solid ${borderColor === 'blue' ? '#1034A6' : borderColor === 'gold' ? '#D4AF37' : borderColor === 'red' ? '#EF4444' : borderColor === 'emerald' ? '#10B981' : borderColor === 'gradient' ? '#ee2a7b' : borderColor === 'neon' ? '#00f2fe' : borderColor}` : 'none',
+                    padding: borderWidth > 0 && borderColor !== 'none' && (shape === 'circle' || shape === 'square') ? `${borderWidth * 0.426}px` : '0px'
+                  }}
+                >
+                  {/* Image under transform */}
+                  <div 
+                    className="w-full h-full relative"
+                    style={{
+                      transform: `scale(${zoom}) translate(${(panX * 128) / 300}px, ${(panY * 128) / 300}px) rotate(${rotation}deg)`,
+                      transition: 'transform 0.05s ease-out',
+                    }}
+                  >
+                    <img 
+                      src={editorSourceImage} 
+                      alt="Source Preview" 
+                      className="w-full h-full object-cover pointer-events-none"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+
+                  {/* If it is gradient or neon and we can't use standard solid borders, we simulate them */}
+                  {borderWidth > 0 && borderColor === 'gradient' && (shape === 'circle' || shape === 'square') && (
+                    <div 
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        border: `${borderWidth * 0.426}px solid transparent`,
+                        backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #f9ce34, #ee2a7b, #6228d7)',
+                        backgroundOrigin: 'border-box',
+                        backgroundClip: 'content-box, border-box',
+                        borderRadius: shape === 'circle' ? '50%' : '1.5rem',
+                      }}
+                    />
+                  )}
+                  {borderWidth > 0 && borderColor === 'neon' && (shape === 'circle' || shape === 'square') && (
+                    <div 
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        border: `${borderWidth * 0.426}px solid transparent`,
+                        backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #00f2fe, #4facfe)',
+                        backgroundOrigin: 'border-box',
+                        backgroundClip: 'content-box, border-box',
+                        borderRadius: shape === 'circle' ? '50%' : '1.5rem',
+                      }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-400 mt-2 font-mono">{shape.toUpperCase()} PREVIEW</span>
+              </div>
+
+              {/* Controls panel */}
+              <div className="md:col-span-8 space-y-3.5 text-xs">
+                
+                {/* Zoom and Rotation in Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Zoom slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><Maximize2 className="w-3 h-3 text-blue-500" /> {t.zoomLabel}</span>
+                      <span className="font-mono text-slate-400">{zoom.toFixed(2)}x</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="3" 
+                      step="0.02" 
+                      value={zoom} 
+                      onChange={(e) => setZoom(parseFloat(e.target.value))}
+                      className="w-full accent-[#1034A6] h-1 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Rotation Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><RotateCw className="w-3 h-3 text-blue-500" /> {t.rotationLabel}</span>
+                      <span className="font-mono text-slate-400">{rotation}°</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="360" 
+                      step="1" 
+                      value={rotation} 
+                      onChange={(e) => setRotation(parseInt(e.target.value))}
+                      className="w-full accent-[#1034A6] h-1 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Horizontal & Vertical Positioning */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Pan X Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><Move className="w-3 h-3 text-blue-500" /> {t.panXLabel}</span>
+                      <span className="font-mono text-slate-400">{panX}px</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="-120" 
+                      max="120" 
+                      step="1" 
+                      value={panX} 
+                      onChange={(e) => setPanX(parseInt(e.target.value))}
+                      className="w-full accent-[#1034A6] h-1 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Pan Y Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><Move className="w-3 h-3 text-blue-500" /> {t.panYLabel}</span>
+                      <span className="font-mono text-slate-400">{panY}px</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="-120" 
+                      max="120" 
+                      step="1" 
+                      value={panY} 
+                      onChange={(e) => setPanY(parseInt(e.target.value))}
+                      className="w-full accent-[#1034A6] h-1 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Shape Selection */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.shapeLabel}</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['circle', 'square', 'hexagon', 'octagon'] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setShape(s)}
+                        className={`py-1.5 px-2 text-[10px] font-bold rounded-lg border transition cursor-pointer ${
+                          shape === s 
+                            ? 'bg-[#1034A6] border-[#1034A6] text-white shadow-xs' 
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {s === 'circle' ? (isRtl ? 'دائري' : 'Rond') : 
+                         s === 'square' ? (isRtl ? 'مربع' : 'Carré') : 
+                         s === 'hexagon' ? (isRtl ? 'مسدس' : 'Hexagone') : (isRtl ? 'مثمن' : 'Octogone')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Border Thickness & Style in Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                  {/* Border Width Slider */}
+                  <div className="sm:col-span-4 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span>{t.borderWidthLabel}</span>
+                      <span className="font-mono text-slate-400">{borderWidth}px</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="12" 
+                      step="1" 
+                      value={borderWidth} 
+                      onChange={(e) => setBorderWidth(parseInt(e.target.value))}
+                      className="w-full accent-[#1034A6] h-1 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Border Color Presets */}
+                  <div className="sm:col-span-8 space-y-1.5">
+                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.borderColorLabel}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { id: 'none', label: isRtl ? 'بدون' : 'Aucun', bg: 'bg-slate-200' },
+                        { id: 'blue', label: 'MRC', bg: 'bg-[#1034A6]' },
+                        { id: 'gold', label: 'Gold', bg: 'bg-amber-400' },
+                        { id: 'red', label: 'Red', bg: 'bg-red-500' },
+                        { id: 'emerald', label: 'Green', bg: 'bg-emerald-500' },
+                        { id: 'gradient', label: 'Rainbow', bg: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600' },
+                        { id: 'neon', label: 'Neon', bg: 'bg-gradient-to-tr from-cyan-400 to-blue-500' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setBorderColor(preset.id)}
+                          className={`flex items-center gap-1.5 py-1 px-2 text-[9px] font-bold rounded-lg border transition cursor-pointer ${
+                            borderColor === preset.id 
+                              ? 'border-slate-800 ring-2 ring-blue-500/10' 
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${preset.bg}`} />
+                          <span className="text-slate-600">{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Input Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

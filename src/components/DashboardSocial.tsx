@@ -5,7 +5,7 @@ import {
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
-  ShoppingBag, ExternalLink, Clock
+  ShoppingBag, ExternalLink, Clock, Trash2
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -226,6 +226,10 @@ export default function DashboardSocial({
     setNewPostText('');
   };
 
+  const handleDeletePost = (postId: string) => {
+    setPosts(posts.filter(p => p.id !== postId));
+  };
+
   // Stats summaries
   const totalRunnersCount = runners.length;
   const activeRunsCount = runs.filter(r => !r.completed).length;
@@ -306,7 +310,18 @@ export default function DashboardSocial({
                       </span>
                     </div>
                   </div>
-                  <Compass className="w-4 h-4 text-slate-300" />
+                  <div className="flex items-center gap-2">
+                    {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        title={isRtl ? "حذف المنشور" : "Supprimer le post"}
+                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50/50 transition duration-200 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <Compass className="w-4 h-4 text-slate-300" />
+                  </div>
                 </div>
 
                 {/* Post Content */}
@@ -358,41 +373,41 @@ export default function DashboardSocial({
           </div>
 
           {/* Create New Post Card */}
-          <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs mt-auto sticky bottom-6 z-10">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 font-mono">
-              {isRtl ? 'المجتمع' : 'community'}
-            </h3>
-            <form onSubmit={handleCreatePost} className="space-y-4">
-              <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden">
-                  {currentUser.avatarUrl ? (
-                    <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
-                  )}
+          {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+            <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs mt-auto sticky bottom-6 z-10">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 font-mono">
+                {isRtl ? 'المجتمع' : 'community'}
+              </h3>
+              <form onSubmit={handleCreatePost} className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden">
+                    {currentUser.avatarUrl ? (
+                      <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                    )}
+                  </div>
+                  <textarea
+                    value={newPostText}
+                    onChange={e => setNewPostText(e.target.value)}
+                    placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
+                    rows={2}
+                    className="flex-1 w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
+                  />
                 </div>
-                <textarea
-                  value={newPostText}
-                  onChange={e => setNewPostText(e.target.value)}
-                  placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
-                  rows={2}
-                  className="flex-1 w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
-                />
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                <div className="flex gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-bold font-mono">⚡ PostaGang N°27 Collective</span>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                  <div className="flex gap-1.5" />
+                  <button
+                    type="submit"
+                    disabled={!newPostText.trim()}
+                    className="px-4 py-2 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+                  >
+                    {isRtl ? 'أنشر' : 'Publier'}
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={!newPostText.trim()}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
-                >
-                  {isRtl ? 'أنشر' : 'Publier'}
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
 
         </div>
 
