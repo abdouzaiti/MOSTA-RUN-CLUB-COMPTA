@@ -152,48 +152,8 @@ export default function DashboardSocial({
   // Load posts / announcements from Supabase
   useEffect(() => {
     async function fetchAnnouncements() {
-      // Setup default mock posts
-      const defaultPosts = [
-        {
-          id: 'post-1',
-          author: {
-            name: 'Abdou Zaiti',
-            avatarUrl: null,
-            role: 'Admin',
-            initials: 'AZ'
-          },
-          time: 'Il y a 2 heures',
-          timeAr: 'منذ ساعتين',
-          content: '🚨 Les gars, la sortie de ce vendredi à Mostaganem s\'annonce magnifique ! Le bus démarre à 06:00 précises de la Posta. Préparez vos gourdes de l\'eau et votre motivation maximale ! 🏃‍♂️🔥',
-          image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1200&q=80',
-          likes: 24,
-          liked: false,
-          likedBy: ['usr-fake-1'],
-          commentsCount: 2,
-          comments: [
-            { author: 'Amine R.', text: 'Présent à 100% ! 🔥' },
-            { author: 'Sofiane K.', text: 'Le tracé de 18km va piquer mais on est prêts.' }
-          ]
-        },
-        {
-          id: 'post-2',
-          author: {
-            name: 'Coach Redouane',
-            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-            role: 'Coach',
-            initials: 'CR'
-          },
-          time: 'Hier à 18:30',
-          timeAr: 'أمس في 18:30',
-          content: 'Conseil de coach du jour : Ne négligez pas vos étirements après les sorties longues. Hydratez-vous avec de l\'eau riche en magnésium. On se voit vendredi pour exploser les chronos individuels ! 💪',
-          image: null,
-          likes: 18,
-          liked: false,
-          likedBy: [],
-          commentsCount: 0,
-          comments: []
-        }
-      ];
+      // Setup default mock posts (empty as requested by user)
+      const defaultPosts: any[] = [];
 
       if (!isSupabaseConfigured) {
         setPosts(defaultPosts);
@@ -456,94 +416,110 @@ export default function DashboardSocial({
           )}
 
           <div className="space-y-6">
-            {posts.map(post => (
-              <div key={post.id} className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs space-y-4 transition-all duration-300 hover:shadow-2xs">
-                {/* Post Author / Meta Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 text-[#1034A6] flex items-center justify-center text-xs font-black tracking-tighter border border-blue-200/50 overflow-hidden shadow-xs">
-                      {post.author.avatarUrl ? (
-                        <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        post.author.initials
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">{post.author.name}</h4>
-                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
-                          post.author.role === 'Admin' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                          post.author.role === 'Coach' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                          'bg-blue-50 text-[#1034A6] border border-blue-100'
-                        }`}>
-                          {post.author.role}
+            {posts.length === 0 ? (
+              <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-3xs text-center space-y-3 flex flex-col items-center justify-center animate-fade-in">
+                <div className="p-3 bg-blue-50 text-[#1034A6] rounded-2xl">
+                  <Compass className="w-6 h-6 animate-pulse" />
+                </div>
+                <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">
+                  {isRtl ? 'لا توجد إعلانات بعد' : 'Aucune annonce disponible'}
+                </h4>
+                <p className="text-slate-500 text-[10px] sm:text-xs max-w-xs leading-relaxed font-medium">
+                  {isRtl 
+                    ? 'لا توجد إعلانات أو منشورات في الوقت الحالي. سيقوم المسؤولون أو المدربون بنشر إشعارات جديدة قريباً.' 
+                    : 'Il n\'y a aucune annonce pour le moment. Les administrateurs ou coachs publieront de nouveaux messages prochainement.'}
+                </p>
+              </div>
+            ) : (
+              posts.map(post => (
+                <div key={post.id} className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs space-y-4 transition-all duration-300 hover:shadow-2xs">
+                  {/* Post Author / Meta Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-[#1034A6] flex items-center justify-center text-xs font-black tracking-tighter border border-blue-200/50 overflow-hidden shadow-xs">
+                        {post.author.avatarUrl ? (
+                          <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          post.author.initials
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">{post.author.name}</h4>
+                          <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
+                            post.author.role === 'Admin' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                            post.author.role === 'Coach' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                            'bg-blue-50 text-[#1034A6] border border-blue-100'
+                          }`}>
+                            {post.author.role}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium font-mono block mt-0.5">
+                          {isRtl ? post.timeAr : post.time}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-medium font-mono block mt-0.5">
-                        {isRtl ? post.timeAr : post.time}
-                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          title={isRtl ? "حذف المنشور" : "Supprimer le post"}
+                          className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50/50 transition duration-200 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <Compass className="w-4 h-4 text-slate-300" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        title={isRtl ? "حذف المنشور" : "Supprimer le post"}
-                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50/50 transition duration-200 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                    <Compass className="w-4 h-4 text-slate-300" />
+
+                  {/* Post Content */}
+                  <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium select-text">
+                    {post.content}
+                  </p>
+
+                  {/* Post Attachment Image (if any) */}
+                  {post.image && (
+                    <div className="relative rounded-2xl overflow-hidden shadow-sm border border-slate-100 max-h-72">
+                      <img src={post.image} alt="Post media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
+
+                  {/* Likes / Interactive Footer Row */}
+                  <div className="flex items-center gap-6 pt-3 border-t border-slate-50 text-xs text-slate-500 font-bold">
+                    <button 
+                      onClick={() => handleLikePost(post.id)}
+                      className={`flex items-center gap-1.5 transition cursor-pointer ${
+                        post.liked ? 'text-rose-600 scale-[1.05]' : 'hover:text-slate-700'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${post.liked ? 'fill-current' : ''}`} />
+                      <span>{post.likes}</span>
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>{post.commentsCount}</span>
+                    </div>
+                    <button className="flex items-center gap-1.5 ml-auto hover:text-slate-700 cursor-pointer">
+                      <Share2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">{isRtl ? 'مشاركة' : 'Partager'}</span>
+                    </button>
                   </div>
+
+                  {/* Embedded comments preview (if any) */}
+                  {post.comments.length > 0 && (
+                    <div className="bg-slate-50/70 p-3 rounded-2xl space-y-2 border border-slate-100 text-[11px] font-semibold text-slate-600">
+                      {post.comments.map((comment, idx) => (
+                        <div key={idx} className="flex gap-1.5">
+                          <span className="font-extrabold text-[#1034A6] shrink-0">{comment.author}:</span>
+                          <span>{comment.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Post Content */}
-                <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium select-text">
-                  {post.content}
-                </p>
-
-                {/* Post Attachment Image (if any) */}
-                {post.image && (
-                  <div className="relative rounded-2xl overflow-hidden shadow-sm border border-slate-100 max-h-72">
-                    <img src={post.image} alt="Post media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                )}
-
-                {/* Likes / Interactive Footer Row */}
-                <div className="flex items-center gap-6 pt-3 border-t border-slate-50 text-xs text-slate-500 font-bold">
-                  <button 
-                    onClick={() => handleLikePost(post.id)}
-                    className={`flex items-center gap-1.5 transition cursor-pointer ${
-                      post.liked ? 'text-rose-600 scale-[1.05]' : 'hover:text-slate-700'
-                    }`}
-                  >
-                    <Heart className={`w-4 h-4 ${post.liked ? 'fill-current' : ''}`} />
-                    <span>{post.likes}</span>
-                  </button>
-                  <div className="flex items-center gap-1.5">
-                    <MessageSquare className="w-4 h-4" />
-                    <span>{post.commentsCount}</span>
-                  </div>
-                  <button className="flex items-center gap-1.5 ml-auto hover:text-slate-700 cursor-pointer">
-                    <Share2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">{isRtl ? 'مشاركة' : 'Partager'}</span>
-                  </button>
-                </div>
-
-                {/* Embedded comments preview (if any) */}
-                {post.comments.length > 0 && (
-                  <div className="bg-slate-50/70 p-3 rounded-2xl space-y-2 border border-slate-100 text-[11px] font-semibold text-slate-600">
-                    {post.comments.map((comment, idx) => (
-                      <div key={idx} className="flex gap-1.5">
-                        <span className="font-extrabold text-[#1034A6] shrink-0">{comment.author}:</span>
-                        <span>{comment.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Create New Post Card */}
