@@ -6,7 +6,7 @@ import {
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
-  ShoppingBag, ExternalLink, Clock, Trash2
+  ShoppingBag, ExternalLink, Clock, Trash2, Database
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -147,6 +147,7 @@ export default function DashboardSocial({
 
   // Real-time or synced posts state
   const [posts, setPosts] = useState<any[]>([]);
+  const [isTableMissing, setIsTableMissing] = useState(false);
 
   // Load posts / announcements from Supabase
   useEffect(() => {
@@ -201,6 +202,14 @@ export default function DashboardSocial({
 
       try {
         const data = await dbService.getAnnouncements();
+        
+        if (data === null) {
+          setIsTableMissing(true);
+          setPosts(defaultPosts);
+          return;
+        }
+
+        setIsTableMissing(false);
         if (data && data.length > 0) {
           // Map to local UI format
           const mapped = data.map(ann => ({
@@ -241,13 +250,13 @@ export default function DashboardSocial({
 
           // Upload in background
           for (const s of seedAnnouncements) {
-            await dbService.upsertAnnouncement(s).catch(e => console.error("Error seeding:", e));
+            await dbService.upsertAnnouncement(s).catch(e => console.warn("Error seeding:", e));
           }
 
           setPosts(defaultPosts);
         }
       } catch (err) {
-        console.error("Failed to load announcements from Supabase:", err);
+        console.warn("Failed to load announcements from Supabase:", err);
         setPosts(defaultPosts);
       }
     }
@@ -283,7 +292,7 @@ export default function DashboardSocial({
     setPosts(updatedPosts);
 
     // Persist to Supabase
-    if (isSupabaseConfigured && updatedPostObj) {
+    if (isSupabaseConfigured && !isTableMissing && updatedPostObj) {
       try {
         const dbAnnouncement: Announcement = {
           id: updatedPostObj.id,
@@ -341,7 +350,7 @@ export default function DashboardSocial({
     setPosts([newPostUi, ...posts]);
     setNewPostText('');
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !isTableMissing) {
       try {
         const dbAnnouncement: Announcement = {
           id,
@@ -367,7 +376,7 @@ export default function DashboardSocial({
   const handleDeletePost = async (postId: string) => {
     setPosts(posts.filter(p => p.id !== postId));
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !isTableMissing) {
       try {
         await dbService.deleteAnnouncement(postId);
       } catch (err) {
@@ -427,6 +436,25 @@ export default function DashboardSocial({
         {/* Left Column: Social Feed & Post Creator (Col Span 8) */}
         <div className="lg:col-span-8 flex flex-col h-full space-y-6 relative">
           
+          {isTableMissing && (
+            <div className="bg-amber-50/80 border border-amber-200/50 rounded-3xl p-4 text-xs font-semibold text-amber-900 flex items-start gap-3 shadow-3xs animate-fade-in">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
+                <Database className="w-4 h-4 animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-serif italic font-extrabold text-xs text-amber-950">
+                  {isRtl ? 'قاعدة البيانات للمنشورات غير مفعلة بعد' : "La table des annonces n'existe pas encore"}
+                </p>
+                <p className="text-amber-800 text-[11px] leading-relaxed font-medium">
+                  {isRtl 
+                    ? 'لمعاينة وحفظ الإعلانات والمنشورات على السحابة، يرجى نسخ كود SQL من قائمة الإعدادات (Admin/Paramètres) وتشغيله في محرر SQL الخاص بـ Supabase.'
+                    : "Pour activer la persistance réelle de vos annonces et éviter ces alertes, veuillez copier la requête de création de table disponible dans l'onglet Paramètres/Admin et l'exécuter dans l'éditeur SQL de votre console Supabase."
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-6">
             {posts.map(post => (
               <div key={post.id} className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs space-y-4 transition-all duration-300 hover:shadow-2xs">

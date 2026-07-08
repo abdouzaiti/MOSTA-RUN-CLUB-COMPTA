@@ -505,7 +505,7 @@ export const dbService = {
   },
 
   // --- ANNOUNCEMENTS (POSTS) ---
-  async getAnnouncements(): Promise<Announcement[]> {
+  async getAnnouncements(): Promise<Announcement[] | null> {
     if (!supabase) return [];
     try {
       const { data, error } = await supabase
@@ -514,39 +514,60 @@ export const dbService = {
         .order('created_at', { ascending: false });
 
       if (error) {
+        // If the table doesn't exist, return null to signify a missing table
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          console.warn("Table 'announcements' does not exist in Supabase yet. This is normal. Use the SQL Editor inside Admin settings to create it.");
+          return null;
+        }
         console.error('Error fetching announcements:', error.message);
         throw error;
       }
       return (data || []).map(mapAnnouncementFromDb);
-    } catch (e) {
-      console.error('Db service getAnnouncements failed, returning empty list:', e);
-      return []; // Return empty array if the user hasn't run the SQL command in their editor yet
+    } catch (e: any) {
+      console.warn('Db service getAnnouncements failed or table does not exist yet:', e?.message || e);
+      return null; // Return null so the UI fallback knows NOT to write/seed
     }
   },
 
   async upsertAnnouncement(announcement: Announcement): Promise<void> {
     if (!supabase) return;
-    const dbAnnouncement = mapAnnouncementToDb(announcement);
-    const { error } = await supabase
-      .from('announcements')
-      .upsert(dbAnnouncement);
+    try {
+      const dbAnnouncement = mapAnnouncementToDb(announcement);
+      const { error } = await supabase
+        .from('announcements')
+        .upsert(dbAnnouncement);
 
-    if (error) {
-      console.error('Error upserting announcement:', error.message);
-      throw error;
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          console.warn("Table 'announcements' does not exist. Cannot upsert announcement.");
+          return;
+        }
+        console.error('Error upserting announcement:', error.message);
+        throw error;
+      }
+    } catch (e: any) {
+      console.warn('Upsert announcement failed, table likely missing:', e?.message || e);
     }
   },
 
   async deleteAnnouncement(id: string): Promise<void> {
     if (!supabase) return;
-    const { error } = await supabase
-      .from('announcements')
-      .delete()
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting announcement:', error.message);
-      throw error;
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          console.warn("Table 'announcements' does not exist. Cannot delete announcement.");
+          return;
+        }
+        console.error('Error deleting announcement:', error.message);
+        throw error;
+      }
+    } catch (e: any) {
+      console.warn('Delete announcement failed, table likely missing:', e?.message || e);
     }
   }
 };
