@@ -93,3 +93,24 @@ export interface CustomList {
   rows: CustomRow[];
 }
 
+export interface AnnouncementComment {
+  author: string;
+  text: string;
+}
+
+export interface Announcement {
+  id: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  authorRole: string;
+  authorInitials: string;
+  timeFr: string;
+  timeAr: string;
+  content: string;
+  imageUrl?: string;
+  likes: number;
+  likedBy: string[]; // List of runner IDs who liked the post
+  comments: AnnouncementComment[];
+  createdAt?: string;
+}
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Runner, Run } from '../types';
+import { Runner, Run, Announcement } from '../types';
 import { Language, translations } from '../translations';
+import { isSupabaseConfigured, dbService } from '../supabaseClient';
 import { 
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
@@ -144,90 +145,235 @@ export default function DashboardSocial({
     };
   }, [upcomingRuns, language, isRtl]);
 
-  // Mock social feed posts
-  const [posts, setPosts] = useState([
-    {
-      id: 'post-1',
-      author: {
-        name: 'Abdou Zaiti',
-        avatarUrl: currentUser.avatarUrl || null,
-        role: 'Admin',
-        initials: 'AZ'
-      },
-      time: 'Il y a 2 heures',
-      timeAr: 'منذ ساعتين',
-      content: '🚨 Les gars, la sortie de ce vendredi à Mostaganem s\'annonce magnifique ! Le bus démarre à 06:00 précises de la Posta. Préparez vos gourdes de l\'eau et votre motivation maximale ! 🏃‍♂️🔥',
-      image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1200&q=80',
-      likes: 24,
-      liked: true,
-      commentsCount: 5,
-      comments: [
-        { author: 'Amine R.', text: 'Présent à 100% ! 🔥' },
-        { author: 'Sofiane K.', text: 'Le tracé de 18km va piquer mais on est prêts.' }
-      ]
-    },
-    {
-      id: 'post-2',
-      author: {
-        name: 'Coach Redouane',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        role: 'Coach',
-        initials: 'CR'
-      },
-      time: 'Hier à 18:30',
-      timeAr: 'أمس في 18:30',
-      content: 'Conseil de coach du jour : Ne négligez pas vos étirements après les sorties longues. Hydratez-vous avec de l\'eau riche en magnésium. On se voit vendredi pour exploser les chronos individuels ! 💪',
-      image: null,
-      likes: 18,
-      liked: false,
-      commentsCount: 2,
-      comments: []
+  // Real-time or synced posts state
+  const [posts, setPosts] = useState<any[]>([]);
+
+  // Load posts / announcements from Supabase
+  useEffect(() => {
+    async function fetchAnnouncements() {
+      // Setup default mock posts
+      const defaultPosts = [
+        {
+          id: 'post-1',
+          author: {
+            name: 'Abdou Zaiti',
+            avatarUrl: null,
+            role: 'Admin',
+            initials: 'AZ'
+          },
+          time: 'Il y a 2 heures',
+          timeAr: 'منذ ساعتين',
+          content: '🚨 Les gars, la sortie de ce vendredi à Mostaganem s\'annonce magnifique ! Le bus démarre à 06:00 précises de la Posta. Préparez vos gourdes de l\'eau et votre motivation maximale ! 🏃‍♂️🔥',
+          image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1200&q=80',
+          likes: 24,
+          liked: false,
+          likedBy: ['usr-fake-1'],
+          commentsCount: 2,
+          comments: [
+            { author: 'Amine R.', text: 'Présent à 100% ! 🔥' },
+            { author: 'Sofiane K.', text: 'Le tracé de 18km va piquer mais on est prêts.' }
+          ]
+        },
+        {
+          id: 'post-2',
+          author: {
+            name: 'Coach Redouane',
+            avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+            role: 'Coach',
+            initials: 'CR'
+          },
+          time: 'Hier à 18:30',
+          timeAr: 'أمس في 18:30',
+          content: 'Conseil de coach du jour : Ne négligez pas vos étirements après les sorties longues. Hydratez-vous avec de l\'eau riche en magnésium. On se voit vendredi pour exploser les chronos individuels ! 💪',
+          image: null,
+          likes: 18,
+          liked: false,
+          likedBy: [],
+          commentsCount: 0,
+          comments: []
+        }
+      ];
+
+      if (!isSupabaseConfigured) {
+        setPosts(defaultPosts);
+        return;
+      }
+
+      try {
+        const data = await dbService.getAnnouncements();
+        if (data && data.length > 0) {
+          // Map to local UI format
+          const mapped = data.map(ann => ({
+            id: ann.id,
+            author: {
+              name: ann.authorName,
+              avatarUrl: ann.authorAvatarUrl || null,
+              role: ann.authorRole,
+              initials: ann.authorInitials
+            },
+            time: ann.timeFr,
+            timeAr: ann.timeAr,
+            content: ann.content,
+            image: ann.imageUrl || null,
+            likes: ann.likes,
+            liked: ann.likedBy.includes(currentUser.id),
+            likedBy: ann.likedBy, // keep raw likedBy array for updates
+            commentsCount: ann.comments.length,
+            comments: ann.comments
+          }));
+          setPosts(mapped);
+        } else {
+          // If no announcements exist in DB, seed defaults
+          const seedAnnouncements: Announcement[] = defaultPosts.map(p => ({
+            id: p.id,
+            authorName: p.author.name,
+            authorAvatarUrl: p.author.avatarUrl || undefined,
+            authorRole: p.author.role,
+            authorInitials: p.author.initials,
+            timeFr: p.time,
+            timeAr: p.timeAr,
+            content: p.content,
+            imageUrl: p.image || undefined,
+            likes: p.likes,
+            likedBy: p.likedBy || [],
+            comments: p.comments
+          }));
+
+          // Upload in background
+          for (const s of seedAnnouncements) {
+            await dbService.upsertAnnouncement(s).catch(e => console.error("Error seeding:", e));
+          }
+
+          setPosts(defaultPosts);
+        }
+      } catch (err) {
+        console.error("Failed to load announcements from Supabase:", err);
+        setPosts(defaultPosts);
+      }
     }
-  ]);
+
+    fetchAnnouncements();
+  }, [currentUser.id]);
 
   const [newPostText, setNewPostText] = useState('');
 
-  const handleLikePost = (postId: string) => {
-    setPosts(posts.map(p => {
+  const handleLikePost = async (postId: string) => {
+    let updatedPostObj: any = null;
+    const updatedPosts = posts.map(p => {
       if (p.id === postId) {
-        return {
+        const isLiked = p.liked;
+        const rawLikedBy = Array.isArray(p.likedBy) ? p.likedBy : [];
+        const newLikedBy = isLiked
+          ? rawLikedBy.filter(id => id !== currentUser.id)
+          : [...rawLikedBy, currentUser.id];
+        
+        const newLikes = isLiked ? Math.max(0, p.likes - 1) : p.likes + 1;
+
+        updatedPostObj = {
           ...p,
-          likes: p.liked ? p.likes - 1 : p.likes + 1,
-          liked: !p.liked
+          likes: newLikes,
+          liked: !isLiked,
+          likedBy: newLikedBy
         };
+        return updatedPostObj;
       }
       return p;
-    }));
+    });
+
+    setPosts(updatedPosts);
+
+    // Persist to Supabase
+    if (isSupabaseConfigured && updatedPostObj) {
+      try {
+        const dbAnnouncement: Announcement = {
+          id: updatedPostObj.id,
+          authorName: updatedPostObj.author.name,
+          authorAvatarUrl: updatedPostObj.author.avatarUrl || undefined,
+          authorRole: updatedPostObj.author.role,
+          authorInitials: updatedPostObj.author.initials,
+          timeFr: updatedPostObj.time,
+          timeAr: updatedPostObj.timeAr,
+          content: updatedPostObj.content,
+          imageUrl: updatedPostObj.image || undefined,
+          likes: updatedPostObj.likes,
+          likedBy: updatedPostObj.likedBy,
+          comments: updatedPostObj.comments
+        };
+        await dbService.upsertAnnouncement(dbAnnouncement);
+      } catch (err) {
+        console.error("Failed to save post like on Supabase:", err);
+      }
+    }
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostText.trim()) return;
 
-    const newPost = {
-      id: 'post-' + Date.now(),
+    const initials = currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    
+    // Format friendly time strings
+    const now = new Date();
+    const timeFr = `Le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    const timeAr = `في ${now.toLocaleDateString('ar-DZ')} الساعة ${now.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}`;
+
+    const id = 'post-' + Date.now();
+
+    const newPostUi = {
+      id,
       author: {
         name: currentUser.name,
         avatarUrl: currentUser.avatarUrl || null,
         role: currentUser.runClubRole || 'Membre',
-        initials: currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+        initials
       },
-      time: 'À l\'instant',
-      timeAr: 'الآن',
+      time: timeFr,
+      timeAr: timeAr,
       content: newPostText,
       image: null,
       likes: 0,
       liked: false,
+      likedBy: [],
       commentsCount: 0,
       comments: []
     };
 
-    setPosts([newPost, ...posts]);
+    setPosts([newPostUi, ...posts]);
     setNewPostText('');
+
+    if (isSupabaseConfigured) {
+      try {
+        const dbAnnouncement: Announcement = {
+          id,
+          authorName: currentUser.name,
+          authorAvatarUrl: currentUser.avatarUrl || undefined,
+          authorRole: currentUser.runClubRole || 'Membre',
+          authorInitials: initials,
+          timeFr,
+          timeAr,
+          content: newPostText,
+          imageUrl: undefined,
+          likes: 0,
+          likedBy: [],
+          comments: []
+        };
+        await dbService.upsertAnnouncement(dbAnnouncement);
+      } catch (err) {
+        console.error("Failed to save new announcement to Supabase:", err);
+      }
+    }
   };
 
-  const handleDeletePost = (postId: string) => {
+  const handleDeletePost = async (postId: string) => {
     setPosts(posts.filter(p => p.id !== postId));
+
+    if (isSupabaseConfigured) {
+      try {
+        await dbService.deleteAnnouncement(postId);
+      } catch (err) {
+        console.error("Failed to delete announcement from Supabase:", err);
+      }
+    }
   };
 
   // Stats summaries

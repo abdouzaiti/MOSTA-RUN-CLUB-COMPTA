@@ -719,7 +719,32 @@ CREATE POLICY "Allow public write on reports" ON reports FOR ALL USING (true);
 DROP POLICY IF EXISTS "Allow public read on custom_lists" ON custom_lists;
 DROP POLICY IF EXISTS "Allow public write on custom_lists" ON custom_lists;
 CREATE POLICY "Allow public read on custom_lists" ON custom_lists FOR SELECT USING (true);
-CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING (true);`;
+CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING (true);
+
+-- 5. Table des annonces (Announcements)
+CREATE TABLE IF NOT EXISTS announcements (
+  id TEXT PRIMARY KEY,
+  author_name TEXT NOT NULL,
+  author_avatar_url TEXT,
+  author_role TEXT NOT NULL,
+  author_initials TEXT,
+  time_fr TEXT NOT NULL,
+  time_ar TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  likes INT DEFAULT 0,
+  liked_by JSONB DEFAULT '[]'::jsonb,
+  comments JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Activez l'accès en lecture/écriture publique temporaire
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read on announcements" ON announcements;
+DROP POLICY IF EXISTS "Allow public write on announcements" ON announcements;
+CREATE POLICY "Allow public read on announcements" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USING (true);`;
 
   const copySqlToClipboard = () => {
     navigator.clipboard.writeText(sqlQueryText);

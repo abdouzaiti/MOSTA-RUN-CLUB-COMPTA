@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Runner, Run, RunReport, CustomList } from './types';
+import { Runner, Run, RunReport, CustomList, Announcement } from './types';
 
 // Read Supabase credentials from client-side environment variables
 const SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL || '';
@@ -120,6 +120,31 @@ DROP POLICY IF EXISTS "Allow public read on custom_lists" ON custom_lists;
 DROP POLICY IF EXISTS "Allow public write on custom_lists" ON custom_lists;
 CREATE POLICY "Allow public read on custom_lists" ON custom_lists FOR SELECT USING (true);
 CREATE POLICY "Allow public write on custom_lists" ON custom_lists FOR ALL USING (true);
+
+-- 5. Table des annonces (Announcements)
+CREATE TABLE IF NOT EXISTS announcements (
+  id TEXT PRIMARY KEY,
+  author_name TEXT NOT NULL,
+  author_avatar_url TEXT,
+  author_role TEXT NOT NULL,
+  author_initials TEXT,
+  time_fr TEXT NOT NULL,
+  time_ar TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  likes INT DEFAULT 0,
+  liked_by JSONB DEFAULT '[]'::jsonb,
+  comments JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Activez l'accès en lecture/écriture publique temporaire
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read on announcements" ON announcements;
+DROP POLICY IF EXISTS "Allow public write on announcements" ON announcements;
+CREATE POLICY "Allow public read on announcements" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USING (true);
  */
 
 // Helper to handle conversion from snake_case database schema to camelCase front-end TypeScript interfaces
@@ -256,6 +281,41 @@ function mapCustomListToDb(item: CustomList): any {
     created_at_str: item.createdAt,
     columns: item.columns,
     rows: item.rows
+  };
+}
+
+function mapAnnouncementFromDb(dbItem: any): Announcement {
+  return {
+    id: dbItem.id,
+    authorName: dbItem.author_name,
+    authorAvatarUrl: dbItem.author_avatar_url || undefined,
+    authorRole: dbItem.author_role,
+    authorInitials: dbItem.author_initials,
+    timeFr: dbItem.time_fr,
+    timeAr: dbItem.time_ar,
+    content: dbItem.content,
+    imageUrl: dbItem.image_url || undefined,
+    likes: Number(dbItem.likes || 0),
+    likedBy: Array.isArray(dbItem.liked_by) ? dbItem.liked_by : [],
+    comments: Array.isArray(dbItem.comments) ? dbItem.comments : [],
+    createdAt: dbItem.created_at
+  };
+}
+
+function mapAnnouncementToDb(item: Announcement): any {
+  return {
+    id: item.id,
+    author_name: item.authorName,
+    author_avatar_url: item.authorAvatarUrl || null,
+    author_role: item.authorRole,
+    author_initials: item.authorInitials,
+    time_fr: item.timeFr,
+    time_ar: item.timeAr,
+    content: item.content,
+    image_url: item.imageUrl || null,
+    likes: item.likes,
+    liked_by: item.likedBy,
+    comments: item.comments
   };
 }
 
@@ -440,6 +500,52 @@ export const dbService = {
 
     if (error) {
       console.error('Error deleting custom list:', error.message);
+      throw error;
+    }
+  },
+
+  // --- ANNOUNCEMENTS (POSTS) ---
+  async getAnnouncements(): Promise<Announcement[]> {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching announcements:', error.message);
+        throw error;
+      }
+      return (data || []).map(mapAnnouncementFromDb);
+    } catch (e) {
+      console.error('Db service getAnnouncements failed, returning empty list:', e);
+      return []; // Return empty array if the user hasn't run the SQL command in their editor yet
+    }
+  },
+
+  async upsertAnnouncement(announcement: Announcement): Promise<void> {
+    if (!supabase) return;
+    const dbAnnouncement = mapAnnouncementToDb(announcement);
+    const { error } = await supabase
+      .from('announcements')
+      .upsert(dbAnnouncement);
+
+    if (error) {
+      console.error('Error upserting announcement:', error.message);
+      throw error;
+    }
+  },
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting announcement:', error.message);
       throw error;
     }
   }
