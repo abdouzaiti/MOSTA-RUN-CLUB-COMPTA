@@ -320,13 +320,49 @@ export default function UserProfileSettings({
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setEditorSourceImage(dataUrl);
-      // Reset sliders
-      setZoom(1);
-      setPanX(0);
-      setPanY(0);
-      setRotation(0);
+      const originalDataUrl = event.target?.result as string;
+
+      // Downscale high-resolution mobile photos for performance and memory safety
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 800; // Optimal size for high quality profile pic & smooth rendering
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          try {
+            const downscaledDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            setEditorSourceImage(downscaledDataUrl);
+          } catch (err) {
+            console.warn("Could not downscale image, using original:", err);
+            setEditorSourceImage(originalDataUrl);
+          }
+        } else {
+          setEditorSourceImage(originalDataUrl);
+        }
+
+        // Reset sliders
+        setZoom(1);
+        setPanX(0);
+        setPanY(0);
+        setRotation(0);
+      };
+      img.src = originalDataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -408,21 +444,31 @@ export default function UserProfileSettings({
           
           {/* Avatar Preview */}
           <div className="relative group shrink-0 self-center sm:self-start">
-            <div className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-black border-4 border-white shadow-md overflow-hidden relative">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-20 h-20 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-black border-4 border-white shadow-md overflow-hidden relative cursor-pointer hover:opacity-95 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              title={t.uploadCustom}
+            >
               {formAvatar ? (
                 <img src={formAvatar} alt={formName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 formName ? formName.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase() : 'MR'
               )}
-            </div>
+              {/* Overlaid Camera Icon on hover */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="w-6 h-6 text-white" />
+              </div>
+            </button>
             
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-1.5 bg-[#1034A6] hover:bg-blue-700 text-white rounded-full border-2 border-white shadow-sm transition cursor-pointer"
+              className="absolute -bottom-1 -right-1 p-2.5 bg-[#1034A6] hover:bg-blue-700 text-white rounded-full border-2 border-white shadow-md transition cursor-pointer flex items-center justify-center"
+              style={{ minWidth: '44px', minHeight: '44px' }}
               title={t.uploadCustom}
             >
-              <Camera className="w-3.5 h-3.5" />
+              <Camera className="w-4 h-4" />
             </button>
             <input
               type="file"
@@ -438,49 +484,61 @@ export default function UserProfileSettings({
               {t.avatar}
             </label>
             
-            {/* Quick Presets Selection */}
-            <div className={`flex flex-wrap items-center gap-2 ${isRtl ? 'justify-end' : 'justify-start'}`}>
-              <span className="text-[10px] text-slate-500 mr-1">{t.choosePreset}:</span>
-              <div className="flex gap-1.5 items-center">
-                {PRESET_AVATARS.map((url, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setEditorSourceImage(url);
-                      setZoom(1);
-                      setPanX(0);
-                      setPanY(0);
-                      setRotation(0);
-                    }}
-                    className={`w-8 h-8 rounded-full border-2 transition cursor-pointer ${
-                      editorSourceImage === url ? 'border-[#1034A6] scale-110 shadow-3xs' : 'border-transparent hover:scale-105'
-                    } overflow-hidden`}
-                  >
-                    <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </button>
-                ))}
+            {/* Quick Presets Selection & Device Upload */}
+            <div className="flex flex-col gap-3 w-full">
+              <div className={`flex flex-wrap items-center gap-2.5 ${isRtl ? 'justify-end' : 'justify-start'}`}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-[#1034A6] hover:text-blue-800 border border-blue-200/60 font-bold text-xs rounded-xl transition cursor-pointer min-h-[44px]"
+                >
+                  <Camera className="w-4 h-4 text-[#1034A6]" />
+                  <span>{t.uploadCustom}</span>
+                </button>
+
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.choosePreset}:</span>
                 
-                {/* Clear custom avatar */}
-                {(formAvatar || editorSourceImage) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormAvatar('');
-                      setEditorSourceImage('');
-                    }}
-                    className="text-[9px] font-mono font-bold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg px-2 py-1 transition cursor-pointer"
-                  >
-                    {isRtl ? 'حذف الصورة' : 'Retirer'}
-                  </button>
-                )}
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {PRESET_AVATARS.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setEditorSourceImage(url);
+                        setZoom(1);
+                        setPanX(0);
+                        setPanY(0);
+                        setRotation(0);
+                      }}
+                      className={`w-9 h-9 rounded-full border-2 transition cursor-pointer ${
+                        editorSourceImage === url ? 'border-[#1034A6] scale-110 shadow-3xs' : 'border-transparent hover:scale-105'
+                      } overflow-hidden`}
+                    >
+                      <img src={url} alt={`Preset ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </button>
+                  ))}
+                  
+                  {/* Clear custom avatar */}
+                  {(formAvatar || editorSourceImage) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormAvatar('');
+                        setEditorSourceImage('');
+                      }}
+                      className="text-[10px] font-mono font-bold text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-xl px-3 py-2 transition cursor-pointer min-h-[38px]"
+                    >
+                      {isRtl ? 'حذف الصورة' : 'Retirer'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Quick File Explorer instruction */}
             <div className={`text-[10px] text-slate-400 flex items-center gap-1 justify-center sm:justify-start ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <ImageIcon className="w-3 h-3 text-slate-300" />
-              <span>{t.uploadCustom}</span>
+              <ImageIcon className="w-3.5 h-3.5 text-slate-300" />
+              <span>{isRtl ? 'يمكنك ضبط وتكبير وتعديل الصورة بعد اختيارها مباشرة.' : 'Vous pouvez ajuster, zoomer et cadrer la photo juste après l\'avoir sélectionnée.'}</span>
             </div>
           </div>
         </div>
