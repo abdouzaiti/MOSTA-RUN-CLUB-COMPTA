@@ -238,11 +238,20 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           const lastMsg = userMessages[userMessages.length - 1];
           const unreadCount = userMessages.filter(msg => msg.senderId === runner.id && !msg.read).length;
 
+          let roleBadge = '';
+          if (runner.runClubRole === 'Admin') {
+            roleBadge = isRtl ? ' (مسؤول)' : ' (Admin)';
+          } else if (runner.runClubRole === 'Coach') {
+            roleBadge = isRtl ? ' (مدرب)' : ' (Coach)';
+          } else {
+            roleBadge = isRtl ? ' (رياضي)' : ' (Athlète)';
+          }
+
           return {
             id: `support-user-${runner.id}`,
-            name: `${runner.name} 🚨`,
+            name: `${runner.name}${roleBadge}`,
             isGroup: false,
-            pinned: false,
+            pinned: runner.runClubRole === 'Coach',
             unreadCount,
             lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message support'),
             lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
@@ -251,7 +260,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           };
         });
     } else {
-      // Regular user sees a single "Support & Assistance" channel
+      // Regular user sees a single "Support & Assistance" channel (Abdou) and then channels for every other runner
       const userMessages = supportMessages.filter(
         msg => (msg.senderId === currentUser.id && msg.receiverId === adminId) || 
                (msg.senderId === adminId && msg.receiverId === currentUser.id) ||
@@ -260,19 +269,57 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       const lastMsg = userMessages[userMessages.length - 1];
       const unreadCount = userMessages.filter(msg => msg.senderId === adminId && !msg.read).length;
 
-      return [
-        {
-          id: 'support-channel-admin',
-          name: isRtl ? 'عبدو (مسؤول)' : 'Abdou (Admin)',
-          isGroup: false,
-          pinned: true,
-          unreadCount,
-          lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'اتصل بالمسؤولين هنا' : 'Contactez le support ici'),
-          lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          avatarUrl: adminRunner?.avatarUrl || undefined,
-          membersCount: 2
+      const adminChan = {
+        id: 'support-channel-admin',
+        name: isRtl ? 'عبدو (مسؤول)' : 'Abdou (Admin)',
+        isGroup: false,
+        pinned: true,
+        unreadCount,
+        lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'اتصل بالمسؤولين هنا' : 'Contactez le support ici'),
+        lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        avatarUrl: adminRunner?.avatarUrl || undefined,
+        membersCount: 2
+      };
+
+      const otherRunners = runners.filter(r => r.id !== currentUser.id && r.id !== adminId);
+      const otherChans = otherRunners.map(runner => {
+        const directMsgs = supportMessages.filter(
+          msg => (msg.senderId === currentUser.id && msg.receiverId === runner.id) || 
+                 (msg.senderId === runner.id && msg.receiverId === currentUser.id)
+        );
+        const lastDirectMsg = directMsgs[directMsgs.length - 1];
+        const unreadDirectCount = directMsgs.filter(msg => msg.senderId === runner.id && !msg.read).length;
+
+        let roleBadge = '';
+        if (runner.runClubRole === 'Admin') {
+          roleBadge = isRtl ? ' (مسؤول)' : ' (Admin)';
+        } else if (runner.runClubRole === 'Coach') {
+          roleBadge = isRtl ? ' (مدرب)' : ' (Coach)';
+        } else {
+          roleBadge = isRtl ? ' (رياضي)' : ' (Athlète)';
         }
-      ];
+
+        return {
+          id: `support-user-${runner.id}`,
+          name: `${runner.name}${roleBadge}`,
+          isGroup: false,
+          pinned: runner.runClubRole === 'Coach',
+          unreadCount: unreadDirectCount,
+          lastMessage: lastDirectMsg ? lastDirectMsg.text : (isRtl ? 'تواصل مباشرة هنا' : 'Discutez en direct ici'),
+          lastMessageTime: lastDirectMsg ? new Date(lastDirectMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          avatarUrl: runner.avatarUrl || undefined,
+          membersCount: 2
+        };
+      });
+
+      // Sort other channels: pinned (Coaches) first, then alphabetically
+      otherChans.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return [adminChan, ...otherChans];
     }
   }, [supportMessages, runners, isAdmin, isRtl, currentUser.id, adminId, adminRunner]);
 
@@ -819,9 +866,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           
           const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
           if (isSupport) {
-            const isSupportAdmin = isAdmin;
-            const receiverId = isSupportAdmin 
-              ? activeChannelId.replace('support-user-', '') 
+            const receiverId = activeChannelId.startsWith('support-user-')
+              ? activeChannelId.replace('support-user-', '')
               : adminId;
 
             const newSupportMsg: SupportMessage = {
@@ -890,9 +936,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       
       const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
       if (isSupport) {
-        const isSupportAdmin = isAdmin;
-        const receiverId = isSupportAdmin 
-          ? activeChannelId.replace('support-user-', '') 
+        const receiverId = activeChannelId.startsWith('support-user-')
+          ? activeChannelId.replace('support-user-', '')
           : adminId;
 
         const newSupportMsg: SupportMessage = {
@@ -1498,9 +1543,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
     const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
     if (isSupport) {
-      const isSupportAdmin = isAdmin;
-      const receiverId = isSupportAdmin 
-        ? activeChannelId.replace('support-user-', '') 
+      const receiverId = activeChannelId.startsWith('support-user-')
+        ? activeChannelId.replace('support-user-', '')
         : adminId;
 
       const newSupportMsg: SupportMessage = {
@@ -1678,9 +1722,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const triggerAttachment = (type: 'voice' | 'image' | 'file') => {
     const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
     if (isSupport) {
-      const isSupportAdmin = isAdmin;
-      const receiverId = isSupportAdmin 
-        ? activeChannelId.replace('support-user-', '') 
+      const receiverId = activeChannelId.startsWith('support-user-')
+        ? activeChannelId.replace('support-user-', '')
         : adminId;
 
       let text = '';

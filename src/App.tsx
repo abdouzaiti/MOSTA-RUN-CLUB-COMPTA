@@ -983,59 +983,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                         setLanguage={setLanguage}
                       />
 
-                      {/* General administration settings */}
-                      <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6">
-                        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                          <Settings className="w-5 h-5 text-blue-600 animate-spin" />
-                          <h3 className="text-base font-black text-[#1034A6] font-serif italic">Paramètres généraux du Club</h3>
-                        </div>
-                        
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          Pour synchroniser votre application avec une base de données durable PostgreSQL via Supabase, connectez votre projet Supabase en renseignant vos clés client-side dans un fichier d'environnement.
-                        </p>
 
-                        <div className="bg-slate-900 text-slate-100 rounded-2xl p-5 border border-slate-800 space-y-3 shadow-md">
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                              <Terminal className="text-[#2F89FC] w-5 h-5" />
-                              <span className="font-mono text-xs font-bold text-slate-200">Script de Création SQL pour les Tables</span>
-                            </div>
-                            <button
-                              onClick={copySqlToClipboard}
-                              className="bg-white/10 hover:bg-white/20 text-white rounded-lg px-2.5 py-1 text-[10px] font-mono transition cursor-pointer"
-                            >
-                              Copier SQL
-                            </button>
-                          </div>
-                          <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-[140px] border border-slate-800/60 leading-normal">
-                            {sqlQueryText}
-                          </pre>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <h4 className="font-bold text-xs text-slate-700 mb-2 font-serif italic">Mise en cache Locale</h4>
-                            <p className="text-[11px] text-slate-500 leading-normal mb-3">
-                              L'application mémorise automatiquement vos changements d'état (runners, listes, runs) dans le localStorage de votre navigateur en l'absence de Supabase.
-                            </p>
-                            <button onClick={() => {
-                              localStorage.clear();
-                              window.location.reload();
-                            }} className="px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:text-rose-800 rounded-xl text-[10px] font-bold transition font-mono cursor-pointer">
-                              ✖ Vider le cache de l'application
-                            </button>
-                          </div>
-
-                          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <h4 className="font-bold text-xs text-slate-700 mb-2 font-serif italic">Diagnostic Réseau</h4>
-                            <ul className="text-[10px] text-slate-600 font-mono space-y-1.5 list-disc pl-4 leading-normal">
-                              <li>Supabase supporté : {isSupabaseConfigured ? '🟢 OUI (Configuré)' : '🟡 NON (Mode Local, Clés Absentes)'}</li>
-                              <li>Clé d'API : Standard client injection active.</li>
-                              <li>Version de build : v2.4 (Géré par l'Intelligence de Mosta Run Club)</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   )}
 
