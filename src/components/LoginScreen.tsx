@@ -270,7 +270,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
   return (
     <div 
-      className={`min-h-[85vh] grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
+      className={`min-h-screen grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
       dir={language === 'ar' ? 'rtl' : 'ltr'}
       style={{ backgroundImage: "url('/back.png')" }}
     >
