@@ -6,9 +6,22 @@ import {
   Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
-  ShoppingBag, ExternalLink, Clock, Trash2, Database, Send
+  ShoppingBag, ExternalLink, Clock, Trash2, Database, Send,
+  Image, X
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
+
+const isUrl = (str: string) => {
+  if (!str) return false;
+  const s = str.trim();
+  return s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:image/');
+};
+
+const isImageUrl = (str: string) => {
+  if (!str) return false;
+  const s = str.trim().toLowerCase();
+  return s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:image/') || s.includes('images.unsplash.com') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.png') || s.endsWith('.gif') || s.endsWith('.webp');
+};
 
 interface DashboardSocialProps {
   runners: Runner[];
@@ -226,6 +239,8 @@ export default function DashboardSocial({
   }, [currentUser.id]);
 
   const [newPostText, setNewPostText] = useState('');
+  const [newPostImage, setNewPostImage] = useState('');
+  const [showImageInput, setShowImageInput] = useState(false);
 
   const handleLikePost = async (postId: string) => {
     let updatedPostObj: any = null;
@@ -367,7 +382,16 @@ export default function DashboardSocial({
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPostText.trim()) return;
+    let text = newPostText.trim();
+    let image = newPostImage.trim();
+
+    // Auto-convert image URL in textarea if no separate image is selected
+    if (isImageUrl(text) && !image) {
+      image = text;
+      text = '';
+    }
+
+    if (!text && !image) return;
 
     const initials = currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     
@@ -388,8 +412,8 @@ export default function DashboardSocial({
       },
       time: timeFr,
       timeAr: timeAr,
-      content: newPostText,
-      image: null,
+      content: text,
+      image: image || null,
       likes: 0,
       liked: false,
       likedBy: [],
@@ -399,6 +423,8 @@ export default function DashboardSocial({
 
     setPosts([newPostUi, ...posts]);
     setNewPostText('');
+    setNewPostImage('');
+    setShowImageInput(false);
 
     if (isSupabaseConfigured && !isTableMissing) {
       try {
@@ -410,8 +436,8 @@ export default function DashboardSocial({
           authorInitials: initials,
           timeFr,
           timeAr,
-          content: newPostText,
-          imageUrl: undefined,
+          content: text,
+          imageUrl: image || undefined,
           likes: 0,
           likedBy: [],
           comments: []
@@ -521,59 +547,103 @@ export default function DashboardSocial({
                 </p>
               </div>
             ) : (
-              posts.map(post => (
-                <div key={post.id} className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs space-y-4 transition-all duration-300 hover:shadow-2xs">
-                  {/* Post Author / Meta Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-[#1034A6] flex items-center justify-center text-xs font-black tracking-tighter border border-blue-200/50 overflow-hidden shadow-xs">
-                        {post.author.avatarUrl ? (
-                          <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          post.author.initials
+              posts.map(post => {
+                const contentIsUrl = isUrl(post.content);
+                const hasImageOnly = !!post.image;
+
+                if (hasImageOnly) {
+                  return (
+                    <div key={post.id} className="relative rounded-[2rem] overflow-hidden group shadow-3xs hover:shadow-2xs transition-all duration-300">
+                      {/* Image displayed clean, edge-to-edge, NO border, NO names, NO URLs */}
+                      <img src={post.image} alt="Post media" className="w-full h-auto object-cover rounded-[2rem] block" referrerPolicy="no-referrer" />
+                      
+                      {/* Interactive Actions Overlay on Hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-5 text-white">
+                        <div className="flex items-center gap-4 text-xs font-bold">
+                          <button 
+                            onClick={() => handleLikePost(post.id)}
+                            className={`flex items-center gap-1.5 transition cursor-pointer ${
+                              post.liked ? 'text-rose-500 scale-105' : 'text-white/80 hover:text-white'
+                            }`}
+                          >
+                            <Heart className={`w-4 h-4 ${post.liked ? 'fill-current' : ''}`} />
+                            <span>{post.likes}</span>
+                          </button>
+                          <div className="flex items-center gap-1.5 text-white/80">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>{post.commentsCount}</span>
+                          </div>
+                        </div>
+
+                        {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            title={isRtl ? "حذف المنشور" : "Supprimer le post"}
+                            className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">{post.author.name}</h4>
-                          <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
-                            post.author.role === 'Admin' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                            post.author.role === 'Coach' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                            'bg-blue-50 text-[#1034A6] border border-blue-100'
-                          }`}>
-                            {post.author.role}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={post.id} className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs space-y-4 transition-all duration-300 hover:shadow-2xs">
+                    {/* Post Author / Meta Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-[#1034A6] flex items-center justify-center text-xs font-black tracking-tighter border border-blue-200/50 overflow-hidden shadow-xs">
+                          {post.author.avatarUrl ? (
+                            <img src={post.author.avatarUrl} alt={post.author.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            post.author.initials
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">{post.author.name}</h4>
+                            <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${
+                              post.author.role === 'Admin' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                              post.author.role === 'Coach' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                              'bg-blue-50 text-[#1034A6] border border-blue-100'
+                            }`}>
+                              {post.author.role}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-medium font-mono block mt-0.5">
+                            {isRtl ? post.timeAr : post.time}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-medium font-mono block mt-0.5">
-                          {isRtl ? post.timeAr : post.time}
-                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            title={isRtl ? "حذف المنشور" : "Supprimer le post"}
+                            className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50/50 transition duration-200 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <Compass className="w-4 h-4 text-slate-300" />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach') && (
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          title={isRtl ? "حذف المنشور" : "Supprimer le post"}
-                          className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50/50 transition duration-200 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      <Compass className="w-4 h-4 text-slate-300" />
-                    </div>
-                  </div>
 
-                  {/* Post Content */}
-                  <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium select-text">
-                    {post.content}
-                  </p>
+                    {/* Post Content */}
+                    {post.content && !contentIsUrl && (
+                      <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium select-text">
+                        {post.content}
+                      </p>
+                    )}
 
-                  {/* Post Attachment Image (if any) */}
-                  {post.image && (
-                    <div className="relative rounded-2xl overflow-hidden shadow-sm border border-slate-100 max-h-72">
-                      <img src={post.image} alt="Post media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
+                    {/* Post Attachment Image (if any) */}
+                    {post.image && (
+                      <div className="relative rounded-2xl overflow-hidden max-h-72">
+                        <img src={post.image} alt="Post media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
 
                   {/* Likes / Interactive Footer Row */}
                   <div className="flex items-center gap-6 pt-3 border-t border-slate-50 text-xs text-slate-500 font-bold">
@@ -645,7 +715,7 @@ export default function DashboardSocial({
                     </button>
                   </form>
                 </div>
-              ))
+              )})
             )}
           </div>
 
@@ -664,19 +734,102 @@ export default function DashboardSocial({
                       currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
                     )}
                   </div>
-                  <textarea
-                    value={newPostText}
-                    onChange={e => setNewPostText(e.target.value)}
-                    placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
-                    rows={2}
-                    className="flex-1 w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
-                  />
+                  <div className="flex-1 space-y-3">
+                    <textarea
+                      value={newPostText}
+                      onChange={e => setNewPostText(e.target.value)}
+                      placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
+                      rows={2}
+                      className="w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
+                    />
+
+                    {/* Image preview with delete button */}
+                    {newPostImage && (
+                      <div className="relative rounded-xl overflow-hidden border border-slate-100 max-h-40 bg-slate-50">
+                        <img src={newPostImage} alt="Post attachment preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <button
+                          type="button"
+                          onClick={() => setNewPostImage('')}
+                          className="absolute top-2 right-2 p-1 bg-slate-900/65 text-white hover:bg-slate-900/80 rounded-full transition cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Expandable Image inputs */}
+                    {showImageInput && (
+                      <div className="space-y-2 p-3 bg-slate-50 border border-slate-100 rounded-xl animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            {isRtl ? 'صورة المنشور' : 'Image du post'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowImageInput(false)}
+                            className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={newPostImage}
+                          onChange={e => setNewPostImage(e.target.value)}
+                          placeholder={isRtl ? 'أدخل رابط الصورة (URL)...' : "Entrer l'URL de l'image..."}
+                          className="w-full text-[11px] bg-white border border-slate-200 focus:border-blue-300 rounded-lg px-3 py-1.5 focus:outline-none font-medium text-slate-700"
+                        />
+                        {/* Presets */}
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-slate-400 block">
+                            {isRtl ? 'أو اختر صورة جاهزة:' : 'Ou choisissez une photo :'}
+                          </span>
+                          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                            {[
+                              { url: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=400&q=80', icon: '🌅', label: isRtl ? 'صباح' : 'Matin' },
+                              { url: 'https://images.unsplash.com/photo-1502224562085-639556652f33?auto=format&fit=crop&w=400&q=80', icon: '🏃‍♂️', label: isRtl ? 'مجموعة' : 'Groupe' },
+                              { url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=400&q=80', icon: '🌲', label: isRtl ? 'طبيعة' : 'Nature' },
+                              { url: 'https://images.unsplash.com/photo-1486218119243-13883505764c?auto=format&fit=crop&w=400&q=80', icon: '👟', label: isRtl ? 'حذاء' : 'Baskets' },
+                              { url: 'https://images.unsplash.com/photo-1578873376229-25a116afcd75?auto=format&fit=crop&w=400&q=80', icon: '🏆', label: isRtl ? 'ميدالية' : 'Médaille' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setNewPostImage(p.url)}
+                                className={`flex items-center gap-1 shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                                  newPostImage === p.url
+                                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                    : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span>{p.icon}</span>
+                                <span>{p.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                  <div className="flex gap-1.5" />
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowImageInput(prev => !prev)}
+                      title={isRtl ? 'إضافة صورة' : 'Ajouter une image'}
+                      className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-center ${
+                        showImageInput || newPostImage 
+                          ? 'bg-blue-50 text-blue-600 border border-blue-100' 
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <Image className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button
                     type="submit"
-                    disabled={!newPostText.trim()}
+                    disabled={!newPostText.trim() && !newPostImage.trim()}
                     className="px-4 py-2 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
                   >
                     {isRtl ? 'أنشر' : 'Publier'}

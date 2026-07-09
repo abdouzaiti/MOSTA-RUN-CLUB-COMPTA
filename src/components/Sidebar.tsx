@@ -41,7 +41,6 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
     { id: 'reports', label: language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'List of Runs' : 'Liste des Runs', icon: Map },
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },
     { id: 'lists', label: language === 'ar' ? 'القوائم' : language === 'en' ? 'Lists' : 'Liste', icon: Trophy },
-    { id: 'stats', label: language === 'ar' ? 'الإحصائيات' : language === 'en' ? 'Stats' : 'Stats', icon: BarChart3 },
     { id: 'messagerie', label: language === 'ar' ? 'الرسائل والتعليقات' : language === 'en' ? 'Messaging' : 'Messagerie', icon: MessageSquare },
     { id: 'notifications', label: language === 'ar' ? 'الإشعارات' : language === 'en' ? 'Notifications' : 'Notifications', icon: Bell },
     { id: 'settings', label: language === 'ar' ? 'الإعدادات' : language === 'en' ? 'Settings' : 'Paramètres', icon: Settings },

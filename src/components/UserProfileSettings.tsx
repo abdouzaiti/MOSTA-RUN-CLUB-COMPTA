@@ -11,14 +11,17 @@ interface UserProfileSettingsProps {
 }
 
 const PRESET_AVATARS = [
-  "https://api.dicebear.com/7.x/adventurer/png?seed=Felix&backgroundColor=b6e3f4",
-  "https://api.dicebear.com/7.x/adventurer/png?seed=Aneka&backgroundColor=ffdfbf",
-  "https://api.dicebear.com/7.x/adventurer/png?seed=Lilou&backgroundColor=c0aede",
-  "https://api.dicebear.com/7.x/avataaars/png?seed=Milo&backgroundColor=d1f4ff",
-  "https://api.dicebear.com/7.x/avataaars/png?seed=Sophia&backgroundColor=ffd5dc",
-  "https://api.dicebear.com/7.x/bottts/png?seed=Marcus&backgroundColor=b6e3f4",
-  "https://api.dicebear.com/7.x/lorelei/png?seed=Lily&backgroundColor=ffdfbf",
-  "https://api.dicebear.com/7.x/fun-emoji/png?seed=Spark&backgroundColor=d1f4ff"
+  "https://api.dicebear.com/7.x/lorelei/png?seed=Lily&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Leo&backgroundColor=d1f4ff",
+  "https://api.dicebear.com/7.x/lorelei/png?seed=Angel&backgroundColor=c0aede",
+  "https://api.dicebear.com/7.x/notionists/png?seed=Aria&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/avataaars/png?seed=Aneka&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Milo&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/7.x/lorelei/png?seed=Jack&backgroundColor=d1f4ff",
+  "https://api.dicebear.com/7.x/notionists/png?seed=Kiki&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/7.x/avataaars/png?seed=Buster&backgroundColor=c0aede",
+  "https://api.dicebear.com/7.x/adventurer/png?seed=Maya&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/7.x/lorelei/png?seed=Mimi&backgroundColor=ffdfbf"
 ];
 
 const dict = {
