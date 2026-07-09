@@ -25,7 +25,7 @@ interface Message {
   duration?: string; // for voice
   mediaUrl?: string; // for image/video
   fileSize?: string; // for file
-  reactions?: { [emoji: string]: number };
+  reactions?: { [key: string]: any };
   replyTo?: { id: string; sender: string; text: string } | null;
   read?: boolean;
 }
@@ -41,6 +41,51 @@ interface ChatChannel {
   lastMessageTime: string;
   membersCount?: number;
 }
+
+const emojiCategories = [
+  {
+    name: 'Smileys',
+    nameAr: 'وجوه',
+    icon: '😊',
+    emojis: ['😊', '😂', '🤣', '🥰', '😍', '😘', '😜', '🤪', '🤔', '😎', '🙄', '😢', '😭', '😡', '😱', '😴', '🥳', '😇', '😷', '🤯', '🤠', '🤩', '🫠', '🫡', '🫣', '🤫', '🥱', '🤤', '😏', '😒', '😬', '😐', '😑', '🫨']
+  },
+  {
+    name: 'Gestures',
+    nameAr: 'حركات',
+    icon: '👍',
+    emojis: ['👍', '👎', '👌', '✌️', '🤞', '👋', '👏', '🙌', '👐', '🤝', '🙏', '💪', '✍️', '✊', '👊', '🤛', '🤜', '🖐️', '🖖', '🤟', '🤘', '🫵', '🖕', '💅', '🤳']
+  },
+  {
+    name: 'Sports',
+    nameAr: 'رياضة',
+    icon: '🏃',
+    emojis: ['🏃', '🏃‍♀️', '🏃‍♂️', '👟', '🏆', '🥇', '🥈', '🥉', '🏅', '🏁', '🧗', '🧗‍♀️', '🧗‍♂️', '🚴', '🚴‍♀️', '🚴‍♂️', '🚶', '🚶‍♀️', '🚶‍♂️', '🏋️', '🏋️‍♀️', '🏋️‍♂️', '🧘', '🧘‍♀️', '🧘‍♂️', '⚽', '🏀', '🎾', '🏈', '🏐', '⛳', '🥊', '🥋', '🎯', '🎿', '🏂', '🎽', '🏔️', '⛺']
+  },
+  {
+    name: 'Nature & Places',
+    nameAr: 'طبيعة',
+    icon: '🌲',
+    emojis: ['🌲', '🌳', '🌴', '🌵', '🌱', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '⛺', '🌅', '🌄', '🏜️', '🏖️', '🏝️', '🌍', '🌎', '🗺️', '📍']
+  },
+  {
+    name: 'Weather',
+    nameAr: 'طقس',
+    icon: '☀️',
+    emojis: ['☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '❄️', '☃️', '⛄', '💨', '🌪️', '🌫️', '🌈', '⚡', '🔥', '💧', '🌊']
+  },
+  {
+    name: 'Symbols & Objects',
+    nameAr: 'رموز',
+    icon: '❤️',
+    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '💯', '✨', '🌟', '⭐', '💥', '💤', '💢', '⏰', '⏱️', '🧭', '💬', '📢', '🔔', '🎉', '🎈', '🎁', '✉️', '📝', '📅', '🔑', '🔒', '⚡', '💡']
+  },
+  {
+    name: 'Flags',
+    nameAr: 'أعلام',
+    icon: '🇩🇿',
+    emojis: ['🇩🇿', '🇵🇸', '🇫🇷', '🇹🇳', '🇲🇦', '🇺🇸', '🇬🇧', '🇨🇦', '🇪🇸', '🇮🇹', '🇩🇪', '🇸🇦', '🇶🇦', '🇦🇪', '🇹🇷', '🇯🇵', '🇧🇷', '🏁', '🚩', '🎌', '🏳️', '🏴', '🏴‍☠️']
+  }
+];
 
 interface MessageriePremiumProps {
   currentUser: Runner;
@@ -66,6 +111,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Input States
   const [inputText, setInputText] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState(0);
   const [typingChannel, setTypingChannel] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
@@ -1262,6 +1309,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
     setInputText('');
     setReplyingTo(null);
+    setShowEmojiPicker(false);
   };
 
   // Delete / Retract a message
@@ -1318,18 +1366,44 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       const chanMsgs = prev[activeChannelId] || [];
       const updated = chanMsgs.map(m => {
         if (m.id === msgId) {
-          const currentReactions = m.reactions || {};
-          const val = currentReactions[emoji] || 0;
-          const newReactions = {
-            ...currentReactions,
-            [emoji]: val + 1
-          };
+          const currentReactions = { ...(m.reactions || {}) };
+          
+          // Get or initialize reactedBy
+          const rawReactedBy = currentReactions.reactedBy || {};
+          // Ensure it's a plain object map
+          const reactedBy = typeof rawReactedBy === 'object' && rawReactedBy !== null && !Array.isArray(rawReactedBy) 
+            ? { ...rawReactedBy } 
+            : {};
+          
+          const prevEmoji = reactedBy[currentUser.id];
+          
+          // Decrement previous emoji count if exists
+          if (prevEmoji) {
+            const currentVal = currentReactions[prevEmoji] || 1;
+            currentReactions[prevEmoji] = Math.max(0, currentVal - 1);
+            if (currentReactions[prevEmoji] === 0) {
+              delete currentReactions[prevEmoji];
+            }
+          }
+          
+          if (prevEmoji === emoji) {
+            // Un-react: User clicked the same emoji again, so we remove their reaction entirely
+            delete reactedBy[currentUser.id];
+          } else {
+            // New reaction or changing reaction
+            reactedBy[currentUser.id] = emoji;
+            const currentVal = currentReactions[emoji] || 0;
+            currentReactions[emoji] = currentVal + 1;
+          }
+          
+          // Save the reactedBy mapping back in reactions object
+          currentReactions.reactedBy = reactedBy;
 
           // Update real Supabase if configured
           if (isSupabaseConfigured && supabase) {
             supabase
               .from('mrc_messages')
-              .update({ reactions: newReactions })
+              .update({ reactions: currentReactions })
               .eq('id', msgId)
               .then(({ error }) => {
                 if (error) console.error("Error updating reactions in Supabase:", error);
@@ -1338,7 +1412,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
           return {
             ...m,
-            reactions: newReactions
+            reactions: currentReactions
           };
         }
         return m;
@@ -1706,21 +1780,33 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all duration-200 shrink-0 z-20">
                     <button 
                       onClick={() => handleAddReaction(message.id, '❤️')}
-                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      className={`p-1 rounded-full shadow-3xs border text-[11px] transition duration-300 cursor-pointer ${
+                        message.reactions?.reactedBy?.[currentUser.id] === '❤️'
+                          ? 'bg-rose-50 border-rose-200 hover:bg-rose-100'
+                          : 'bg-white hover:bg-slate-50 border-slate-100'
+                      }`}
                       title="Aimer"
                     >
                       ❤️
                     </button>
                     <button 
                       onClick={() => handleAddReaction(message.id, '🔥')}
-                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      className={`p-1 rounded-full shadow-3xs border text-[11px] transition duration-300 cursor-pointer ${
+                        message.reactions?.reactedBy?.[currentUser.id] === '🔥'
+                          ? 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+                          : 'bg-white hover:bg-slate-50 border-slate-100'
+                      }`}
                       title="Incendier"
                     >
                       🔥
                     </button>
                     <button 
                       onClick={() => handleAddReaction(message.id, '👍')}
-                      className="p-1 bg-white hover:bg-slate-50 rounded-full shadow-3xs border border-slate-100 text-[11px] transition duration-300 cursor-pointer"
+                      className={`p-1 rounded-full shadow-3xs border text-[11px] transition duration-300 cursor-pointer ${
+                        message.reactions?.reactedBy?.[currentUser.id] === '👍'
+                          ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                          : 'bg-white hover:bg-slate-50 border-slate-100'
+                      }`}
                       title="Valider"
                     >
                       👍
@@ -1747,12 +1833,25 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 {/* Reactions list under bubble */}
                 {message.reactions && Object.keys(message.reactions).length > 0 && (
                   <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    {Object.entries(message.reactions).map(([emoji, count]) => (
-                      <span key={emoji} className="bg-slate-50 border border-slate-100/80 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-slate-600 flex items-center gap-0.5 shadow-3xs">
-                        <span>{emoji}</span>
-                        <span className="text-[8px] font-mono">{count}</span>
-                      </span>
-                    ))}
+                    {Object.entries(message.reactions).map(([emoji, count]) => {
+                      if (emoji === 'reactedBy') return null;
+                      if (typeof count !== 'number' || count <= 0) return null;
+                      const hasReactedWithThis = message.reactions?.reactedBy?.[currentUser.id] === emoji;
+                      return (
+                        <span 
+                          key={emoji} 
+                          onClick={() => handleAddReaction(message.id, emoji)}
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold flex items-center gap-0.5 shadow-3xs transition duration-200 cursor-pointer ${
+                            hasReactedWithThis 
+                              ? 'bg-blue-50 border border-blue-200/80 text-[#1034A6] hover:bg-blue-100/50' 
+                              : 'bg-slate-50 border border-slate-100/80 text-slate-600 hover:bg-slate-100/50'
+                          }`}
+                        >
+                          <span>{emoji}</span>
+                          <span className="text-[8px] font-mono">{count}</span>
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -1898,13 +1997,78 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             </div>
 
             {/* Main Text Area Field */}
-            <input
-              type="text"
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              placeholder={isRtl ? 'اكتب رسالة...' : 'Écrire un message...'}
-              className="flex-1 text-xs font-semibold py-2.5 bg-[#F8FAFC] border border-slate-200/80 rounded-xl focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 transition px-3 text-slate-800"
-            />
+            <div className="flex-1 relative flex items-center">
+              <input
+                type="text"
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                placeholder={isRtl ? 'اكتب رسالة...' : 'Écrire un message...'}
+                className={`w-full text-xs font-semibold py-2.5 bg-[#F8FAFC] border border-slate-200/80 rounded-xl focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 transition text-slate-800 ${
+                  isRtl ? 'pl-3 pr-10' : 'pr-3 pl-10'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className={`absolute ${isRtl ? 'right-3' : 'left-3'} text-slate-400 hover:text-amber-500 hover:scale-110 active:scale-95 transition cursor-pointer`}
+                title={isRtl ? 'إدراج رمز تعبيري' : 'Insérer un émoji'}
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+
+              {/* Custom Emoji Picker Popover */}
+              {showEmojiPicker && (
+                <div className={`absolute bottom-14 ${isRtl ? 'right-0' : 'left-0'} bg-white border border-slate-150 rounded-2xl shadow-2xl p-3 w-72 sm:w-80 z-50 flex flex-col gap-2.5 animate-fade-in`}>
+                  {/* Category Tabs Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {isRtl ? emojiCategories[selectedEmojiCategory].nameAr : emojiCategories[selectedEmojiCategory].name}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowEmojiPicker(false)}
+                      className="text-slate-400 hover:text-slate-600 transition p-0.5 rounded-full hover:bg-slate-50 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none border-b border-slate-100/60 justify-between">
+                    {emojiCategories.map((cat, index) => (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => setSelectedEmojiCategory(index)}
+                        title={isRtl ? cat.nameAr : cat.name}
+                        className={`p-1.5 rounded-lg text-xs transition duration-200 cursor-pointer shrink-0 flex items-center justify-center ${
+                          selectedEmojiCategory === index 
+                            ? 'bg-blue-50 text-blue-600 font-bold border border-blue-100' 
+                            : 'hover:bg-slate-50 text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        <span className="text-sm mr-0.5">{cat.icon}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Grid of Emojis for selected category */}
+                  <div className="grid grid-cols-6 gap-1.5 max-h-44 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+                    {emojiCategories[selectedEmojiCategory].emojis.map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setInputText(prev => prev + emoji);
+                        }}
+                        className="text-lg sm:text-xl hover:scale-125 hover:rotate-6 active:scale-95 transition cursor-pointer flex items-center justify-center p-1.5 hover:bg-blue-50/50 rounded-lg"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Send Action Trigger */}
             <button
