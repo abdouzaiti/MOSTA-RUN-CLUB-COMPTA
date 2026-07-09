@@ -7,7 +7,7 @@ import {
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
   ShoppingBag, ExternalLink, Clock, Trash2, Database, Send,
-  Image, X
+  Image, X, Headphones
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -30,6 +30,7 @@ interface DashboardSocialProps {
   onToggleRegister: (runId: string) => void;
   setActiveTab: (tab: string) => void;
   language: Language;
+  onOpenSupportChat?: () => void;
 }
 
 export default function DashboardSocial({ 
@@ -38,7 +39,8 @@ export default function DashboardSocial({
   currentUser, 
   onToggleRegister, 
   setActiveTab,
-  language 
+  language,
+  onOpenSupportChat
 }: DashboardSocialProps) {
   const isRtl = language === 'ar';
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
@@ -967,70 +969,59 @@ export default function DashboardSocial({
             </a>
           </div>
 
-          {/* Upcoming Training Highlight */}
-          <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">
-                {isRtl ? 'التدريب المقبل' : 'PROCHAIN RUN'}
-              </h3>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                <span className="text-[9px] text-rose-500 font-black font-mono">COUNTDOWN</span>
+          {/* Support Chat Trigger Card - Replaces Upcoming Training Highlight */}
+          <div className="bg-gradient-to-br from-[#1034A6] via-[#1E56A0] to-[#2F89FC] text-white rounded-[2rem] p-5 shadow-lg border border-white/10 space-y-4 relative overflow-hidden group">
+            {/* Ambient animated bg aura */}
+            <div className="absolute -right-12 -top-12 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Headphones className="w-4 h-4 text-amber-300 animate-pulse shrink-0" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono">
+                  {isRtl ? 'الدعم والمساعدة' : 'SUPPORT LIVE MRC'}
+                </h3>
               </div>
-            </div>
-
-            {/* LIVE COUNTDOWN TIMER BLOCK */}
-            <div className="bg-gradient-to-r from-rose-500/10 to-orange-500/10 border border-rose-500/15 p-3 rounded-2xl flex items-center gap-2.5">
-              <div className="p-2 bg-rose-500 text-white rounded-xl animate-pulse">
-                <Clock className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[9px] text-rose-700 font-black block uppercase tracking-wider">
-                  {isRtl ? 'العد التنازلي المباشر' : 'DÉCOMPTE EN DIRECT'}
-                </span>
-                <span className="text-[11px] font-mono font-black text-slate-800 block tracking-tight truncate">
-                  {countdownStr}
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="text-[9px] text-emerald-300 font-bold font-mono">
+                  {isRtl ? 'متصل الآن' : 'DISPO'}
                 </span>
               </div>
             </div>
 
-            {upcomingRuns.length > 0 ? (
-              upcomingRuns.map(run => {
-                const isMyRun = run.participants.some(p => p.id === currentUser.id);
-                return (
-                  <div key={run.id} className="p-3 bg-blue-50/45 hover:bg-blue-50 border border-blue-100/50 rounded-2xl space-y-2.5 transition">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-serif italic font-extrabold text-xs sm:text-sm text-slate-800">{run.title}</h4>
-                        <span className="text-[10px] text-slate-400 font-bold block mt-0.5">📅 {run.date} @ {run.time}</span>
-                      </div>
-                      <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-0.5 rounded border border-emerald-100">
-                        {run.distance} km
-                      </span>
-                    </div>
+            <div className="space-y-2">
+              <h4 className="text-sm font-serif italic font-extrabold text-white">
+                {isRtl ? 'هل لديك أي سؤال أو استفسار؟' : "Besoin d'aide ou de conseils ?"}
+              </h4>
+              <p className="text-xs text-white/85 leading-relaxed font-medium">
+                {isRtl 
+                  ? 'تواصل مباشرة مع الكابتن عبدو الزايتي وطاقم المشرفين للإبلاغ عن مشكلة أو الاستفسار عن الاشتراكات والخرجات.'
+                  : "Démarrez un chat privé avec le Captain Abdou Zaiti. Signalez un bug, posez vos questions sur les cotisations, maillots ou sorties."
+                }
+              </p>
+              
+              <div className="flex items-center gap-2 bg-white/10 rounded-xl p-2.5 border border-white/5">
+                <div className="w-6 h-6 rounded-full bg-white text-[#1034A6] flex items-center justify-center font-bold text-[9px] overflow-hidden shrink-0">
+                  AZ
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] text-white/70 font-bold block leading-none">
+                    {isRtl ? 'المدير العام' : 'Fondateur / Admin'}
+                  </span>
+                  <span className="text-[10px] text-white font-black block truncate leading-tight mt-0.5">
+                    Abdou Zaiti
+                  </span>
+                </div>
+              </div>
+            </div>
 
-                    <div className="flex items-center justify-between pt-1 text-[11px]">
-                      <span className="font-semibold text-slate-500">{run.participants.length} athlètes</span>
-                      <button
-                        onClick={() => onToggleRegister(run.id)}
-                        className={`px-3 py-1 text-[10px] font-bold rounded-lg border transition ${
-                          isMyRun 
-                            ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' 
-                            : 'bg-blue-600 text-white border-transparent hover:bg-blue-700'
-                        }`}
-                      >
-                        {isMyRun 
-                          ? (isRtl ? 'إلغاء' : 'Désister') 
-                          : (isRtl ? 'تسجيل' : 'Participer')
-                        }
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-xs text-slate-400 font-medium py-2">Aucune sortie planifiée pour le moment.</p>
-            )}
+            <button
+              onClick={() => onOpenSupportChat?.()}
+              className="w-full py-3 bg-white hover:bg-slate-50 text-[#1034A6] text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              <span>{isRtl ? 'بدء محادثة الدعم' : 'Démarrer le Chat'}</span>
+            </button>
           </div>
 
 
