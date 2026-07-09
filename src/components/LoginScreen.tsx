@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Runner } from '../types';
-import { ShieldCheck, User, Lock, Phone, Mail, HeartPulse, Sparkles, LogIn, ArrowRight, Eye, EyeOff, Globe } from 'lucide-react';
+import { ShieldCheck, User, Lock, Phone, Mail, HeartPulse, Sparkles, LogIn, ArrowRight, Eye, EyeOff, Globe, MessageSquare, X, HelpCircle, ArrowLeft, Headphones } from 'lucide-react';
 import { translations, Language } from '../translations';
+import AdminSupportChat from './AdminSupportChat';
 
 interface LoginScreenProps {
   runners: Runner[];
@@ -28,6 +29,39 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
   const [emailSetup, setEmailSetup] = useState('');
   const [bloodTypeSetup, setBloodTypeSetup] = useState('O+');
   const [setupError, setSetupError] = useState('');
+
+  // Live Support Chat states
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [guestName, setGuestName] = useState(() => localStorage.getItem('mrc_guest_name') || '');
+  const [guestId, setGuestId] = useState(() => {
+    let id = localStorage.getItem('mrc_guest_id');
+    if (!id) {
+      id = 'guest-' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('mrc_guest_id', id);
+    }
+    return id;
+  });
+  const [hasSetGuestName, setHasSetGuestName] = useState(() => !!localStorage.getItem('mrc_guest_name'));
+  const [selectedAthleteId, setSelectedAthleteId] = useState(() => localStorage.getItem('mrc_guest_athlete_id') || '');
+  const [inputName, setInputName] = useState('');
+
+  const getChatUser = (): Runner => {
+    if (selectedAthleteId) {
+      const runner = runners.find(r => r.id === selectedAthleteId);
+      if (runner) return runner;
+    }
+    return {
+      id: guestId,
+      name: guestName || 'Visiteur MRC',
+      avatarUrl: undefined,
+      phone: '',
+      email: '',
+      bloodType: 'O+',
+      runClubRole: 'Membre',
+      password: '',
+      passwordChanged: false
+    };
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -374,11 +408,135 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
             </button>
           </form>
 
-          <div className="bg-natural-bone/50 p-4 rounded-2xl border border-natural-border/70 text-center text-[10px] text-natural-sage font-medium leading-relaxed italic">
-            <span>{language === 'ar' ? 'هل تحتاج إلى وصول؟ يجب على مسؤول أو مدرب من مستغانم تسجيلك في الدليل لتفعيل حسابك.' : "Besoin d'un accès ? Un administrateur ou coach de Mostaganem doit vous enregistrer dans l'annuaire pour activer votre compte."}</span>
+          <div className="bg-gradient-to-br from-blue-50/50 to-blue-50/25 p-4 rounded-[2rem] border border-blue-100/60 text-center space-y-3">
+            <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+              {language === 'ar' 
+                ? 'هل تحتاج إلى حساب؟ يجب على المسؤول تسجيلك في الدليل لتفعيل حسابك.' 
+                : "Besoin d'un accès ? Un administrateur doit vous enregistrer dans l'annuaire pour activer votre compte."}
+            </p>
+            <button
+              type="button"
+              id="admin-chat-trigger"
+              onClick={() => setIsChatModalOpen(true)}
+              className="w-full py-2.5 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] hover:from-[#1E56A0] hover:to-[#2F89FC] text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all duration-200"
+            >
+              <MessageSquare className="w-3.5 h-3.5 shrink-0 text-amber-300 animate-pulse" />
+              <span>{language === 'ar' ? 'تحدث مباشرة مع الكابتن عبدو' : "Chat Live avec l'Admin"}</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Live Support Chat Modal for Guests / Unauthenticated Users */}
+      {isChatModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-fade-in text-xs">
+            {/* Modal Header */}
+            <div className="p-4 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Headphones className="w-4.5 h-4.5 text-amber-300 animate-pulse" />
+                <div>
+                  <h3 className="font-serif italic font-black text-sm text-white">
+                    {language === 'ar' ? 'محادثة المساعدة المباشرة' : "Chat d'Assistance MRC"}
+                  </h3>
+                  <p className="text-[9px] text-white/70 font-mono">
+                    {language === 'ar' ? 'تواصل مع الكابتن عبدو الزايتي' : "En direct avec Captain Abdou"}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsChatModalOpen(false)}
+                className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-white/80 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {!hasSetGuestName ? (
+                /* Identity setup screen first */
+                <div className="space-y-4 py-3">
+                  <div className="text-center space-y-1.5 pb-2">
+                    <div className="w-12 h-12 bg-blue-50 text-[#1034A6] rounded-full flex items-center justify-center mx-auto">
+                      <HelpCircle className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-serif italic font-bold text-slate-800 text-sm">
+                      {language === 'ar' ? 'من يتحدث معنا؟' : 'Qui nous contacte ?'}
+                    </h4>
+                    <p className="text-[10px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                      {language === 'ar' 
+                        ? 'يرجى تحديد هويتك لنتمكن من مساعدتك وحفظ تاريخ المحادثة بشكل آمن.' 
+                        : "Veuillez vous identifier pour que l'Admin puisse vous répondre et suivre votre historique."}
+                    </p>
+                  </div>
+
+                  {/* Identity input section */}
+                  <div className="space-y-3.5">
+                    {/* Enter guest/visitor name */}
+                    <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl space-y-2">
+                      <span className="font-mono text-[9px] font-black text-slate-500 uppercase tracking-wider block">
+                        {language === 'ar' ? 'الاسم الكامل أو اللقب' : 'Votre Nom Complet / Pseudo'}
+                      </span>
+                      <input
+                        type="text"
+                        value={inputName}
+                        onChange={(e) => setInputName(e.target.value)}
+                        placeholder={language === 'ar' ? 'اكتب اسمك الكامل هنا...' : 'Saisissez votre Nom / Pseudo...'}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#1034A6] text-slate-800 font-medium"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="button"
+                      disabled={!inputName.trim()}
+                      onClick={() => {
+                        const finalName = inputName.trim();
+                        setGuestName(finalName);
+                        setSelectedAthleteId('');
+                        localStorage.setItem('mrc_guest_name', finalName);
+                        localStorage.removeItem('mrc_guest_athlete_id');
+                        setHasSetGuestName(true);
+                      }}
+                      className="w-full py-3 bg-[#1034A6] hover:bg-[#1E56A0] disabled:bg-slate-200 text-white disabled:text-slate-400 font-black rounded-xl transition cursor-pointer text-xs"
+                    >
+                      {language === 'ar' ? 'بدء المحادثة المباشرة ⚡' : 'Lancer le Chat Live ⚡'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Chat view */
+                <div className="flex flex-col h-[55vh]">
+                  {/* Small identity reminder banner */}
+                  <div className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between mb-3 text-[10px] text-[#1034A6] font-bold">
+                    <span>
+                      👤 {language === 'ar' ? 'تتحدث بصفتك:' : 'Connecté en tant que :'} <strong className="font-serif italic">{getChatUser().name}</strong>
+                    </span>
+                    <button
+                      onClick={() => {
+                        setHasSetGuestName(false);
+                      }}
+                      className="text-rose-600 hover:underline cursor-pointer"
+                    >
+                      {language === 'ar' ? 'تغيير الهوية' : "Changer d'identité"}
+                    </button>
+                  </div>
+
+                  {/* Embedded AdminSupportChat component */}
+                  <div className="flex-1 min-h-0 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100">
+                    <AdminSupportChat 
+                      currentUser={getChatUser()} 
+                      runners={runners} 
+                      language={language} 
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

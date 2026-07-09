@@ -156,48 +156,6 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
 
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
-
-    // If a regular user sends a message, trigger a helpful automated Admin response after 1.5 seconds
-    if (!isAdmin) {
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        
-        let replyText = "Merci pour ton message ! Je suis en train de courir ou d'organiser la prochaine sortie. Je te réponds dès que possible ! En attendant, n'hésite pas à consulter l'onglet Planning. Bon run ! 🏃‍♂️⚡";
-        if (language === 'ar') {
-          replyText = "شكراً لرسالتك! أنا حالياً أركض أو أقوم بتنظيم الخرجة المقبلة. سأرد عليك في أقرب وقت ممكن! في هذه الأثناء، لا تتردد في مراجعة جدول الخرجات. جرياً موفقاً! 🏃‍♂️⚡";
-        } else if (language === 'en') {
-          replyText = "Thanks for your message! I'm currently running or organizing the next club outing. I'll get back to you as soon as possible! In the meantime, feel free to check the Outings Planning. Happy running! 🏃‍♂️⚡";
-        }
-
-        // Custom suggestions based on keywords
-        const lowerText = textToSend.toLowerCase();
-        if (lowerText.includes('password') || lowerText.includes('mot de passe') || lowerText.includes('كلمة')) {
-          replyText = language === 'ar' 
-            ? "لتغيير كلمة المرور الخاصة بك، انتقل إلى علامة التبويب 'الإعدادات' في ملفك الشخصي وقم بتحديث معلومات الأمان الخاصة بك مباشرة. 🔐"
-            : language === 'en'
-            ? "To change your password, go to the 'Settings' tab on your profile and update your security information directly. 🔐"
-            : "Pour changer ton mot de passe, va dans l'onglet 'Paramètres' de ton profil et mets à jour tes informations de sécurité directement. 🔐";
-        } else if (lowerText.includes('mal') || lowerText.includes('bless') || lowerText.includes('malade') || lowerText.includes('ألم') || lowerText.includes('إصابة')) {
-          replyText = language === 'ar'
-            ? "سلامتك! إذا كنت مصاباً، يرجى التوقف فوراً عن الجري. اتصل بالمسعف أو اطلب المساعدة في المجموعة. يمكنك العثور على أرقام الطوارئ في بطاقات السلامة أعلاه. 🚑"
-            : language === 'en'
-            ? "Get well soon! If you are injured, please stop running immediately. Check the safety protocols and contact our emergency numbers listed above. 🚑"
-            : "Bon rétablissement ! Si tu es blessé, arrête immédiatement de courir. Regarde les consignes de sécurité et contacte les numéros d'urgence affichés ci-dessus. 🚑";
-        }
-
-        const autoReply: SupportMessage = {
-          id: `support-msg-reply-${Date.now()}`,
-          senderId: adminId,
-          senderName: adminRunner ? adminRunner.name : 'Abdou Zaiti',
-          receiverId: currentUser.id,
-          text: replyText,
-          timestamp: new Date().toISOString(),
-          read: true
-        };
-        setMessages(prev => [...prev, autoReply]);
-      }, 1800);
-    }
   };
 
   // Filter messages for current thread

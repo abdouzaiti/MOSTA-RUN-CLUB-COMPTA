@@ -87,6 +87,17 @@ const emojiCategories = [
   }
 ];
 
+interface SupportMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  receiverId: string;
+  text: string;
+  timestamp: string; // ISO String
+  read?: boolean;
+}
+
 interface MessageriePremiumProps {
   currentUser: Runner;
   runners: Runner[];
@@ -180,6 +191,91 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     ...(runners || []).filter(r => r.id !== currentUser.id)
   ];
 
+  // Load support messages from localStorage
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>(() => {
+    const saved = localStorage.getItem('mrc_support_messages');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error reading support messages:", e);
+      }
+    }
+    return [
+      {
+        id: 'welcome-1',
+        senderId: 'usr-1',
+        senderName: 'Abdou Zaiti',
+        receiverId: 'default',
+        text: "Salam! Bienvenue sur le support de Mosta Run Club. N'hésite pas à me poser tes questions ou à me signaler tout problème technique ou organisationnel ici. L-khardt, tkair w l-javasa t3-shat! 🏃‍♂️🔥",
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        read: true
+      }
+    ];
+  });
+
+  // Save support messages to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('mrc_support_messages', JSON.stringify(supportMessages));
+  }, [supportMessages]);
+
+  // Support Admin details
+  const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+  const adminId = adminRunner ? adminRunner.id : 'usr-1';
+  const isAdmin = currentUser.runClubRole === 'Admin' || currentUser.id === adminId;
+
+  // Compute support channels dynamically
+  const supportChannels = React.useMemo<ChatChannel[]>(() => {
+    if (isAdmin) {
+      // Admin sees a channel for every other runner (so they can chat with them)
+      return runners
+        .filter(r => r.id !== currentUser.id)
+        .map(runner => {
+          const userMessages = supportMessages.filter(
+            msg => (msg.senderId === runner.id && msg.receiverId === currentUser.id) || 
+                   (msg.senderId === currentUser.id && msg.receiverId === runner.id)
+          );
+          const lastMsg = userMessages[userMessages.length - 1];
+          const unreadCount = userMessages.filter(msg => msg.senderId === runner.id && !msg.read).length;
+
+          return {
+            id: `support-user-${runner.id}`,
+            name: `${runner.name} 🚨`,
+            isGroup: false,
+            pinned: false,
+            unreadCount,
+            lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message support'),
+            lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            avatarUrl: runner.avatarUrl || undefined,
+            membersCount: 2
+          };
+        });
+    } else {
+      // Regular user sees a single "Support & Assistance" channel
+      const userMessages = supportMessages.filter(
+        msg => (msg.senderId === currentUser.id && msg.receiverId === adminId) || 
+               (msg.senderId === adminId && msg.receiverId === currentUser.id) ||
+               (msg.receiverId === 'default' || msg.receiverId === 'all')
+      );
+      const lastMsg = userMessages[userMessages.length - 1];
+      const unreadCount = userMessages.filter(msg => msg.senderId === adminId && !msg.read).length;
+
+      return [
+        {
+          id: 'support-channel-admin',
+          name: isRtl ? 'عبدو (مسؤول)' : 'Abdou (Admin)',
+          isGroup: false,
+          pinned: true,
+          unreadCount,
+          lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'اتصل بالمسؤولين هنا' : 'Contactez le support ici'),
+          lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          avatarUrl: adminRunner?.avatarUrl || undefined,
+          membersCount: 2
+        }
+      ];
+    }
+  }, [supportMessages, runners, isAdmin, isRtl, currentUser.id, adminId, adminRunner]);
+
   // Load channels and messages from localStorage to ensure realistic, fully durable storage
   const [channels, setChannels] = useState<ChatChannel[]>(() => {
     const saved = localStorage.getItem('mrc_real_chat_channels');
@@ -205,6 +301,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     localStorage.setItem('mrc_real_chat_channels', JSON.stringify(defaultChannels));
     return defaultChannels;
   });
+
+  const allChannels = React.useMemo<ChatChannel[]>(() => {
+    return [...channels, ...supportChannels];
+  }, [channels, supportChannels]);
 
   const [channelMessages, setChannelMessages] = useState<{ [chanId: string]: Message[] }>(() => {
     const saved = localStorage.getItem('mrc_real_chat_messages');
@@ -407,8 +507,87 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     }
   }, [isSupabaseConfigured]);
 
-  const activeChannel = channels.find(c => c.id === activeChannelId) || channels[0];
-  const messages = channelMessages[activeChannelId] || [];
+  const activeChannel = allChannels.find(c => c.id === activeChannelId) || allChannels[0];
+
+  const messages = React.useMemo<Message[]>(() => {
+    if (activeChannelId === 'support-channel-admin') {
+      // Regular user support messages
+      return supportMessages
+        .filter(msg => 
+          (msg.senderId === currentUser.id && msg.receiverId === adminId) ||
+          (msg.senderId === adminId && msg.receiverId === currentUser.id) ||
+          (msg.receiverId === 'default' || msg.receiverId === 'all')
+        )
+        .map(msg => ({
+          id: msg.id,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          senderRole: msg.senderId === adminId ? 'Admin' : 'Membre',
+          avatarUrl: msg.senderAvatar || null,
+          text: msg.text,
+          time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'text' as const,
+          read: msg.read
+        }));
+    } else if (activeChannelId.startsWith('support-user-')) {
+      // Admin support messages with a specific user
+      const targetUserId = activeChannelId.replace('support-user-', '');
+      return supportMessages
+        .filter(msg => 
+          (msg.senderId === targetUserId && msg.receiverId === currentUser.id) ||
+          (msg.senderId === currentUser.id && msg.receiverId === targetUserId) ||
+          (targetUserId && (msg.senderId === adminId || msg.senderId === 'usr-1') && msg.receiverId === 'default')
+        )
+        .map(msg => ({
+          id: msg.id,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          senderRole: msg.senderId === adminId ? 'Admin' : 'Membre',
+          avatarUrl: msg.senderAvatar || null,
+          text: msg.text,
+          time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'text' as const,
+          read: msg.read
+        }));
+    } else {
+      // Regular community messages
+      return channelMessages[activeChannelId] || [];
+    }
+  }, [activeChannelId, supportMessages, channelMessages, currentUser.id, adminId]);
+
+  // Mark active support messages as read
+  useEffect(() => {
+    if (!activeChannelId) return;
+    
+    if (activeChannelId === 'support-channel-admin') {
+      const hasUnread = supportMessages.some(
+        msg => msg.senderId === adminId && msg.receiverId === currentUser.id && !msg.read
+      );
+      if (hasUnread) {
+        setSupportMessages(prev => 
+          prev.map(msg => 
+            msg.senderId === adminId && msg.receiverId === currentUser.id
+              ? { ...msg, read: true }
+              : msg
+          )
+        );
+      }
+    } else if (activeChannelId.startsWith('support-user-')) {
+      const targetUserId = activeChannelId.replace('support-user-', '');
+      const hasUnread = supportMessages.some(
+        msg => msg.senderId === targetUserId && msg.receiverId === currentUser.id && !msg.read
+      );
+      if (hasUnread) {
+        setSupportMessages(prev => 
+          prev.map(msg => 
+            msg.senderId === targetUserId && msg.receiverId === currentUser.id
+              ? { ...msg, read: true }
+              : msg
+          )
+        );
+      }
+    }
+  }, [activeChannelId, supportMessages, currentUser.id, adminId]);
 
   // Recording seconds ticking effect
   useEffect(() => {
@@ -638,6 +817,29 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         reader.onloadend = () => {
           const base64AudioUrl = reader.result as string;
           
+          const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+          if (isSupport) {
+            const isSupportAdmin = isAdmin;
+            const receiverId = isSupportAdmin 
+              ? activeChannelId.replace('support-user-', '') 
+              : adminId;
+
+            const newSupportMsg: SupportMessage = {
+              id: `support-msg-${Date.now()}`,
+              senderId: currentUser.id,
+              senderName: currentUser.name,
+              senderAvatar: currentUser.avatarUrl,
+              receiverId,
+              text: `🎙️ Message Vocal (${durationStr})`,
+              timestamp: new Date().toISOString(),
+              read: false
+            };
+
+            setSupportMessages(prev => [...prev, newSupportMsg]);
+            setIsRecording(false);
+            return;
+          }
+          
           const voiceMsg: Message = {
             id: 'm-voice-' + Date.now(),
             senderId: currentUser.id || 'usr-1',
@@ -685,6 +887,29 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const durationStr = formatSeconds(durationSeconds);
+      
+      const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+      if (isSupport) {
+        const isSupportAdmin = isAdmin;
+        const receiverId = isSupportAdmin 
+          ? activeChannelId.replace('support-user-', '') 
+          : adminId;
+
+        const newSupportMsg: SupportMessage = {
+          id: `support-msg-${Date.now()}`,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatarUrl,
+          receiverId,
+          text: `🎙️ Message Vocal (Simulé) (${durationStr})`,
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+
+        setSupportMessages(prev => [...prev, newSupportMsg]);
+        setIsRecording(false);
+        return;
+      }
       
       const voiceMsg: Message = {
         id: 'm-voice-' + Date.now(),
@@ -1271,6 +1496,31 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+    if (isSupport) {
+      const isSupportAdmin = isAdmin;
+      const receiverId = isSupportAdmin 
+        ? activeChannelId.replace('support-user-', '') 
+        : adminId;
+
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl,
+        receiverId,
+        text: inputText,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      setSupportMessages(prev => [...prev, newSupportMsg]);
+      setInputText('');
+      setReplyingTo(null);
+      setShowEmojiPicker(false);
+      return;
+    }
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const newMsg: Message = {
@@ -1426,6 +1676,33 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Simulate file / image / audio attachments
   const triggerAttachment = (type: 'voice' | 'image' | 'file') => {
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+    if (isSupport) {
+      const isSupportAdmin = isAdmin;
+      const receiverId = isSupportAdmin 
+        ? activeChannelId.replace('support-user-', '') 
+        : adminId;
+
+      let text = '';
+      if (type === 'voice') text = '🎙️ Message Vocal enregistré';
+      else if (type === 'image') text = '📷 Photo: Superbe coucher de soleil pendant le run';
+      else text = '📁 Fichier: Programme_Detaillé_Mosta_Trail.pdf';
+
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl,
+        receiverId,
+        text,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      setSupportMessages(prev => [...prev, newSupportMsg]);
+      return;
+    }
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     let mockMsg: Message;
 
@@ -1477,7 +1754,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   };
 
   // Filter channels based on search
-  const filteredChannels = channels.filter(c => 
+  const filteredChannels = allChannels.filter(c => 
     c.name.toLowerCase().includes(chatSearch.toLowerCase()) || 
     c.lastMessage.toLowerCase().includes(chatSearch.toLowerCase())
   );
@@ -1513,8 +1790,30 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 onClick={() => {
                   setActiveChannelId(channel.id);
                   setMobileView('chat');
-                  // Clear unread
-                  setChannels(channels.map(c => c.id === channel.id ? { ...c, unreadCount: 0 } : c));
+                  // Clear unread for community
+                  if (channel.id === 'chan-group-1') {
+                    setChannels(channels.map(c => c.id === channel.id ? { ...c, unreadCount: 0 } : c));
+                  } else {
+                    // For support channels, mark them as read in supportMessages state
+                    if (channel.id === 'support-channel-admin') {
+                      setSupportMessages(prev => 
+                        prev.map(msg => 
+                          msg.senderId === adminId && msg.receiverId === currentUser.id
+                            ? { ...msg, read: true }
+                            : msg
+                        )
+                      );
+                    } else if (channel.id.startsWith('support-user-')) {
+                      const targetUserId = channel.id.replace('support-user-', '');
+                      setSupportMessages(prev => 
+                        prev.map(msg => 
+                          msg.senderId === targetUserId && msg.receiverId === currentUser.id
+                            ? { ...msg, read: true }
+                            : msg
+                        )
+                      );
+                    }
+                  }
                 }}
                 className={`w-full flex items-center gap-3 p-3 rounded-2xl transition text-left cursor-pointer ${
                   isActive 
@@ -2098,7 +2397,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           {/* Header */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
             <h4 className="font-serif italic font-black text-sm text-slate-800">
-              {isRtl ? 'أعضاء المجموعة' : 'Membres & Infos'}
+              {isRtl ? 'المعلومات والتفاصيل' : 'Membres & Infos'}
             </h4>
             <button 
               onClick={() => setShowInfoPanel(false)}
@@ -2108,73 +2407,140 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             </button>
           </div>
 
-          {/* Group Meta Info */}
-          <div className="p-4 border-b border-slate-100 text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-md mx-auto mb-3 overflow-hidden">
-              <img src="/logo.png" alt="community" className="w-full h-full object-contain p-3 brightness-0 invert" referrerPolicy="no-referrer" />
-            </div>
-            <h5 className="font-serif italic font-black text-base text-slate-800">
-              community
-            </h5>
-            <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider mt-1">
-              {groupMembers.length} {isRtl ? 'عضو نشط' : 'membres actifs'}
-            </p>
-            <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-3 px-1 text-center">
-              {isRtl 
-                ? 'القناة الرسمية للتواصل، تنظيم التدريبات، ومشاركة تفاصيل رحلات النادي اللوجستية.' 
-                : 'Canal de communication officiel pour la community. Coordination des sorties, hébergements et entraînements.'}
-            </p>
-          </div>
+          {activeChannel.isGroup ? (
+            <>
+              {/* Group Meta Info */}
+              <div className="p-4 border-b border-slate-100 text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-md mx-auto mb-3 overflow-hidden">
+                  <img src="/logo.png" alt="community" className="w-full h-full object-contain p-3 brightness-0 invert" referrerPolicy="no-referrer" />
+                </div>
+                <h5 className="font-serif italic font-black text-base text-slate-800">
+                  community
+                </h5>
+                <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider mt-1">
+                  {groupMembers.length} {isRtl ? 'عضو نشط' : 'membres actifs'}
+                </p>
+                <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-3 px-1 text-center">
+                  {isRtl 
+                    ? 'القناة الرسمية للتواصل، تنظيم التدريبات، ومشاركة تفاصيل رحلات النادي اللوجستية.' 
+                    : 'Canal de communication officiel pour la community. Coordination des sorties, hébergements et entraînements.'}
+                </p>
+              </div>
 
-          {/* Members List Section */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            <div className="px-1 text-[10px] font-extrabold text-slate-400 font-mono uppercase tracking-wider">
-              {isRtl ? 'قائمة الأعضاء' : 'Membres du Club'} ({groupMembers.length})
-            </div>
+              {/* Members List Section */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div className="px-1 text-[10px] font-extrabold text-slate-400 font-mono uppercase tracking-wider">
+                  {isRtl ? 'قائمة الأعضاء' : 'Membres du Club'} ({groupMembers.length})
+                </div>
 
-            <div className="space-y-2">
-              {groupMembers.map((member) => {
-                const isMe = member.id === currentUser.id;
-                return (
-                  <div 
-                    key={member.id}
-                    className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition"
-                  >
-                    {/* Avatar */}
-                    <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-600">
-                        {member.avatarUrl ? (
-                          <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                <div className="space-y-2">
+                  {groupMembers.map((member) => {
+                    const isMe = member.id === currentUser.id;
+                    return (
+                      <div 
+                        key={member.id}
+                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition"
+                      >
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-600">
+                            {member.avatarUrl ? (
+                              <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                            )}
+                          </div>
+                          <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white bg-emerald-500" />
+                        </div>
+
+                        {/* Member info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <p className="text-xs font-bold text-slate-800 truncate">
+                              {member.name} {isMe && <span className="text-[9px] text-blue-600 font-mono font-bold">({isRtl ? 'أنت' : 'Moi'})</span>}
+                            </p>
+                          </div>
+                          <p className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">
+                            {member.runClubRole || 'Membre'}
+                          </p>
+                        </div>
+
+                        {/* Meta Action */}
+                        {member.bloodType && (
+                          <span className="bg-red-50 text-red-600 border border-red-100 text-[9px] font-black font-mono px-1.5 py-0.5 rounded-lg shadow-3xs shrink-0">
+                            {member.bloodType}
+                          </span>
                         )}
                       </div>
-                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white bg-emerald-500" />
-                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            // Support Channel Info Panel
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              {(() => {
+                const partnerUser = isAdmin 
+                  ? runners.find(r => r.id === activeChannelId.replace('support-user-', '')) 
+                  : adminRunner;
 
-                    {/* Member info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 justify-between">
-                        <p className="text-xs font-bold text-slate-800 truncate">
-                          {member.name} {isMe && <span className="text-[9px] text-blue-600 font-mono font-bold">({isRtl ? 'أنت' : 'Moi'})</span>}
-                        </p>
+                if (!partnerUser) return null;
+
+                return (
+                  <div className="p-4 space-y-6 text-center">
+                    <div>
+                      <div className="w-20 h-20 rounded-full bg-slate-100 border-2 border-blue-500 shadow-md mx-auto mb-3 overflow-hidden flex items-center justify-center text-xl font-extrabold text-slate-600">
+                        {partnerUser.avatarUrl ? (
+                          <img src={partnerUser.avatarUrl} alt={partnerUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          partnerUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                        )}
                       </div>
-                      <p className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">
-                        {member.runClubRole || 'Membre'}
-                      </p>
+                      <h5 className="font-serif italic font-black text-lg text-slate-800">
+                        {partnerUser.name}
+                      </h5>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-2">
+                        {isRtl ? 'خط المساعدة والنجدة 🚨' : 'Canal Support & Secours 🚨'}
+                      </span>
                     </div>
 
-                    {/* Meta Action */}
-                    {member.bloodType && (
-                      <span className="bg-red-50 text-red-600 border border-red-100 text-[9px] font-black font-mono px-1.5 py-0.5 rounded-lg shadow-3xs shrink-0">
-                        {member.bloodType}
-                      </span>
-                    )}
+                    <div className="border-t border-slate-100 pt-4 text-left">
+                      <h6 className="text-[10px] font-extrabold text-slate-400 font-mono uppercase tracking-wider mb-2">
+                        {isRtl ? 'معلومات الاتصال الطارئة' : 'Informations d\'urgence'}
+                      </h6>
+                      <ul className="space-y-3 text-xs text-slate-600 font-semibold">
+                        <li className="flex justify-between">
+                          <span className="text-slate-400">{isRtl ? 'فصيلة الدم' : 'Groupe Sanguin'}</span>
+                          <span className="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-md border border-red-100">
+                            {partnerUser.bloodType || 'N/A'}
+                          </span>
+                        </li>
+                        <li className="flex justify-between">
+                          <span className="text-slate-400">{isRtl ? 'رقم الهاتف' : 'Téléphone'}</span>
+                          <span>{partnerUser.phone || '06 12 34 56 78'}</span>
+                        </li>
+                        <li className="flex justify-between">
+                          <span className="text-slate-400">Club</span>
+                          <span>Mosta Run Club</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 text-left text-xs leading-relaxed text-slate-600">
+                      <p className="font-bold text-blue-800 mb-1">
+                        {isRtl ? 'تعليمات السلامة' : 'Directives de Sécurité'}
+                      </p>
+                      {isRtl 
+                        ? 'في حالة حدوث إصابة أو حادث أثناء التدريب، تواصل مباشرة مع الإدارة هنا. تأكد دائماً من تسجيل بياناتك الطبية وتحديثها في ملفك الشخصي.'
+                        : 'En cas d\'accident ou de blessure sur le parcours, signalez immédiatement votre position et la situation. Les encadrants interviendront rapidement.'}
+                    </div>
                   </div>
                 );
-              })}
+              })()}
             </div>
-          </div>
+          )}
+
         </div>
       )}
 

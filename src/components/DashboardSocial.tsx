@@ -969,60 +969,7 @@ export default function DashboardSocial({
             </a>
           </div>
 
-          {/* Support Chat Trigger Card - Replaces Upcoming Training Highlight */}
-          <div className="bg-gradient-to-br from-[#1034A6] via-[#1E56A0] to-[#2F89FC] text-white rounded-[2rem] p-5 shadow-lg border border-white/10 space-y-4 relative overflow-hidden group">
-            {/* Ambient animated bg aura */}
-            <div className="absolute -right-12 -top-12 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Headphones className="w-4 h-4 text-amber-300 animate-pulse shrink-0" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono">
-                  {isRtl ? 'الدعم والمساعدة' : 'SUPPORT LIVE MRC'}
-                </h3>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <span className="text-[9px] text-emerald-300 font-bold font-mono">
-                  {isRtl ? 'متصل الآن' : 'DISPO'}
-                </span>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <h4 className="text-sm font-serif italic font-extrabold text-white">
-                {isRtl ? 'هل لديك أي سؤال أو استفسار؟' : "Besoin d'aide ou de conseils ?"}
-              </h4>
-              <p className="text-xs text-white/85 leading-relaxed font-medium">
-                {isRtl 
-                  ? 'تواصل مباشرة مع الكابتن عبدو الزايتي وطاقم المشرفين للإبلاغ عن مشكلة أو الاستفسار عن الاشتراكات والخرجات.'
-                  : "Démarrez un chat privé avec le Captain Abdou Zaiti. Signalez un bug, posez vos questions sur les cotisations, maillots ou sorties."
-                }
-              </p>
-              
-              <div className="flex items-center gap-2 bg-white/10 rounded-xl p-2.5 border border-white/5">
-                <div className="w-6 h-6 rounded-full bg-white text-[#1034A6] flex items-center justify-center font-bold text-[9px] overflow-hidden shrink-0">
-                  AZ
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[9px] text-white/70 font-bold block leading-none">
-                    {isRtl ? 'المدير العام' : 'Fondateur / Admin'}
-                  </span>
-                  <span className="text-[10px] text-white font-black block truncate leading-tight mt-0.5">
-                    Abdou Zaiti
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => onOpenSupportChat?.()}
-              className="w-full py-3 bg-white hover:bg-slate-50 text-[#1034A6] text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
-            >
-              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-              <span>{isRtl ? 'بدء محادثة الدعم' : 'Démarrer le Chat'}</span>
-            </button>
-          </div>
 
 
 
