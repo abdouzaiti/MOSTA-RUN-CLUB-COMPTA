@@ -153,51 +153,8 @@ export default function InscriptionsAndProfile({ currentUser, setCurrentUser, ru
         </div>
       </div>
 
-      {/* 4. STATISTIQUES DU CLUB CARD (GRANDE CARDE VIOLETTE A DEGRADÉ) */}
-      <div className="bg-gradient-to-br from-[#8E2DE2] via-[#6300D4] to-[#4A00E0] rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
-        {/* Decorative Circles */}
-        <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-        <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500/15 rounded-full blur-2xl" />
 
-        <h3 className={`text-[10px] font-bold text-purple-200 uppercase tracking-widest mb-4 flex items-center gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <Trophy className="w-3.5 h-3.5 text-yellow-300" />
-          <span>{isRtl ? 'إحصائيات نادي مصطفى ران' : 'STATISTIQUES DU CLUB'}</span>
-        </h3>
 
-        <div className="grid grid-cols-4 gap-2 text-center">
-          <div className="space-y-1">
-            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الأعضاء' : 'MEMBRES'}</span>
-            <div className="flex items-center justify-center gap-1">
-              <Users className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">{runners ? Math.max(runners.length, 128) : 128}</span>
-            </div>
-          </div>
-
-          <div className="border-l border-white/10 space-y-1">
-            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الخرجات' : 'SORTIES'}</span>
-            <div className="flex items-center justify-center gap-1">
-              <Award className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">{runs ? Math.max(runs.length, 24) : 24}</span>
-            </div>
-          </div>
-
-          <div className="border-l border-white/10 space-y-1">
-            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'المسافة' : 'KM'}</span>
-            <div className="flex items-center justify-center gap-1">
-              <Trophy className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">{totalClubDistance}</span>
-            </div>
-          </div>
-
-          <div className="border-l border-white/10 space-y-1">
-            <span className="text-[9px] font-semibold text-purple-200 block tracking-wider uppercase">{isRtl ? 'الولايات' : 'VILAYAS'}</span>
-            <div className="flex items-center justify-center gap-1">
-              <MapPin className="w-3 text-purple-300 shrink-0" />
-              <span className="text-base font-black text-white">{totalVilayas}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Emergency details Edit Modal Popup (Pristine overlay popup UX!) */}
       {showEmergencyModal && (
