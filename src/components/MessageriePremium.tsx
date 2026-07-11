@@ -2114,34 +2114,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* Supabase & Agora Connection status and config wizard trigger */}
-            <button
-              onClick={() => setShowSetupModal(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-xl text-[10px] font-mono font-bold transition cursor-pointer text-slate-600"
-              title="Connecteurs Supabase Realtime & Agora"
-            >
-              <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-500 animate-pulse' : 'text-slate-400'}`} />
-              <span className="opacity-80">Supabase:</span>
-              <span className={isSupabaseConfigured ? 'text-emerald-600 font-extrabold' : 'text-amber-600'}>
-                {isSupabaseConfigured ? 'LIVE 🟢' : 'DÉMO 🟡'}
-              </span>
-              <span className="text-slate-300">|</span>
-              <Zap className={`w-3 h-3 ${isAgoraConfigured ? 'text-blue-500' : 'text-slate-400'}`} />
-              <span className="opacity-80">Agora:</span>
-              <span className={isAgoraConfigured ? 'text-blue-600 font-extrabold' : 'text-slate-500 font-normal'}>
-                {isAgoraConfigured ? 'LIVE 🔵' : 'DÉMO 🟡'}
-              </span>
-            </button>
-
-            {/* Mobile small status indicator */}
-            <button
-              onClick={() => setShowSetupModal(true)}
-              className="sm:hidden p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
-              title="Status Supabase & Agora"
-            >
-              <Database className={`w-4 h-4 ${isSupabaseConfigured ? 'text-emerald-500' : 'text-slate-400'}`} />
-            </button>
-
             <button 
               onClick={() => handleStartCall('voice')}
               className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
@@ -2187,7 +2159,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   }`}
               >
                 {/* Sender Title meta */}
-                {!isMe && (
+                {!isMe && message.type !== 'image' && (
                   <span className="text-[9px] font-bold text-slate-400 mb-1 px-1 font-mono uppercase">
                     {message.senderName} • {message.senderRole}
                   </span>
@@ -2205,9 +2177,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                       if (navigator.vibrate) navigator.vibrate([45, 45]);
                     }}
                     className={`rounded-2xl p-3 shadow-3xs relative overflow-hidden transition-all select-none cursor-pointer active:scale-[0.98] ${
-                      isMe 
-                        ? 'bg-blue-600 text-white border border-blue-600 rounded-tr-none' 
-                        : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
+                      message.type === 'image'
+                        ? 'bg-transparent border-transparent shadow-none !p-0'
+                        : isMe 
+                          ? 'bg-blue-600 text-white border border-blue-600 rounded-tr-none' 
+                          : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
                     }`}
                   >
                     {/* Reply container inside the message */}
@@ -2270,9 +2244,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                           </div>
                         </div>
-                        {message.text && message.text !== '📷 Photo' && (
-                          <p className="text-xs font-semibold">{message.text}</p>
-                        )}
                       </div>
                     ) : message.type === 'file' ? (
                       <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">

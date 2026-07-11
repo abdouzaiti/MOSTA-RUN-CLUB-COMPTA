@@ -934,15 +934,19 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
               return (
                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                   <div className={`flex items-center gap-1.5 mb-1 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <span className="font-extrabold text-[9px] text-slate-600">
-                      {isMe ? (isRtl ? 'أنا' : 'Moi') : msg.senderName}
-                    </span>
+                    { (msg as any).type !== 'image' && (
+                      <span className="font-extrabold text-[9px] text-slate-600">
+                        {isMe ? (isRtl ? 'أنا' : 'Moi') : msg.senderName}
+                      </span>
+                    )}
                     <span className="text-[8px] text-slate-400 font-mono">{formatTime(msg.timestamp)}</span>
                   </div>
                   <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs relative group/msg ${
-                    isMe 
-                      ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
-                      : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
+                    (msg as any).type === 'image' 
+                      ? 'bg-transparent border-transparent shadow-none !p-0' 
+                      : isMe 
+                        ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
+                        : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
                   }`}>
                     {(msg as any).type === 'voice' ? (
                       <div className="flex items-center gap-2 min-w-[120px]">
@@ -963,7 +967,6 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                         />
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                         </div>
-                        {msg.text && msg.text !== '📷 Photo' && <p className="mt-1">{msg.text.replace('📷 Photo: ', '')}</p>}
                       </div>
                     ) : (msg as any).type === 'file' ? (
                       <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
