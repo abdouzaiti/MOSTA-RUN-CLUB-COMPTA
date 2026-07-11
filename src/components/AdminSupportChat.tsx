@@ -32,6 +32,8 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const isAdmin = currentUser.runClubRole === 'Admin' || currentUser.id === adminId;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const isGirlMode = typeof window !== 'undefined' && localStorage.getItem('mrc_girl_mode') === 'true';
+
   // Load support messages from localStorage
   const [messages, setMessages] = useState<SupportMessage[]>(() => {
     const saved = localStorage.getItem('mrc_support_messages');
@@ -368,7 +370,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
           <div className={`p-3 bg-slate-50 border-b border-slate-200/60 flex items-center gap-2.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-full bg-[#1034A6] text-white flex items-center justify-center text-xs font-black overflow-hidden border border-slate-200">
-                <img src="/logo.png" alt="Abdou Zaiti Avatar" className="w-full h-full object-contain p-1 bg-white" referrerPolicy="no-referrer" />
+                <img src={isGirlMode ? "/pinklogo.png" : "/logo.png"} alt="Abdou Zaiti Avatar" className="w-full h-full object-contain p-1 bg-white" referrerPolicy="no-referrer" />
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></span>
             </div>

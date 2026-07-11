@@ -43,6 +43,7 @@ export default function DashboardSocial({
   onOpenSupportChat
 }: DashboardSocialProps) {
   const isRtl = language === 'ar';
+  const isGirlMode = typeof window !== 'undefined' && localStorage.getItem('mrc_girl_mode') === 'true';
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
 
   // Live screenshot of the real vercel website with a mockup fallback
@@ -474,7 +475,7 @@ export default function DashboardSocial({
       {/* Top Welcome / Hero Banner Banner Section */}
       <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-[#1034A6] via-[#1E56A0] to-[#2F89FC] text-white p-6 sm:p-8 shadow-xl border border-white/10">
         <div className="absolute top-0 right-0 p-8 opacity-40 pointer-events-none transform translate-x-8 -translate-y-12 blur-[2px]">
-          <img src="/logo.png" alt="Logo" className="w-80 h-80 object-contain drop-shadow-xl brightness-0 invert" />
+          <img src={isGirlMode ? "/pinklogo.png" : "/logo.png"} alt="Logo" className="w-80 h-80 object-contain drop-shadow-xl brightness-0 invert" />
         </div>
         <div className="relative z-10 max-w-xl space-y-4">
           <div className="flex items-center gap-2 bg-white/15 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase backdrop-blur-xs w-fit">

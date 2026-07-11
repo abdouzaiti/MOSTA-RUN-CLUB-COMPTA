@@ -29,9 +29,21 @@ interface SidebarProps {
   onLogout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  girlMode?: boolean;
+  setGirlMode?: (enabled: boolean) => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdateCurrentUser, onLogout, language, setLanguage }: SidebarProps) {
+export default function Sidebar({ 
+  activeTab, 
+  setActiveTab, 
+  currentUser, 
+  onUpdateCurrentUser, 
+  onLogout, 
+  language, 
+  setLanguage, 
+  girlMode,
+  setGirlMode
+}: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,17 +100,36 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
       <div className={`lg:hidden w-full bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shrink-0 relative z-40 ${
         activeTab === 'messagerie' ? 'hidden' : ''
       }`}>
-        <div className="flex items-center gap-2">
-          <div className="p-1 shrink-0">
-            <img src="/logo.png" alt="Mosta Run Club Logo" className="w-8 h-8 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />
+        {/* Left Section Logo & Brand - Clickable Theme Mod Trigger */}
+        <div 
+          onClick={() => setGirlMode && setGirlMode(!girlMode)}
+          className="flex items-center gap-2 cursor-pointer group active:scale-95 transition-transform"
+          title={girlMode ? "Mode Normal" : "Girl Mode 🌸"}
+        >
+          <div className="p-1 shrink-0 relative">
+            <img src={girlMode ? "/pinklogo.png" : "/logo.png"} alt="Mosta Run Club Logo" className="w-8 h-8 object-contain drop-shadow-sm group-hover:rotate-12 transition-transform duration-300" referrerPolicy="no-referrer" />
           </div>
           <div>
-            <span className="font-serif italic font-black text-xs text-[#1034A6] tracking-widest block leading-none">MOSTA RUN CLUB</span>
-            <span className="text-[8px] font-mono tracking-widest text-[#2F89FC] uppercase font-bold">MRC Team</span>
+            <span className={`font-serif italic font-black text-xs tracking-widest block leading-none transition-colors ${girlMode ? 'text-pink-600' : 'text-[#1034A6]'}`}>MOSTA RUN CLUB</span>
+            <span className={`text-[8px] font-mono tracking-widest uppercase font-bold transition-colors ${girlMode ? 'text-rose-400' : 'text-[#2F89FC]'}`}>{girlMode ? 'GIRL MODE 🌸' : 'MRC Team'}</span>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        {/* Right Section Actions - Theme Mod Toggle Trigger & Quick controls */}
+        <div className="flex items-center gap-1.5">
+          {/* Theme Mod Toggle Trigger */}
+          <button
+            onClick={() => setGirlMode && setGirlMode(!girlMode)}
+            className={`p-2 rounded-full border cursor-pointer transition-all duration-300 flex items-center justify-center relative active:scale-90 ${
+              girlMode 
+                ? 'bg-pink-50 border-pink-200 text-pink-500 shadow-xs scale-105' 
+                : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+            title={girlMode ? "Mode Normal ⚡" : "Girl Mode 🌸"}
+          >
+            <span className="text-xs leading-none">🌸</span>
+          </button>
+
           {/* Notifications Trigger */}
           <button
             onClick={() => setActiveTab('notifications')}
@@ -113,7 +144,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
           </button>
 
           {/* Mobile Profile Photo Quick Access */}
-          <div className="relative shrink-0 group mr-1">
+          <div className="relative shrink-0 group mr-0.5">
             <div 
               onClick={() => fileInputRef.current?.click()}
               className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] overflow-hidden border border-slate-200 cursor-pointer shadow-sm hover:ring-2 ring-blue-400 transition"
@@ -148,9 +179,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser, onUpdate
           {/* Top Header & Logo stacked */}
           <div className="space-y-6">
             <div className="flex flex-col items-center pt-2 text-center relative z-15">
-              <div className="p-2 flex items-center justify-center w-24 h-24 transform hover:scale-[1.05] transition duration-300 overflow-hidden">
-                <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain drop-shadow-lg brightness-0 invert" referrerPolicy="no-referrer" />
-              </div>
+              <button 
+                type="button"
+                onClick={() => setGirlMode && setGirlMode(!girlMode)}
+                className="p-2 flex items-center justify-center w-24 h-24 transform hover:scale-[1.05] transition duration-300 overflow-hidden cursor-pointer active:scale-95 group focus:outline-hidden"
+                title={girlMode ? "Mode Normal" : "Girl Mode 🌸"}
+              >
+                <img src="/logo.png" alt="Mosta Run Club Logo" className="w-full h-full object-contain drop-shadow-lg group-hover:rotate-12 transition-transform duration-300 brightness-0 invert" referrerPolicy="no-referrer" />
+              </button>
             </div>
 
             {/* Menu Links */}

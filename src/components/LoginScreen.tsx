@@ -10,9 +10,10 @@ interface LoginScreenProps {
   onUpdateRunner: (user: Runner) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  girlMode?: boolean;
 }
 
-export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage }: LoginScreenProps) {
+export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage, girlMode }: LoginScreenProps) {
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   
   // Authentication states
@@ -165,7 +166,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
         <div className="w-full max-w-lg bg-white rounded-3xl border border-natural-border shadow-md overflow-hidden animate-fade-in">
           {/* Header */}
           <div className="p-6 bg-natural-olive/10 border-b border-natural-divider text-center space-y-2 relative">
-            <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-2 object-contain" />
+            <img src={girlMode ? "/pinklogo.png" : "/logo.png"} alt="Logo" className="w-16 h-16 mx-auto mb-2 object-contain" />
             <div className={`absolute top-4 ${language === 'ar' ? 'left-4' : 'right-4'} bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1`}>
               <Sparkles className="w-3 h-3 animate-pulse" />
               {language === 'ar' ? 'عضو جديد !' : 'Nouveau membre !'}
@@ -311,7 +312,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
       {/* Top Left Logo */}
       <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 animate-fade-in flex items-center gap-3">
         <img 
-          src="/logo.png" 
+          src={girlMode ? "/pinklogo.png" : "/logo.png"} 
           alt="Mosta Run Club" 
           className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-lg" 
         />

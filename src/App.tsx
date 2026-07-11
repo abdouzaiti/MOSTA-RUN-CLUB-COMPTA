@@ -844,6 +844,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               onUpdateRunner={handleUpdateCurrentUser}
               language={language}
               setLanguage={setLanguage}
+              girlMode={girlMode}
             />
           )}
         </>
@@ -858,10 +859,12 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
             onLogout={handleLogout}
             language={language}
             setLanguage={setLanguage}
+            girlMode={girlMode}
+            setGirlMode={handleSetGirlMode}
           />
 
           {/* Right Main Scrollable View Panel */}
-          <div className={`flex-1 flex flex-col h-full relative lg:-translate-x-[3cm] lg:w-[calc(100%+3cm)] lg:max-w-[calc(100%+3cm)] ${
+          <div className={`flex-1 flex flex-col h-full relative ${
             activeTab === 'messagerie'
               ? 'overflow-hidden p-0' 
               : 'overflow-y-auto pt-4 pb-4 pr-4 pl-2 lg:pt-6 lg:pb-6 lg:pr-6 lg:pl-3 lg:no-scrollbar'

@@ -106,6 +106,7 @@ interface MessageriePremiumProps {
 
 export default function MessageriePremium({ currentUser, runners, language }: MessageriePremiumProps) {
   const isRtl = language === 'ar';
+  const isGirlMode = typeof window !== 'undefined' && localStorage.getItem('mrc_girl_mode') === 'true';
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -1871,7 +1872,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   }`}>
                     {channel.isGroup ? (
                       <img 
-                        src="/logo.png" 
+                        src={isGirlMode ? "/pinklogo.png" : "/logo.png"} 
                         alt={channel.name} 
                         className={`w-full h-full object-contain p-2 ${isActive ? 'brightness-0 invert' : ''}`} 
                         referrerPolicy="no-referrer" 

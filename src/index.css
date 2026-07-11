@@ -145,7 +145,7 @@
 }
 
 /* Custom scrollbar and ambient grid styling */
-::-webkit-scrollbar {
+  ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
@@ -159,4 +159,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(90, 90, 64, 0.5);
 }
-
