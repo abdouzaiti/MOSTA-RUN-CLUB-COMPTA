@@ -951,7 +951,11 @@ export default function UserProfileSettings({
           <button
             type="button"
             onClick={onLogout}
-            className="w-full sm:w-auto px-6 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition border border-rose-200 cursor-pointer flex items-center justify-center gap-2"
+            className={`w-full sm:w-auto px-6 py-2.5 ${
+              girlMode 
+                ? 'bg-pink-50 hover:bg-pink-100 text-pink-600 border-pink-200' 
+                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+            } font-bold text-xs rounded-xl transition border cursor-pointer flex items-center justify-center gap-2`}
           >
             <Lock className="w-3.5 h-3.5" />
             <span>{language === 'ar' ? 'تسجيل الخروج' : 'Se déconnecter'}</span>

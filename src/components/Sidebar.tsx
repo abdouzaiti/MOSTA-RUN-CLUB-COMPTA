@@ -127,7 +127,7 @@ export default function Sidebar({
             }`}
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+            <span className={`absolute top-0 right-0 w-2 h-2 ${girlMode ? 'bg-rose-500' : 'bg-blue-500'} rounded-full animate-pulse`} />
           </button>
 
           {/* Mobile Menu Toggle */}
@@ -183,7 +183,7 @@ export default function Sidebar({
               </button>
             </nav>
 
-            <div className="pt-6 border-t border-white/10 space-y-4">
+            <div className="pt-6 border-t border-white/10 space-y-4 pb-24 sm:pb-8">
               {/* Theme & Language Quick Toggles */}
               <div className="grid grid-cols-2 gap-2">
                 <button 
@@ -222,7 +222,9 @@ export default function Sidebar({
                   onLogout();
                   setIsOpen(false);
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-black shadow-lg shadow-rose-900/20 cursor-pointer transition active:scale-95"
+                className={`w-full flex items-center justify-center gap-2 py-3.5 ${
+                  girlMode ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-900/20' : 'bg-[#1034A6] hover:bg-blue-700 shadow-blue-900/20'
+                } text-white rounded-xl text-sm font-black shadow-lg cursor-pointer transition active:scale-95`}
               >
                 <LogOut className="w-5 h-5" />
                 <span>{language === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}</span>
@@ -338,7 +340,9 @@ export default function Sidebar({
 
               <button 
                 onClick={onLogout}
-                className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold hover:bg-rose-500/20 hover:text-rose-400 rounded-lg border border-white/10 cursor-pointer transition"
+                className={`flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold ${
+                  girlMode ? 'hover:bg-rose-500/20 hover:text-rose-400' : 'hover:bg-blue-500/20 hover:text-blue-400'
+                } rounded-lg border border-white/10 cursor-pointer transition`}
                 title="S'en déconnecter"
               >
                 <LogOut className="w-2.5 h-2.5" />

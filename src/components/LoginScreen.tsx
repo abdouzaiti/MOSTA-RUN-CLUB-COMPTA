@@ -305,22 +305,22 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
   return (
     <div 
-      className={`min-h-screen relative grid grid-cols-1 lg:grid-cols-2 items-center p-4 pt-16 sm:pt-24 lg:p-12 xl:p-16 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
+      className={`min-h-screen relative grid grid-cols-1 lg:grid-cols-2 items-center p-4 pt-4 sm:pt-12 lg:p-12 xl:p-16 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
       dir="ltr"
       style={{ backgroundImage: "url('/back.png')" }}
     >
       {/* Top Left Logo */}
-      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 animate-fade-in flex items-center gap-3">
+      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-10 animate-fade-in flex items-center gap-2 sm:gap-3">
         <img 
           src={girlMode ? "/pinklogo.png" : "/logo.png"} 
           alt="Mosta Run Club" 
-          className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-lg" 
+          className="w-10 h-10 sm:w-20 sm:h-20 object-contain drop-shadow-lg" 
         />
         <div className="flex flex-col text-left leading-tight">
-          <span className="text-base sm:text-lg font-black text-brand-blue tracking-wider uppercase drop-shadow-sm font-sans">
+          <span className="text-sm sm:text-lg font-black text-brand-blue tracking-wider uppercase drop-shadow-sm font-sans">
             One Club
           </span>
-          <span className="text-xs sm:text-sm font-bold text-white italic tracking-wide font-sans drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+          <span className="text-[10px] sm:text-sm font-bold text-white italic tracking-wide font-sans drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
             One Family...
           </span>
         </div>
@@ -370,72 +370,72 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
         <div 
           dir={language === 'ar' ? 'rtl' : 'ltr'}
-          className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[3rem] border border-natural-border shadow-2xl overflow-hidden p-8 sm:p-10 animate-fade-in text-xs space-y-6"
+          className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[2rem] sm:rounded-[3rem] border border-natural-border shadow-2xl overflow-hidden p-6 sm:p-10 animate-fade-in text-xs space-y-4 sm:space-y-6"
         >
-          <div className="border-b border-natural-divider pb-4 text-center">
-            <h2 className="font-extrabold font-sans text-natural-olive text-xl uppercase tracking-wider">{t('login')}</h2>
-            <p className="text-[11px] text-natural-sage font-bold mt-1 font-sans uppercase opacity-80 tracking-wider">{t('welcome')}</p>
+          <div className="border-b border-natural-divider pb-3 sm:pb-4 text-center">
+            <h2 className="font-extrabold font-sans text-natural-olive text-lg sm:text-xl uppercase tracking-wider">{t('login')}</h2>
+            <p className="text-[10px] sm:text-[11px] text-natural-sage font-bold mt-0.5 sm:mt-1 font-sans uppercase opacity-80 tracking-wider">{t('welcome')}</p>
           </div>
 
           {errorMsg && (
-            <div className="p-4 bg-rose-50 text-rose-700 font-bold rounded-2xl border border-rose-100 leading-relaxed font-sans text-[11px] flex items-center gap-2">
+            <div className="p-3 sm:p-4 bg-rose-50 text-rose-700 font-bold rounded-xl sm:rounded-2xl border border-rose-100 leading-relaxed font-sans text-[10px] sm:text-[11px] flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 shrink-0" />
               {errorMsg}
             </div>
           )}
 
-          <form onSubmit={handleLoginSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
+          <form onSubmit={handleLoginSubmit} className="space-y-4 sm:space-y-5">
+            <div className="space-y-1">
+              <label className="block text-[9px] sm:text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
                 {t('username')}
               </label>
               <div className="relative group">
-                <User className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
+                <User className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3 w-4 h-4 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
                 <input
                   type="text"
                   required
                   value={identifier}
                   onChange={e => setIdentifier(e.target.value)}
                   placeholder={t('searchPlaceholder')}
-                  className={`w-full ${language === 'ar' ? 'pr-11 pl-4 text-right' : 'pl-11 pr-4'} py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans transition-all`}
+                  className={`w-full ${language === 'ar' ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4'} py-2.5 sm:py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans transition-all`}
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
+            <div className="space-y-1">
+              <label className="block text-[9px] sm:text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
                 {t('password')}
               </label>
               <div className="relative group">
-                <Lock className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
+                <Lock className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3 w-4 h-4 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className={`w-full ${language === 'ar' ? 'pr-11 pl-12 text-right' : 'pl-11 pr-12'} py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans text-sm transition-all`}
+                  className={`w-full ${language === 'ar' ? 'pr-10 pl-11 text-right' : 'pl-10 pr-11'} py-2.5 sm:py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans text-sm transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className={`absolute ${language === 'ar' ? 'left-3.5' : 'right-3.5'} top-3.5 text-natural-sage hover:text-natural-olive transition-colors p-0.5`}
+                  className={`absolute ${language === 'ar' ? 'left-3.5' : 'right-3.5'} top-2.5 text-natural-sage hover:text-natural-olive transition-colors p-0.5`}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer font-sans text-sm shadow-lg hover:shadow-xl active:scale-95 group"
+              className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer font-sans text-sm shadow-lg hover:shadow-xl active:scale-95 group"
             >
               <span className="uppercase tracking-widest font-extrabold">{t('login')}</span>
               <LogIn className="w-5 h-5 text-natural-accent group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
 
-          <div className="bg-gradient-to-br from-blue-50/50 to-blue-50/25 p-4 rounded-[2rem] border border-blue-100/60 text-center space-y-3">
-            <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+          <div className="bg-gradient-to-br from-blue-50/50 to-blue-50/25 p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] border border-blue-100/60 text-center space-y-2 sm:space-y-3">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-medium leading-relaxed">
               {language === 'ar' 
                 ? 'هل تحتاج إلى حساب؟ يجب على المسؤول تسجيلك في الدليل لتفعيل حسابك.' 
                 : "Besoin d'un accès ? Un administrateur doit vous enregistrer dans l'annuaire pour activer votre compte."}
@@ -444,7 +444,7 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
               type="button"
               id="admin-chat-trigger"
               onClick={() => setIsChatModalOpen(true)}
-              className="w-full py-2.5 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] hover:from-[#1E56A0] hover:to-[#2F89FC] text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all duration-200"
+              className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] hover:from-[#1E56A0] hover:to-[#2F89FC] text-white text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all duration-200"
             >
               <MessageSquare className="w-3.5 h-3.5 shrink-0 text-amber-300 animate-pulse" />
               <span>{language === 'ar' ? 'تحدث مباشرة مع الكابتن عبدو' : "Chat Live avec l'Admin"}</span>

@@ -794,46 +794,46 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
   if (!language) {
     return (
       <div 
-        className="min-h-screen flex items-center justify-center p-6 bg-white"
+        className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-white"
       >
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-natural-border overflow-hidden animate-fade-in relative z-10">
-          <div className="bg-natural-olive p-10 text-center relative overflow-hidden">
-            <Globe className="absolute -right-6 -top-6 w-32 h-32 text-white/10" />
-            <Sparkles className="absolute -left-4 -bottom-4 w-20 h-20 text-white/5" />
+        <div className="max-w-md w-full bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-natural-border overflow-hidden animate-fade-in relative z-10">
+          <div className="bg-natural-olive p-6 sm:p-10 text-center relative overflow-hidden">
+            <Globe className="absolute -right-6 -top-6 w-24 h-24 sm:w-32 sm:h-32 text-white/10" />
+            <Sparkles className="absolute -left-4 -bottom-4 w-16 h-16 sm:w-20 sm:h-20 text-white/5" />
             <div className="relative z-10">
-              <h1 className="text-3xl font-serif italic font-black text-white">MOSTA RUN CLUB</h1>
-              <p className="text-natural-accent text-sm font-bold tracking-[0.2em] mt-1 uppercase">Choose your language</p>
+              <h1 className="text-2xl sm:text-3xl font-serif italic font-black text-white">MOSTA RUN CLUB</h1>
+              <p className="text-natural-accent text-[10px] sm:text-sm font-bold tracking-[0.2em] mt-1 uppercase">Choose your language</p>
             </div>
           </div>
           
-          <div className="p-8 space-y-4">
+          <div className="p-6 sm:p-8 space-y-3 sm:space-y-4">
             <button 
               onClick={() => handleSelectLanguage('ar')}
-              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+              className="w-full group flex items-center justify-between p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
             >
-              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">العربية</span>
-              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">AR</span>
+              <span className="text-lg sm:text-xl font-bold text-natural-text group-hover:text-white transition-colors">العربية</span>
+              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center text-[10px] sm:text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">AR</span>
             </button>
 
             <button 
               onClick={() => handleSelectLanguage('fr')}
-              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+              className="w-full group flex items-center justify-between p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
             >
-              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">Français</span>
-              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">FR</span>
+              <span className="text-lg sm:text-xl font-bold text-natural-text group-hover:text-white transition-colors">Français</span>
+              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center text-[10px] sm:text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">FR</span>
             </button>
 
             <button 
               onClick={() => handleSelectLanguage('en')}
-              className="w-full group flex items-center justify-between p-5 rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
+              className="w-full group flex items-center justify-between p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-natural-bone hover:bg-natural-olive transition-all duration-300 border border-natural-border hover:border-natural-olive cursor-pointer"
             >
-              <span className="text-xl font-bold text-natural-text group-hover:text-white transition-colors">English</span>
-              <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">EN</span>
+              <span className="text-lg sm:text-xl font-bold text-natural-text group-hover:text-white transition-colors">English</span>
+              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center text-[10px] sm:text-xs font-bold text-natural-olive group-hover:bg-natural-accent group-hover:text-white transition-all transform group-hover:scale-110">EN</span>
             </button>
           </div>
 
-          <div className="px-8 pb-8 text-center border-t border-natural-divider pt-4">
-            <p className="text-natural-sage text-[10px] uppercase font-bold tracking-[0.1em]">© 2026 Mostaganem Run Club • Bahr & Sahara</p>
+          <div className="px-6 sm:px-8 pb-6 sm:pb-8 text-center border-t border-natural-divider pt-3 sm:pt-4">
+            <p className="text-natural-sage text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.1em]">© 2026 Mostaganem Run Club • Bahr & Sahara</p>
           </div>
         </div>
       </div>
@@ -850,13 +850,13 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
           {/* Global Loading state spinner for DB */}
           {isLoadingDb ? (
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 min-h-screen flex items-center justify-center">
-              <div className="p-16 text-center bg-white rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-4">
-                <Cpu className="w-10 h-10 text-natural-olive animate-spin" />
+              <div className="p-8 sm:p-16 text-center bg-white rounded-[2rem] sm:rounded-3xl border border-natural-border shadow-xs flex flex-col items-center justify-center space-y-3 sm:space-y-4">
+                <Cpu className="w-8 h-8 sm:w-10 sm:h-10 text-natural-olive animate-spin" />
                 <div className={language === 'ar' ? 'font-arabic' : ''}>
-                  <p className="text-sm font-bold text-natural-olive font-serif italic">
+                  <p className="text-xs sm:text-sm font-bold text-natural-olive font-serif italic">
                     {language === 'ar' ? 'جاري مزامنة قاعدة البيانات...' : 'Synchronisation Supabase en cours...'}
                   </p>
-                  <p className="text-xs text-natural-sage mt-1">
+                  <p className="text-[10px] sm:text-xs text-natural-sage mt-1">
                     {language === 'ar' ? 'استرجاع قائمة العداءين والبرنامج المخطط له.' : 'Récupération sécurisée du roster de course et des planifications réelles.'}
                   </p>
                 </div>
