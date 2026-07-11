@@ -94,6 +94,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   // Voice Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingSecondsRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<any>(null);
@@ -286,8 +287,8 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // In a real app, we would upload this to Supabase Storage.
-        // Here we simulate with a data URL for simplicity
+        const durationSeconds = recordingSecondsRef.current;
+        
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
@@ -302,14 +303,11 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
             text: '🎙️ Vocal Message',
             timestamp: new Date().toISOString(),
             read: false,
-            // In a real implementation, we'd add type: 'voice' and mediaUrl: base64Audio
-            // But since SupportMessage type is fixed, we'll prefix text
           };
           
-          // Add custom property to text if needed, or update types
           (newMessage as any).type = 'voice';
           (newMessage as any).mediaUrl = base64Audio;
-          (newMessage as any).duration = formatSeconds(recordingSeconds);
+          (newMessage as any).duration = formatSeconds(durationSeconds);
 
           try {
             await dbService.sendSupportMessage(newMessage);
@@ -322,8 +320,13 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingSeconds(0);
+      recordingSecondsRef.current = 0;
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
+        setRecordingSeconds(prev => {
+          const next = prev + 1;
+          recordingSecondsRef.current = next;
+          return next;
+        });
       }, 1000);
     } catch (err) {
       console.error("Error starting recording:", err);

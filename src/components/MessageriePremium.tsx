@@ -907,7 +907,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               read: false
             };
 
-            setSupportMessages(prev => [...prev, newSupportMsg]);
+            // Add optional fields for mapping
+            (newSupportMsg as any).type = 'voice';
+            (newSupportMsg as any).mediaUrl = base64AudioUrl;
+            (newSupportMsg as any).duration = durationStr;
+
+            dbService.sendSupportMessage(newSupportMsg).catch(err => {
+              console.error("Error sending support voice message:", err);
+            });
+
             setIsRecording(false);
             return;
           }

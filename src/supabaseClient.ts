@@ -156,6 +156,10 @@ CREATE TABLE IF NOT EXISTS support_messages (
   read BOOLEAN DEFAULT FALSE,
   sender_name TEXT,
   sender_avatar TEXT,
+  reactions JSONB DEFAULT '{}',
+  type TEXT DEFAULT 'text',
+  media_url TEXT,
+  duration TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -339,7 +343,7 @@ function mapAnnouncementToDb(item: Announcement): any {
 }
 
 function mapSupportMessageFromDb(dbItem: any): SupportMessage {
-  return {
+  const msg = {
     id: dbItem.id,
     senderId: dbItem.sender_id,
     senderName: dbItem.sender_name || 'Runner',
@@ -350,10 +354,17 @@ function mapSupportMessageFromDb(dbItem: any): SupportMessage {
     read: Boolean(dbItem.read),
     reactions: dbItem.reactions || {}
   };
+  
+  // Add optional fields
+  if (dbItem.type) (msg as any).type = dbItem.type;
+  if (dbItem.media_url) (msg as any).mediaUrl = dbItem.media_url;
+  if (dbItem.duration) (msg as any).duration = dbItem.duration;
+  
+  return msg;
 }
 
 function mapSupportMessageToDb(item: SupportMessage): any {
-  return {
+  const dbItem = {
     id: item.id,
     sender_id: item.senderId,
     sender_name: item.senderName,
@@ -364,6 +375,13 @@ function mapSupportMessageToDb(item: SupportMessage): any {
     read: item.read ?? false,
     reactions: item.reactions || {}
   };
+
+  // Add optional fields
+  if ((item as any).type) dbItem.type = (item as any).type;
+  if ((item as any).mediaUrl) dbItem.media_url = (item as any).mediaUrl;
+  if ((item as any).duration) dbItem.duration = (item as any).duration;
+
+  return dbItem;
 }
 
 export const dbService = {
