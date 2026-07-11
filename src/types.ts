@@ -124,5 +124,9 @@ export interface SupportMessage {
   timestamp: string; // ISO String
   read?: boolean;
   reactions?: { [key: string]: any }; // emoji -> count, plus 'reactedBy' mapping
+  type?: 'text' | 'image' | 'video' | 'voice' | 'file';
+  mediaUrl?: string;
+  duration?: string;
+  fileSize?: string;
 }
 

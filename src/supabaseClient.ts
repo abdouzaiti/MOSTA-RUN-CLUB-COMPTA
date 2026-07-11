@@ -160,14 +160,34 @@ CREATE TABLE IF NOT EXISTS support_messages (
   type TEXT DEFAULT 'text',
   media_url TEXT,
   duration TEXT,
+  file_size TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read on support_messages" ON support_messages;
-DROP POLICY IF EXISTS "Allow public write on support_messages" ON support_messages;
-CREATE POLICY "Allow public read on support_messages" ON support_messages FOR SELECT USING (true);
-CREATE POLICY "Allow public write on support_messages" ON support_messages FOR ALL USING (true);
+-- 7. Table des messages du Chat Premium (Global/Canaux)
+CREATE TABLE IF NOT EXISTS mrc_messages (
+  id TEXT PRIMARY KEY,
+  sender_id TEXT NOT NULL,
+  sender_name TEXT NOT NULL,
+  sender_role TEXT DEFAULT 'Membre',
+  avatar_url TEXT,
+  text TEXT,
+  time TEXT,
+  type TEXT DEFAULT 'text',
+  media_url TEXT,
+  file_size TEXT,
+  duration TEXT,
+  reply_to JSONB,
+  reactions JSONB DEFAULT '{}',
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE mrc_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read on mrc_messages" ON mrc_messages;
+DROP POLICY IF EXISTS "Allow public write on mrc_messages" ON mrc_messages;
+CREATE POLICY "Allow public read on mrc_messages" ON mrc_messages FOR SELECT USING (true);
+CREATE POLICY "Allow public write on mrc_messages" ON mrc_messages FOR ALL USING (true);
  */
 
 // Helper to handle conversion from snake_case database schema to camelCase front-end TypeScript interfaces
