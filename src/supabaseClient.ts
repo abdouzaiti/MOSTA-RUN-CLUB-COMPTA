@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Runner, Run, RunReport, CustomList, Announcement, SupportMessage } from './types';
+import { useState, useEffect } from 'react';
 
 // Read Supabase credentials from client-side environment variables
 const SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL || '';
@@ -709,7 +710,22 @@ export const dbService = {
 
   async sendSupportMessage(message: SupportMessage): Promise<void> {
     if (!supabase) return;
-    const dbMsg = mapSupportMessageToDb(message);
+
+    // Intercept and upload media if it's a base64 data URI
+    const msgCopy = { ...message };
+    if ((msgCopy as any).mediaUrl && (msgCopy as any).mediaUrl.startsWith('data:')) {
+      try {
+        const ext = (msgCopy as any).mediaUrl.split(';base64,')[0].split('/')[1] || 'bin';
+        const publicUrl = await this.uploadMediaFile((msgCopy as any).mediaUrl, `support_${msgCopy.id}.${ext}`);
+        if (publicUrl) {
+          (msgCopy as any).mediaUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading support media on send:", err);
+      }
+    }
+
+    const dbMsg = mapSupportMessageToDb(msgCopy);
     const { error } = await supabase
       .from('support_messages')
       .insert(dbMsg);
@@ -757,5 +773,153 @@ export const dbService = {
       console.error('Error deleting support message:', error.message);
       throw error;
     }
+  },
+
+  async uploadMediaFile(fileOrBlob: File | Blob | string, fileName?: string): Promise<string | null> {
+    if (!supabase) return null;
+    try {
+      try {
+        await supabase.storage.createBucket('chat-media', { public: true });
+      } catch (_) {}
+
+      let blob: Blob;
+      let mimeType = '';
+      let name = fileName || `file_${Date.now()}`;
+
+      if (typeof fileOrBlob === 'string') {
+        if (fileOrBlob.startsWith('data:')) {
+          blob = base64ToBlob(fileOrBlob);
+          mimeType = blob.type;
+          const ext = mimeType.split('/')[1] || 'bin';
+          if (!fileName) {
+            name = `voice_${Date.now()}.${ext}`;
+          }
+        } else {
+          return fileOrBlob;
+        }
+      } else {
+        blob = fileOrBlob;
+        mimeType = blob.type;
+        if (fileOrBlob instanceof File) {
+          name = fileOrBlob.name;
+        }
+      }
+
+      const cleanName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${Date.now()}_${cleanName}`;
+
+      const { data, error } = await supabase.storage
+        .from('chat-media')
+        .upload(path, blob, {
+          contentType: mimeType,
+          upsert: true
+        });
+
+      if (error) {
+        console.error("Supabase Storage upload error:", error);
+        throw error;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(path);
+
+      return urlData?.publicUrl || null;
+    } catch (err) {
+      console.error("uploadMediaFile failed:", err);
+      return null;
+    }
   }
 };
+
+function base64ToBlob(base64: string): Blob {
+  const parts = base64.split(';base64,');
+  const contentType = parts[0].split(':')[1];
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  return new Blob([uInt8Array], { type: contentType });
+}
+
+const mediaMemoryCache = new Map<string, string>();
+
+export async function loadMediaCached(url: string): Promise<string> {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  if (mediaMemoryCache.has(url)) return mediaMemoryCache.get(url)!;
+
+  try {
+    if ('caches' in window) {
+      const cache = await caches.open('chat-media-cache');
+      const cachedResponse = await cache.match(url);
+      if (cachedResponse) {
+        const blob = await cachedResponse.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        mediaMemoryCache.set(url, objectUrl);
+        return objectUrl;
+      }
+
+      const response = await fetch(url);
+      if (response.ok) {
+        await cache.put(url, response.clone());
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        mediaMemoryCache.set(url, objectUrl);
+        return objectUrl;
+      }
+    }
+  } catch (err) {
+    console.warn("Cache API fetch failed, using direct URL:", err);
+  }
+  return url;
+}
+
+export function useMediaLoader(
+  messageId: string,
+  tableName: 'mrc_messages' | 'support_messages',
+  initialMediaUrl?: string
+) {
+  const [resolvedUrl, setResolvedUrl] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      if (initialMediaUrl && (initialMediaUrl.startsWith('data:') || initialMediaUrl.startsWith('blob:'))) {
+        setResolvedUrl(initialMediaUrl);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        let url = initialMediaUrl;
+        if (!url) {
+          url = await dbService.getMessageMedia(messageId, tableName) || '';
+        }
+        if (url) {
+          const cachedUrl = await loadMediaCached(url);
+          if (active) {
+            setResolvedUrl(cachedUrl);
+          }
+        }
+      } catch (err) {
+        console.error("useMediaLoader failed:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+    load();
+    return () => {
+      active = false;
+    };
+  }, [messageId, tableName, initialMediaUrl]);
+
+  return { resolvedUrl: resolvedUrl || initialMediaUrl || '', loading };
+}
+
+

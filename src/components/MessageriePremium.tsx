@@ -8,9 +8,22 @@ import {
   VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users,
   Database, Wifi, WifiOff, Copy, Zap, Sparkles, Trash2
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured, dbService } from '../supabaseClient';
+import { supabase, isSupabaseConfigured, dbService, loadMediaCached, useMediaLoader } from '../supabaseClient';
 import { AgoraManager, isAgoraConfigured } from '../lib/agora';
 import MountainVistaBackground from './MountainVistaBackground';
+
+interface MediaLoaderWrapperProps {
+  messageId: string;
+  type: 'image' | 'video' | 'voice' | 'file';
+  tableName: 'mrc_messages' | 'support_messages';
+  initialMediaUrl?: string;
+  children: (resolvedUrl: string, loading: boolean) => React.ReactNode;
+}
+
+function MediaLoaderWrapper({ messageId, type, tableName, initialMediaUrl, children }: MediaLoaderWrapperProps) {
+  const { resolvedUrl, loading } = useMediaLoader(messageId, tableName, initialMediaUrl);
+  return <>{children(resolvedUrl, loading)}</>;
+}
 
 
 interface Message {
@@ -434,6 +447,30 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const syncMessageToSupabase = async (msg: Message) => {
     if (isSupabaseConfigured && supabase) {
       try {
+        let finalMediaUrl = msg.mediaUrl;
+        if (finalMediaUrl && finalMediaUrl.startsWith('data:')) {
+          try {
+            const ext = finalMediaUrl.split(';base64,')[0].split('/')[1] || 'bin';
+            const uploadedUrl = await dbService.uploadMediaFile(finalMediaUrl, `mrc_${msg.id}.${ext}`);
+            if (uploadedUrl) {
+              finalMediaUrl = uploadedUrl;
+              // Update local state so we don't hold the large Base64
+              setChannelMessages(prev => {
+                const chanId = activeChannelId;
+                const chanMsgs = prev[chanId] || [];
+                return {
+                  ...prev,
+                  [chanId]: chanMsgs.map(m =>
+                    m.id === msg.id ? { ...m, mediaUrl: uploadedUrl } : m
+                  )
+                };
+              });
+            }
+          } catch (uploadErr) {
+            console.error("Error uploading media file to Supabase Storage:", uploadErr);
+          }
+        }
+
         const { error } = await supabase
           .from('mrc_messages')
           .insert([{
@@ -445,7 +482,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             text: msg.text,
             time: msg.time,
             type: msg.type || 'text',
-            media_url: msg.mediaUrl || null,
+            media_url: finalMediaUrl || null,
             file_size: msg.fileSize || null,
             duration: msg.duration || null,
             reply_to: msg.replyTo || null,
@@ -2315,149 +2352,162 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
                     {/* Rendering based on message types */}
                     {message.type === 'voice' ? (
-                      <div className="flex items-center gap-3 py-1">
-                        <button 
-                          onClick={() => handleToggleVoicePlay(message)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
-                            isMe ? 'bg-white text-slate-900' : 'bg-slate-800 text-white'
-                          }`}
-                        >
-                          {playingVoiceId === message.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                        </button>
-                        
-                        <div className="flex-1 min-w-[120px]">
-                          {/* Interactive fake wave analyzer bars */}
-                          <div className="flex items-end gap-0.5 h-6">
-                            {[2, 5, 8, 3, 6, 9, 4, 7, 5, 2, 8, 4, 6, 3, 7, 5].map((h, i) => (
-                              <span 
-                                key={i} 
-                                className={`w-0.75 rounded-full transition-all duration-300 ${
-                                  playingVoiceId === message.id ? 'animate-pulse' : ''
-                                } ${
-                                  isMe ? 'bg-white/60' : 'bg-slate-300'
-                                }`} 
-                                style={{ height: `${h * 10}%` }} 
-                              />
-                            ))}
-                          </div>
-                          <div className="flex justify-between text-[8px] opacity-75 mt-1 font-mono">
-                            <span>{playingVoiceId === message.id ? 'Lecture...' : 'Message vocal'}</span>
-                            <span>{message.duration}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : message.type === 'image' ? (
-                      <div className="space-y-2">
-                        <div 
-                          className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 cursor-pointer relative group/img bg-slate-100 min-h-[150px] flex items-center justify-center"
-                          onClick={async (e) => {
-                            if (!message.mediaUrl) {
-                              const target = e.currentTarget;
-                              const loadingSpan = target.querySelector('.loading-text');
-                              if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
-                              
-                              try {
-                                const isSupport = activeChannelId.includes('support');
-                                const tableName = isSupport ? 'support_messages' : 'mrc_messages';
-                                const url = await dbService.getMessageMedia(message.id, tableName);
-                                
-                                if (url) {
-                                  if (isSupport) {
-                                    setSupportMessages(prev => prev.map(m => 
-                                      m.id === message.id ? { ...m, mediaUrl: url } : m
-                                    ));
-                                  } else {
-                                    setChannelMessages(prev => {
-                                      const currentChanId = activeChannelId;
-                                      const chanMsgs = prev[currentChanId] || [];
-                                      return {
-                                        ...prev,
-                                        [currentChanId]: chanMsgs.map(m => 
-                                          m.id === message.id ? { ...m, mediaUrl: url } : m
-                                        )
-                                      };
-                                    });
-                                  }
-                                  setZoomedImage(url);
+                      <MediaLoaderWrapper
+                        messageId={message.id}
+                        type="voice"
+                        tableName={activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-') ? 'support_messages' : 'mrc_messages'}
+                        initialMediaUrl={message.mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div className="flex items-center gap-3 py-1">
+                            <button 
+                              onClick={async () => {
+                                if (loading || !resolvedUrl) return;
+                                if (activeAudioRef.current) {
+                                  activeAudioRef.current.pause();
+                                  activeAudioRef.current = null;
                                 }
-                              } catch (err) {
-                                console.error("Error lazy loading image in MessageriePremium:", err);
-                                if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل التحميل' : 'Échec';
-                              }
-                            } else {
-                              setZoomedImage(message.mediaUrl);
-                            }
-                          }}
-                        >
-                          <img 
-                            src={message.mediaUrl || 'https://via.placeholder.com/400x300?text=...'} 
-                            alt="shared pic" 
-                            className="w-full h-full object-contain bg-black/5" 
-                            referrerPolicy="no-referrer" 
-                          />
-                          {!message.mediaUrl && (
-                            <div className="absolute inset-0 bg-black/5 flex flex-col items-center justify-center">
-                              <span className="loading-text text-slate-500 text-xs font-medium">{isRtl ? 'اضغط لتحميل الصورة' : 'Charger l\'image'}</span>
+
+                                if (playingVoiceId === message.id) {
+                                  setPlayingVoiceId(null);
+                                } else {
+                                  setPlayingVoiceId(message.id);
+                                  const audio = new Audio(resolvedUrl);
+                                  activeAudioRef.current = audio;
+                                  audio.play().catch(err => {
+                                    console.error("Failed to play voice message:", err);
+                                    setPlayingVoiceId(null);
+                                  });
+                                  audio.onended = () => {
+                                    setPlayingVoiceId(null);
+                                    activeAudioRef.current = null;
+                                  };
+                                }
+                              }}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
+                                isMe ? 'bg-white text-slate-900' : 'bg-slate-800 text-white'
+                              }`}
+                            >
+                              {loading ? (
+                                <span className="text-[10px] animate-spin">⏳</span>
+                              ) : playingVoiceId === message.id ? (
+                                <Pause className="w-4 h-4 fill-current" />
+                              ) : (
+                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                              )}
+                            </button>
+                            
+                            <div className="flex-1 min-w-[120px]">
+                              {/* Interactive fake wave analyzer bars */}
+                              <div className="flex items-end gap-0.5 h-6">
+                                {[2, 5, 8, 3, 6, 9, 4, 7, 5, 2, 8, 4, 6, 3, 7, 5].map((h, i) => (
+                                  <span 
+                                    key={i} 
+                                    className={`w-0.75 rounded-full transition-all duration-300 ${
+                                      playingVoiceId === message.id ? 'animate-pulse' : ''
+                                    } ${
+                                      isMe ? 'bg-white/60' : 'bg-slate-300'
+                                    }`} 
+                                    style={{ height: `${h * 10}%` }} 
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex justify-between text-[8px] opacity-75 mt-1 font-mono">
+                                <span>{loading ? (isRtl ? 'جاري التحميل...' : 'Chargement...') : playingVoiceId === message.id ? 'Lecture...' : 'Message vocal'}</span>
+                                <span>{message.duration}</span>
+                              </div>
                             </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                           </div>
-                        </div>
-                      </div>
-                    ) : message.type === 'video' ? (
-                      <div className="space-y-2">
-                        <div className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 bg-black">
-                          <video 
-                            src={message.mediaUrl} 
-                            controls={!!message.mediaUrl}
-                            className="w-full h-full object-contain cursor-pointer"
-                            onPlay={async (e) => {
-                              if (!message.mediaUrl) {
-                                const target = e.currentTarget;
-                                target.pause();
-                                try {
-                                  const isSupport = activeChannelId.includes('support');
-                                  const tableName = isSupport ? 'support_messages' : 'mrc_messages';
-                                  const url = await dbService.getMessageMedia(message.id, tableName);
-                                  
-                                  if (url) {
-                                    if (isSupport) {
-                                      setSupportMessages(prev => prev.map(m => 
-                                        m.id === message.id ? { ...m, mediaUrl: url } : m
-                                      ));
-                                    } else {
-                                      setChannelMessages(prev => {
-                                        const currentChanId = activeChannelId;
-                                        const chanMsgs = prev[currentChanId] || [];
-                                        return {
-                                          ...prev,
-                                          [currentChanId]: chanMsgs.map(m => 
-                                            m.id === message.id ? { ...m, mediaUrl: url } : m
-                                          )
-                                        };
-                                      });
-                                    }
-                                    target.src = url;
-                                    target.play();
-                                  }
-                                } catch (err) {
-                                  console.error("Error lazy loading video:", err);
-                                }
-                              }
-                            }}
-                          />
-                        </div>
-                        {message.fileSize && (
-                          <p className="text-[10px] opacity-60 px-1 italic">{message.fileSize}</p>
                         )}
-                      </div>
+                      </MediaLoaderWrapper>
+                    ) : message.type === 'image' ? (
+                      <MediaLoaderWrapper
+                        messageId={message.id}
+                        type="image"
+                        tableName={activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-') ? 'support_messages' : 'mrc_messages'}
+                        initialMediaUrl={message.mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div className="space-y-2">
+                            <div 
+                              className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 cursor-pointer relative group/img bg-slate-100 min-h-[150px] flex items-center justify-center"
+                              onClick={() => {
+                                if (resolvedUrl) {
+                                  setZoomedImage(resolvedUrl);
+                                }
+                              }}
+                            >
+                              {loading ? (
+                                <div className="absolute inset-0 bg-black/5 flex flex-col items-center justify-center">
+                                  <span className="text-slate-500 text-xs font-medium animate-pulse">{isRtl ? 'جاري التحميل...' : 'Chargement...'}</span>
+                                </div>
+                              ) : (
+                                <img 
+                                  src={resolvedUrl || 'https://via.placeholder.com/400x300?text=...'} 
+                                  alt="shared pic" 
+                                  className="w-full h-full object-contain bg-black/5" 
+                                  referrerPolicy="no-referrer" 
+                                />
+                              )}
+                              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </MediaLoaderWrapper>
+                    ) : message.type === 'video' ? (
+                      <MediaLoaderWrapper
+                        messageId={message.id}
+                        type="video"
+                        tableName={activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-') ? 'support_messages' : 'mrc_messages'}
+                        initialMediaUrl={message.mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div className="space-y-2">
+                            <div className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 bg-black min-h-[150px] flex items-center justify-center relative">
+                              {loading ? (
+                                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                                  <span className="text-white text-xs font-medium animate-pulse">{isRtl ? 'جاري التحميل...' : 'Chargement...'}</span>
+                                </div>
+                              ) : (
+                                <video 
+                                  src={resolvedUrl} 
+                                  controls={!!resolvedUrl}
+                                  className="w-full h-full object-contain cursor-pointer"
+                                />
+                              )}
+                            </div>
+                            {message.fileSize && (
+                              <p className="text-[10px] opacity-60 px-1 italic">{message.fileSize}</p>
+                            )}
+                          </div>
+                        )}
+                      </MediaLoaderWrapper>
                     ) : message.type === 'file' ? (
-                      <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
-                        <Paperclip className="w-5 h-5 shrink-0" />
-                        <div className="flex-1 min-w-0 text-[11px] font-bold">
-                          <span className="text-[9px] opacity-75 font-mono block">{message.fileSize}</span>
-                        </div>
-                      </div>
+                      <MediaLoaderWrapper
+                        messageId={message.id}
+                        type="file"
+                        tableName={activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-') ? 'support_messages' : 'mrc_messages'}
+                        initialMediaUrl={message.mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <a 
+                            href={resolvedUrl || '#'} 
+                            download={message.text}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition cursor-pointer"
+                          >
+                            <Paperclip className="w-5 h-5 shrink-0" />
+                            <div className="flex-1 min-w-0 text-[11px] font-bold">
+                              <span className="truncate block text-slate-800">{message.text}</span>
+                              <span className="text-[9px] opacity-75 font-mono block">
+                                {loading ? (isRtl ? 'جاري التحميل...' : 'Chargement...') : message.fileSize || 'Doc'}
+                              </span>
+                            </div>
+                          </a>
+                        )}
+                      </MediaLoaderWrapper>
                     ) : (
                       <p className="text-xs sm:text-[13px] font-semibold leading-relaxed break-words select-text">
                         {message.text}

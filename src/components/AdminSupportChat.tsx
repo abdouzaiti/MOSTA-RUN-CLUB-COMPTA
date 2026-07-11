@@ -1,12 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Runner, SupportMessage } from '../types';
 import { Language } from '../translations';
-import { supabase, dbService } from '../supabaseClient';
+import { supabase, dbService, loadMediaCached, useMediaLoader } from '../supabaseClient';
 import { 
   Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle,
   Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause, Trash2, Database, Camera,
   Image as ImageIcon, Paperclip
 } from 'lucide-react';
+
+interface MediaLoaderWrapperProps {
+  messageId: string;
+  type: 'image' | 'video' | 'voice' | 'file';
+  tableName: 'mrc_messages' | 'support_messages';
+  initialMediaUrl?: string;
+  children: (resolvedUrl: string, loading: boolean) => React.ReactNode;
+}
+
+function MediaLoaderWrapper({ messageId, type, tableName, initialMediaUrl, children }: MediaLoaderWrapperProps) {
+  const { resolvedUrl, loading } = useMediaLoader(messageId, tableName, initialMediaUrl);
+  return <>{children(resolvedUrl, loading)}</>;
+}
 
 interface AdminSupportChatProps {
   currentUser: Runner;
@@ -1149,106 +1162,142 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                         : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
                   }`}>
                     {(msg as any).type === 'voice' ? (
-                      <div className="flex items-center gap-2 min-w-[120px]">
-                        <button 
-                          onClick={() => handlePlayVoice(msg)}
-                          className={`p-1.5 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition ${isMe ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                        >
-                          {playingVoiceId === msg.id ? (
-                            <Pause className="w-3.5 h-3.5 fill-current" />
-                          ) : (
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                          )}
-                        </button>
-                        <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
-                          <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
-                        </div>
-                        <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
-                      </div>
-                    ) : (msg as any).type === 'video' ? (
-                      <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px]">
-                        <video 
-                          src={(msg as any).mediaUrl} 
-                          controls={!!(msg as any).mediaUrl}
-                          className="w-full h-full object-contain cursor-pointer"
-                          onPlay={async (e) => {
-                            if (!(msg as any).mediaUrl) {
-                              const target = e.currentTarget;
-                              const loadingSpan = target.parentElement?.querySelector('.loading-text');
-                              if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
-
-                              target.pause();
-                              try {
-                                const url = await dbService.getMessageMedia(msg.id, 'support_messages');
-                                if (url) {
-                                  setMessages(prev => prev.map(m => 
-                                    m.id === msg.id ? { ...m, mediaUrl: url } : m
-                                  ));
-                                  target.src = url;
-                                  target.play();
+                      <MediaLoaderWrapper
+                        messageId={msg.id}
+                        type="voice"
+                        tableName="support_messages"
+                        initialMediaUrl={(msg as any).mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div className="flex items-center gap-2 min-w-[120px]">
+                            <button 
+                              onClick={async () => {
+                                if (loading || !resolvedUrl) return;
+                                if (activeAudioRef.current) {
+                                  activeAudioRef.current.pause();
+                                  activeAudioRef.current = null;
                                 }
-                              } catch (err) {
-                                console.error("Error lazy loading video:", err);
-                                if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
-                              }
-                            }
-                          }}
-                        />
-                        {(msg as any).fileSize && (
-                          <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
-                            {(msg as any).fileSize}
-                            {!(msg as any).mediaUrl && <span className="loading-text ml-2">{isRtl ? 'اضغط للتحميل' : 'Click to load'}</span>}
-                          </div>
-                        )}
-                      </div>
-                    ) : (msg as any).type === 'image' ? (
-                      <div className="relative group/img cursor-pointer" onClick={async (e) => {
-                        if (!(msg as any).mediaUrl) {
-                          const target = e.currentTarget;
-                          const loadingSpan = target.querySelector('.loading-text');
-                          if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
 
-                          try {
-                            const url = await dbService.getMessageMedia(msg.id, 'support_messages');
-                            if (url) {
-                              setMessages(prev => prev.map(m => 
-                                m.id === msg.id ? { ...m, mediaUrl: url } : m
-                              ));
-                              setZoomedImage(url);
-                            }
-                          } catch (err) {
-                            console.error("Error lazy loading image:", err);
-                            if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
-                          }
-                        } else {
-                          setZoomedImage((msg as any).mediaUrl);
-                        }
-                      }}>
-                        <img 
-                          src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=...'} 
-                          alt="Shared" 
-                          className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
-                        />
-                        {!(msg as any).mediaUrl && (
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
-                            <span className="loading-text text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{isRtl ? 'تحميل الصورة' : 'Load Image'}</span>
+                                if (playingVoiceId === msg.id) {
+                                  setPlayingVoiceId(null);
+                                } else {
+                                  setPlayingVoiceId(msg.id);
+                                  const audio = new Audio(resolvedUrl);
+                                  activeAudioRef.current = audio;
+                                  audio.play().catch(err => {
+                                    console.error("Failed to play support voice:", err);
+                                    setPlayingVoiceId(null);
+                                  });
+                                  audio.onended = () => {
+                                    setPlayingVoiceId(null);
+                                    activeAudioRef.current = null;
+                                  };
+                                }
+                              }}
+                              className={`p-1.5 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition ${isMe ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                            >
+                              {loading ? (
+                                <span className="text-[9px] animate-spin">⏳</span>
+                              ) : playingVoiceId === msg.id ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                              )}
+                            </button>
+                            <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
+                              <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
+                            </div>
+                            <span className="text-[9px] font-mono opacity-80">{loading ? '...' : (msg as any).duration || '0:00'}</span>
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-                        </div>
-                      </div>
+                      </MediaLoaderWrapper>
+                    ) : (msg as any).type === 'video' ? (
+                      <MediaLoaderWrapper
+                        messageId={msg.id}
+                        type="video"
+                        tableName="support_messages"
+                        initialMediaUrl={(msg as any).mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px] min-h-[150px] flex items-center justify-center relative">
+                            {loading ? (
+                              <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                                <span className="text-white text-xs font-medium animate-pulse">{isRtl ? 'جاري التحميل...' : 'Chargement...'}</span>
+                              </div>
+                            ) : (
+                              <video 
+                                src={resolvedUrl} 
+                                controls={!!resolvedUrl}
+                                className="w-full h-full object-contain cursor-pointer"
+                              />
+                            )}
+                            {(msg as any).fileSize && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
+                                {(msg as any).fileSize}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </MediaLoaderWrapper>
+                    ) : (msg as any).type === 'image' ? (
+                      <MediaLoaderWrapper
+                        messageId={msg.id}
+                        type="image"
+                        tableName="support_messages"
+                        initialMediaUrl={(msg as any).mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <div 
+                            className="relative group/img cursor-pointer max-h-[300px] min-h-[150px] flex items-center justify-center"
+                            onClick={() => {
+                              if (resolvedUrl) {
+                                setZoomedImage(resolvedUrl);
+                              }
+                            }}
+                          >
+                            {loading ? (
+                              <div className="absolute inset-0 bg-black/5 flex items-center justify-center rounded-lg">
+                                <span className="text-slate-500 text-[10px] font-bold animate-pulse">{isRtl ? 'جاري التحميل...' : 'Chargement...'}</span>
+                              </div>
+                            ) : (
+                              <img 
+                                src={resolvedUrl || 'https://via.placeholder.com/300x200?text=...'} 
+                                alt="Shared" 
+                                className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                            </div>
+                          </div>
+                        )}
+                      </MediaLoaderWrapper>
                     ) : (msg as any).type === 'file' ? (
-                      <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="p-2 bg-slate-500/20 rounded-lg">
-                          <Database className="w-4 h-4 text-slate-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[8px] opacity-60">{(msg as any).fileSize || 'Unknown size'}</p>
-                        </div>
-                        <button className="p-1.5 hover:bg-white/10 rounded-lg transition">
-                          <Database className="w-3.5 h-3.5 opacity-50" />
-                        </button>
-                      </div>
+                      <MediaLoaderWrapper
+                        messageId={msg.id}
+                        type="file"
+                        tableName="support_messages"
+                        initialMediaUrl={(msg as any).mediaUrl}
+                      >
+                        {(resolvedUrl, loading) => (
+                          <a 
+                            href={resolvedUrl || '#'} 
+                            download={msg.text}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10 cursor-pointer"
+                          >
+                            <div className="p-2 bg-slate-500/20 rounded-lg">
+                              <Paperclip className="w-4 h-4 text-slate-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs truncate max-w-[150px] text-slate-800">{msg.text}</p>
+                              <p className="text-[8px] opacity-60">
+                                {loading ? (isRtl ? 'جاري التحميل...' : 'Chargement...') : (msg as any).fileSize || 'Doc'}
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                      </MediaLoaderWrapper>
                     ) : msg.text}
 
                     {/* Hover reactions menu */}
