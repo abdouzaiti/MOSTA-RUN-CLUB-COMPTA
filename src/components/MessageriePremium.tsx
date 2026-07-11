@@ -224,7 +224,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               return [...prev, newMsg];
             });
           } else if (payload.eventType === 'UPDATE') {
-            setSupportMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, read: payload.new.read } : m));
+            setSupportMessages(prev => prev.map(m => m.id === payload.new.id ? { 
+              ...m, 
+              read: payload.new.read,
+              reactions: payload.new.reactions || m.reactions
+            } : m));
           }
         })
         .subscribe();
@@ -589,7 +593,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           avatarUrl: msg.senderAvatar || null,
           text: msg.text,
           time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type: 'text' as const,
+          type: (msg as any).type || 'text',
+          mediaUrl: (msg as any).mediaUrl,
+          duration: (msg as any).duration,
+          reactions: msg.reactions || {},
           read: msg.read
         }));
     } else if (activeChannelId.startsWith('support-user-')) {
@@ -609,7 +616,10 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           avatarUrl: msg.senderAvatar || null,
           text: msg.text,
           time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type: 'text' as const,
+          type: (msg as any).type || 'text',
+          mediaUrl: (msg as any).mediaUrl,
+          duration: (msg as any).duration,
+          reactions: msg.reactions || {},
           read: msg.read
         }));
     } else {
@@ -1676,6 +1686,40 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // React to a message
   const handleAddReaction = (msgId: string, emoji: string) => {
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+    
+    if (isSupport) {
+      const message = supportMessages.find(m => m.id === msgId);
+      if (!message) return;
+
+      const currentReactions = { ...(message.reactions || {}) };
+      const rawReactedBy = (currentReactions as any).reactedBy || {};
+      const reactedBy = typeof rawReactedBy === 'object' && rawReactedBy !== null && !Array.isArray(rawReactedBy) 
+        ? { ...rawReactedBy } 
+        : {};
+      
+      const prevEmoji = reactedBy[currentUser.id];
+      if (prevEmoji) {
+        const currentVal = (currentReactions[prevEmoji] as any) || 1;
+        currentReactions[prevEmoji] = (Math.max(0, currentVal - 1) as any);
+        if (currentReactions[prevEmoji] === 0) delete currentReactions[prevEmoji];
+      }
+      
+      if (prevEmoji === emoji) {
+        delete reactedBy[currentUser.id];
+      } else {
+        reactedBy[currentUser.id] = emoji;
+        const currentVal = (currentReactions[emoji] as any) || 0;
+        currentReactions[emoji] = (currentVal + 1) as any;
+      }
+      (currentReactions as any).reactedBy = reactedBy;
+
+      dbService.updateSupportMessageReactions(msgId, currentReactions).catch(err => {
+        console.error("Error updating support reaction:", err);
+      });
+      return;
+    }
+
     setChannelMessages(prev => {
       const chanMsgs = prev[activeChannelId] || [];
       const updated = chanMsgs.map(m => {
@@ -2197,7 +2241,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                     {Object.entries(message.reactions).map(([emoji, count]) => {
                       if (emoji === 'reactedBy') return null;
-                      if (typeof count !== 'number' || count <= 0) return null;
+                      if (typeof (count as any) !== 'number' || (count as any) <= 0) return null;
                       const hasReactedWithThis = message.reactions?.reactedBy?.[currentUser.id] === emoji;
                       return (
                         <span 

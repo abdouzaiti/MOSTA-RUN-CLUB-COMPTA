@@ -3,7 +3,8 @@ import { Runner, SupportMessage } from '../types';
 import { Language } from '../translations';
 import { supabase, dbService } from '../supabaseClient';
 import { 
-  Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle
+  Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle,
+  Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause
 } from 'lucide-react';
 
 interface AdminSupportChatProps {
@@ -62,14 +63,19 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
               receiverId: payload.new.receiver_id,
               text: payload.new.text,
               timestamp: payload.new.timestamp,
-              read: payload.new.read
+              read: payload.new.read,
+              reactions: payload.new.reactions || {}
             };
             setMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
           } else if (payload.eventType === 'UPDATE') {
-            setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, read: payload.new.read } : m));
+            setMessages(prev => prev.map(m => m.id === payload.new.id ? { 
+              ...m, 
+              read: payload.new.read,
+              reactions: payload.new.reactions || m.reactions 
+            } : m));
           }
         })
         .subscribe();
@@ -84,6 +90,18 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // Voice Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<any>(null);
+
+  // Call States
+  const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; status: 'ringing' | 'connected' | 'ended' } | null>(null);
+  const [callDuration, setCallDuration] = useState(0);
+  const callIntervalRef = useRef<any>(null);
 
   // Filter messages related to the current thread
   const activeThreadUserId = isAdmin ? selectedUserId : adminId;
@@ -212,6 +230,141 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     }
   };
 
+  const handleAddReaction = async (msgId: string, emoji: string) => {
+    const message = messages.find(m => m.id === msgId);
+    if (!message) return;
+
+    const currentReactions = { ...(message.reactions || {}) };
+    
+    // Get or initialize reactedBy
+    const rawReactedBy = (currentReactions as any).reactedBy || {};
+    const reactedBy = typeof rawReactedBy === 'object' && rawReactedBy !== null && !Array.isArray(rawReactedBy) 
+      ? { ...rawReactedBy } 
+      : {};
+    
+    const prevEmoji = reactedBy[currentUser.id];
+    
+    // Decrement previous emoji count if exists
+    if (prevEmoji) {
+      const currentVal = (currentReactions[prevEmoji] as any) || 1;
+      currentReactions[prevEmoji] = (Math.max(0, currentVal - 1) as any);
+      if (currentReactions[prevEmoji] === 0) {
+        delete currentReactions[prevEmoji];
+      }
+    }
+    
+    if (prevEmoji === emoji) {
+      // Un-react
+      delete reactedBy[currentUser.id];
+    } else {
+      // New reaction or changing reaction
+      reactedBy[currentUser.id] = emoji;
+      const currentVal = (currentReactions[emoji] as any) || 0;
+      currentReactions[emoji] = (currentVal + 1) as any;
+    }
+    
+    (currentReactions as any).reactedBy = reactedBy;
+
+    try {
+      await dbService.updateSupportMessageReactions(msgId, currentReactions);
+      // Local state will be updated by Supabase subscription
+    } catch (err) {
+      console.error("Error updating reaction:", err);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // In a real app, we would upload this to Supabase Storage.
+        // Here we simulate with a data URL for simplicity
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          const receiverId = isAdmin ? selectedUserId : adminId;
+          const newMessage: SupportMessage = {
+            id: `support-msg-${Date.now()}`,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            senderAvatar: currentUser.avatarUrl || null,
+            receiverId: receiverId,
+            text: '🎙️ Vocal Message',
+            timestamp: new Date().toISOString(),
+            read: false,
+            // In a real implementation, we'd add type: 'voice' and mediaUrl: base64Audio
+            // But since SupportMessage type is fixed, we'll prefix text
+          };
+          
+          // Add custom property to text if needed, or update types
+          (newMessage as any).type = 'voice';
+          (newMessage as any).mediaUrl = base64Audio;
+          (newMessage as any).duration = formatSeconds(recordingSeconds);
+
+          try {
+            await dbService.sendSupportMessage(newMessage);
+          } catch (err) {
+            console.error("Error sending voice message:", err);
+          }
+        };
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error starting recording:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingIntervalRef.current);
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const formatSeconds = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const quickReactions = ['❤️', '👍', '🔥', '👏', '😮', '😢'];
+
+  const startCall = (type: 'voice' | 'video') => {
+    setActiveCall({ type, status: 'ringing' });
+    setCallDuration(0);
+    
+    // Simulate connection after 2 seconds
+    setTimeout(() => {
+      setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
+      callIntervalRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }, 2000);
+  };
+
+  const endCall = () => {
+    setActiveCall(null);
+    if (callIntervalRef.current) clearInterval(callIntervalRef.current);
+  };
+
   // Filter messages for current thread
   const threadMessages = messages.filter(msg => {
     if (isAdmin) {
@@ -323,6 +476,32 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
           <div className="md:col-span-8 flex flex-col bg-white rounded-xl border border-slate-200/80 overflow-hidden min-h-[350px]">
             {selectedUserId ? (
               <>
+                {/* Active Call Overlay */}
+                {activeCall && (
+                  <div className="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center text-white p-6 animate-fade-in">
+                    <div className="w-20 h-20 rounded-full bg-blue-600 mb-4 flex items-center justify-center text-2xl font-bold overflow-hidden border-4 border-slate-800">
+                      {runners.find(r => r.id === selectedUserId)?.avatarUrl ? (
+                        <img src={runners.find(r => r.id === selectedUserId)?.avatarUrl} alt="Partner" className="w-full h-full object-cover" />
+                      ) : (
+                        runners.find(r => r.id === selectedUserId)?.name.substring(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <h3 className="text-lg font-black mb-1">{runners.find(r => r.id === selectedUserId)?.name}</h3>
+                    <p className="text-blue-400 text-xs font-bold mb-8 animate-pulse">
+                      {activeCall.status === 'ringing' ? 'Appel en cours...' : formatSeconds(callDuration)}
+                    </p>
+                    
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={endCall}
+                        className="w-12 h-12 rounded-full bg-rose-600 flex items-center justify-center hover:bg-rose-700 transition shadow-lg"
+                      >
+                        <Phone className="w-6 h-6 rotate-[135deg]" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Active user header */}
                 {(() => {
                   const activeRunner = runners.find(r => r.id === selectedUserId);
@@ -343,8 +522,22 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[9px] text-slate-400 font-mono block">Tel: {activeRunner?.phone || 'N/A'}</span>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => startCall('voice')}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => startCall('video')}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="text-right ml-2">
+                          <span className="text-[9px] text-slate-400 font-mono block">Tel: {activeRunner?.phone || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -366,12 +559,64 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                             <span className="font-extrabold text-[9px] text-slate-600">{msg.senderName}</span>
                             <span className="text-[8px] text-slate-400 font-mono">{formatTime(msg.timestamp)}</span>
                           </div>
-                          <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs ${
+                          <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs relative group ${
                             isMe 
                               ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
                               : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
                           }`}>
-                            {msg.text}
+                            {(msg as any).type === 'voice' ? (
+                              <div className="flex items-center gap-2 min-w-[120px]">
+                                <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#1034A6]'}`}>
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                                <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
+                                  <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
+                                </div>
+                                <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
+                              </div>
+                            ) : msg.text}
+
+                            {/* Hover reactions menu */}
+                            <div className={`absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-slate-200 shadow-lg rounded-full px-1 py-0.5 flex gap-1 z-10 ${
+                              isMe ? 'right-0' : 'left-0'
+                            }`}>
+                              {quickReactions.map(emoji => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => handleAddReaction(msg.id, emoji)}
+                                  className="hover:scale-125 transition-transform p-0.5"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                            
+                            {/* Displayed reactions */}
+                            {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                              <div className={`flex flex-wrap gap-1 mt-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                {Object.entries(msg.reactions).map(([emoji, count]) => {
+                                  if (emoji === 'reactedBy') return null;
+                                  if (typeof (count as any) !== 'number' || (count as any) <= 0) return null;
+                                  const reactedBy = (msg.reactions as any).reactedBy || {};
+                                  const hasReacted = reactedBy[currentUser.id] === emoji;
+                                  
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => handleAddReaction(msg.id, emoji)}
+                                      className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold border transition flex items-center gap-0.5 ${
+                                        hasReacted 
+                                          ? 'bg-blue-50 border-blue-200 text-[#1034A6]' 
+                                          : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      <span>{emoji}</span>
+                                      <span>{count}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -388,16 +633,41 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                   }}
                   className={`p-2.5 border-t border-slate-100 bg-white flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}
                 >
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder={isRtl ? 'اكتب ردك هنا...' : 'Écrire votre réponse...'}
-                    className="flex-1 text-[11px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-300 font-semibold text-slate-800"
-                  />
+                  {isRecording ? (
+                    <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-100 rounded-xl px-3 py-1.5 animate-pulse">
+                      <div className="flex items-center gap-2 text-red-600 text-[10px] font-bold">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span>{formatSeconds(recordingSeconds)}</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={stopRecording}
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold"
+                      >
+                        STOP
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="p-2 text-slate-400 hover:text-blue-600 transition"
+                      >
+                        <Mic className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder={isRtl ? 'اكتب ردك هنا...' : 'Écrire votre réponse...'}
+                        className="flex-1 text-[11px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-300 font-semibold text-slate-800"
+                      />
+                    </>
+                  )}
                   <button
                     type="submit"
-                    disabled={!inputText.trim()}
+                    disabled={!inputText.trim() && !isRecording}
                     className="p-2.5 bg-[#1034A6] text-white hover:bg-[#1E56A0] disabled:opacity-40 rounded-xl cursor-pointer transition shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -437,6 +707,20 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                 {isRtl ? 'مستعد لمساعدتك في أي وقت' : 'Fondateur de Mosta Run Club • Disponible pour vous aider'}
               </p>
             </div>
+            <div className={`flex items-center gap-1 ${isRtl ? 'mr-auto' : 'ml-auto'}`}>
+              <button 
+                onClick={() => startCall('voice')}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition"
+              >
+                <Phone className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => startCall('video')}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition"
+              >
+                <Video className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Quick suggestions row */}
@@ -459,7 +743,29 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
           </div>
 
           {/* Message Feed Area */}
-          <div className="flex-1 p-4 space-y-3.5 overflow-y-auto min-h-0 bg-slate-50/30">
+          <div className="flex-1 p-4 space-y-3.5 overflow-y-auto min-h-0 bg-slate-50/30 relative">
+            {/* Active Call Overlay for User */}
+            {activeCall && (
+              <div className="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center text-white p-6 animate-fade-in">
+                <div className="w-20 h-20 rounded-full bg-[#1034A6] mb-4 flex items-center justify-center text-2xl font-bold overflow-hidden border-4 border-slate-800">
+                  <img src={isGirlMode ? "/pinklogo.png" : "/logo.png"} alt="Admin" className="w-full h-full object-contain p-2 bg-white" />
+                </div>
+                <h3 className="text-lg font-black mb-1">Abdou Zaiti</h3>
+                <p className="text-blue-400 text-xs font-bold mb-8 animate-pulse">
+                  {activeCall.status === 'ringing' ? 'Appel en cours...' : formatSeconds(callDuration)}
+                </p>
+                
+                <div className="flex gap-4">
+                  <button 
+                    onClick={endCall}
+                    className="w-12 h-12 rounded-full bg-rose-600 flex items-center justify-center hover:bg-rose-700 transition shadow-lg"
+                  >
+                    <Phone className="w-6 h-6 rotate-[135deg]" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {threadMessages.map((msg) => {
               const isMe = msg.senderId === currentUser.id;
               return (
@@ -505,16 +811,41 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
             }}
             className={`p-2.5 border-t border-slate-150 bg-white flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}
           >
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={isRtl ? 'اكتب رسالة إلى الكابتن...' : 'Écrivez votre message d\'aide...'}
-              className="flex-1 text-[11px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-300 font-semibold text-slate-800"
-            />
+            {isRecording ? (
+              <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-100 rounded-xl px-3 py-2 animate-pulse">
+                <div className="flex items-center gap-2 text-red-600 text-[10px] font-bold">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span>{formatSeconds(recordingSeconds)}</span>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={stopRecording}
+                  className="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold"
+                >
+                  STOP
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  className="p-2 text-slate-400 hover:text-blue-600 transition"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={isRtl ? 'اكتب رسالة إلى الكابتن...' : 'Écrivez votre message d\'aide...'}
+                  className="flex-1 text-[11px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-300 font-semibold text-slate-800"
+                />
+              </>
+            )}
             <button
               type="submit"
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() && !isRecording}
               className="p-2.5 bg-[#1034A6] text-white hover:bg-[#1E56A0] disabled:opacity-40 rounded-xl cursor-pointer transition shrink-0"
             >
               <Send className="w-3.5 h-3.5" />

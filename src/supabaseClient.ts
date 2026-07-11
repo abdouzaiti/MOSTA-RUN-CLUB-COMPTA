@@ -347,7 +347,8 @@ function mapSupportMessageFromDb(dbItem: any): SupportMessage {
     receiverId: dbItem.receiver_id,
     text: dbItem.text,
     timestamp: dbItem.timestamp,
-    read: Boolean(dbItem.read)
+    read: Boolean(dbItem.read),
+    reactions: dbItem.reactions || {}
   };
 }
 
@@ -360,7 +361,8 @@ function mapSupportMessageToDb(item: SupportMessage): any {
     receiver_id: item.receiverId,
     text: item.text,
     timestamp: item.timestamp,
-    read: item.read ?? false
+    read: item.read ?? false,
+    reactions: item.reactions || {}
   };
 }
 
@@ -662,6 +664,19 @@ export const dbService = {
 
     if (error) {
       console.error('Error marking support message as read:', error.message);
+      throw error;
+    }
+  },
+
+  async updateSupportMessageReactions(id: string, reactions: { [key: string]: string[] }): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('support_messages')
+      .update({ reactions })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating support message reactions:', error.message);
       throw error;
     }
   }

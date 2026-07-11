@@ -123,5 +123,6 @@ export interface SupportMessage {
   text: string;
   timestamp: string; // ISO String
   read?: boolean;
+  reactions?: { [key: string]: any }; // emoji -> count, plus 'reactedBy' mapping
 }
 
