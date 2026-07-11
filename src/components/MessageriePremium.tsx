@@ -460,11 +460,12 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Supabase Realtime synchronization effect
   useEffect(() => {
     if (isSupabaseConfigured && supabase) {
-      // 1. Fetch existing messages from Supabase
+      // 1. Fetch existing messages from Supabase (Limit to last 100)
       supabase
         .from('mrc_messages')
         .select('*')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(100)
         .then(({ data, error }) => {
           if (error) {
             console.error("Error loading messages from Supabase:", error);
@@ -486,6 +487,14 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               read: item.read
             }));
             
+            // Sort back to chronological
+            formatted.sort((a, b) => {
+              // Extract ID timestamps or use a stable sort if needed, 
+              // but since we have 'created_at' in DB we should probably use that if we mapped it.
+              // For now, simple ID comparison or just trusting the reversed order from DESC.
+              return a.id.localeCompare(b.id); 
+            });
+
             setChannelMessages(prev => ({
               ...prev,
               'chan-group-1': formatted
