@@ -1176,68 +1176,76 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const mediaUrl = URL.createObjectURL(file);
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
-
-    if (isSupport) {
-      const receiverId = activeChannelId === 'support-channel-admin' ? adminId : activeChannelId.replace('support-user-', '');
-      
-      const newSupportMsg: SupportMessage = {
-        id: `support-msg-vid-${Date.now()}`,
-        senderId: currentUser.id,
-        senderName: currentUser.name,
-        senderAvatar: currentUser.avatarUrl || null,
-        receiverId,
-        text: '',
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-
-      (newSupportMsg as any).type = 'video';
-      (newSupportMsg as any).mediaUrl = mediaUrl;
-      (newSupportMsg as any).fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
-
-      dbService.sendSupportMessage(newSupportMsg).catch(err => {
-        console.error("Error sending support video:", err);
-      });
+    // Check file size (limit to 10MB for base64 prototype)
+    if (file.size > 10 * 1024 * 1024) {
+      alert(isRtl ? 'حجم الفيديو كبير جداً (الأقصى 10 ميجابايت)' : 'Vidéo trop volumineuse (Max 10 Mo)');
       return;
     }
 
-    const newMsg: Message = {
-      id: 'm-video-' + Date.now(),
-      senderId: currentUser.id || 'usr-1',
-      senderName: currentUser.name,
-      senderRole: currentUser.runClubRole || 'Membre',
-      avatarUrl: currentUser.avatarUrl || null,
-      text: '',
-      time: timestamp,
-      type: 'video',
-      mediaUrl: mediaUrl,
-      fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-      read: false
-    };
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    setChannelMessages(prev => ({
-      ...prev,
-      [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
-    }));
+      const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
 
-    // Sync to Supabase
-    syncMessageToSupabase(newMsg);
-
-    setChannels(prev => prev.map(c => {
-      if (c.id === activeChannelId) {
-        return {
-          ...c,
-          lastMessage: `${currentUser.name.split(' ')[0]}: 🎥 Vidéo`,
-          lastMessageTime: timestamp
+      if (isSupport) {
+        const receiverId = activeChannelId === 'support-channel-admin' ? adminId : activeChannelId.replace('support-user-', '');
+        
+        const newSupportMsg: SupportMessage = {
+          id: `support-msg-vid-${Date.now()}`,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatarUrl || null,
+          receiverId,
+          text: '',
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: 'video',
+          mediaUrl: dataUrl,
+          fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
         };
+
+        dbService.sendSupportMessage(newSupportMsg).catch(err => {
+          console.error("Error sending support video:", err);
+        });
+        return;
       }
-      return c;
-    }));
-    
+
+      const newMsg: Message = {
+        id: 'm-video-' + Date.now(),
+        senderId: currentUser.id || 'usr-1',
+        senderName: currentUser.name,
+        senderRole: currentUser.runClubRole || 'Membre',
+        avatarUrl: currentUser.avatarUrl || null,
+        text: '',
+        time: timestamp,
+        type: 'video',
+        mediaUrl: dataUrl,
+        fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+        read: false
+      };
+
+      setChannelMessages(prev => ({
+        ...prev,
+        [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
+      }));
+
+      // Sync to Supabase
+      syncMessageToSupabase(newMsg);
+
+      setChannels(prev => prev.map(c => {
+        if (c.id === activeChannelId) {
+          return {
+            ...c,
+            lastMessage: `${currentUser.name.split(' ')[0]}: 🎥 Vidéo`,
+            lastMessageTime: timestamp
+          };
+        }
+        return c;
+      }));
+    };
+    reader.readAsDataURL(file);
     e.target.value = '';
   };
 

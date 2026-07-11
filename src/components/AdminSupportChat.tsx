@@ -447,27 +447,36 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const mediaUrl = URL.createObjectURL(file);
-    const receiverId = isAdmin ? selectedUserId : adminId;
+    // Check size
+    if (file.size > 10 * 1024 * 1024) {
+      alert("La vidéo est trop volumineuse (Max 10 Mo)");
+      return;
+    }
 
-    const newSupportMsg: SupportMessage = {
-      id: `support-msg-vid-${Date.now()}`,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderAvatar: currentUser.avatarUrl || null,
-      receiverId,
-      text: '',
-      timestamp: new Date().toISOString(),
-      read: false
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const receiverId = isAdmin ? selectedUserId : adminId;
+
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-vid-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl || null,
+        receiverId,
+        text: '',
+        timestamp: new Date().toISOString(),
+        read: false,
+        type: 'video',
+        mediaUrl: dataUrl,
+        fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+      };
+
+      dbService.sendSupportMessage(newSupportMsg).catch(err => {
+        console.error("Error sending support video:", err);
+      });
     };
-
-    (newSupportMsg as any).type = 'video';
-    (newSupportMsg as any).mediaUrl = mediaUrl;
-    (newSupportMsg as any).fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
-
-    dbService.sendSupportMessage(newSupportMsg).catch(err => {
-      console.error("Error sending support video:", err);
-    });
+    reader.readAsDataURL(file);
     e.target.value = '';
   };
 
