@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS support_messages (
   id TEXT PRIMARY KEY,
   sender_id TEXT NOT NULL,
   receiver_id TEXT NOT NULL,
-  text TEXT NOT NULL,
+  text TEXT,
   timestamp TIMESTAMPTZ DEFAULT NOW(),
   read BOOLEAN DEFAULT FALSE,
   sender_name TEXT,
@@ -182,6 +182,11 @@ CREATE TABLE IF NOT EXISTS mrc_messages (
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index suggestions for performance:
+-- CREATE INDEX IF NOT EXISTS idx_support_messages_created_at ON support_messages(created_at DESC);
+-- CREATE INDEX IF NOT EXISTS idx_mrc_messages_created_at ON mrc_messages(created_at DESC);
+-- CREATE INDEX IF NOT EXISTS idx_support_messages_sender_receiver ON support_messages(sender_id, receiver_id);
 
 ALTER TABLE mrc_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read on mrc_messages" ON mrc_messages;
@@ -662,10 +667,12 @@ export const dbService = {
   async getSupportMessages(): Promise<SupportMessage[]> {
     if (!supabase) return [];
     try {
+      // Limit to 10 most recent messages to avoid "Failed to fetch" with massive base64 payloads
       const { data, error } = await supabase
         .from('support_messages')
         .select('*')
-        .order('timestamp', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (error) {
         if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
@@ -675,7 +682,8 @@ export const dbService = {
         console.error('Error fetching support messages:', error.message);
         throw error;
       }
-      return (data || []).map(mapSupportMessageFromDb);
+      // Return chronologically for the UI
+      return (data || []).map(mapSupportMessageFromDb).reverse();
     } catch (e) {
       console.error('Db service getSupportMessages failed:', e);
       return [];

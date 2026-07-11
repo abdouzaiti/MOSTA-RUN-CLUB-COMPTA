@@ -431,45 +431,51 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   }, [channelMessages]);
 
   // Sync a single message to Supabase if configured
-  const syncMessageToSupabase = (msg: Message) => {
+  const syncMessageToSupabase = async (msg: Message) => {
     if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('mrc_messages')
-        .insert([{
-          id: msg.id,
-          sender_id: msg.senderId,
-          sender_name: msg.senderName,
-          sender_role: msg.senderRole || 'Membre',
-          avatar_url: msg.avatarUrl || null,
-          text: msg.text,
-          time: msg.time,
-          type: msg.type || 'text',
-          media_url: msg.mediaUrl || null,
-          file_size: msg.fileSize || null,
-          duration: msg.duration || null,
-          reply_to: msg.replyTo || null,
-          reactions: msg.reactions || {},
-          read: msg.read || false
-        }])
-        .then(({ error }) => {
-          if (error) console.error("Error inserting to Supabase:", error);
-        });
+      try {
+        const { error } = await supabase
+          .from('mrc_messages')
+          .insert([{
+            id: msg.id,
+            sender_id: msg.senderId,
+            sender_name: msg.senderName,
+            sender_role: msg.senderRole || 'Membre',
+            avatar_url: msg.avatarUrl || null,
+            text: msg.text,
+            time: msg.time,
+            type: msg.type || 'text',
+            media_url: msg.mediaUrl || null,
+            file_size: msg.fileSize || null,
+            duration: msg.duration || null,
+            reply_to: msg.replyTo || null,
+            reactions: msg.reactions || {},
+            read: msg.read || false
+          }]);
+        
+        if (error) {
+          console.error("Error inserting to Supabase:", error);
+        }
+      } catch (err) {
+        console.error("Exception in syncMessageToSupabase:", err);
+      }
     }
   };
 
   // Supabase Realtime synchronization effect
   useEffect(() => {
     if (isSupabaseConfigured && supabase) {
-      // 1. Fetch existing messages from Supabase
+      // 1. Fetch existing messages from Supabase (limit 10 to avoid "Failed to fetch" with large videos)
       supabase
         .from('mrc_messages')
         .select('*')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(10)
         .then(({ data, error }) => {
           if (error) {
             console.error("Error loading messages from Supabase:", error);
           } else if (data) {
-            const formatted: Message[] = data.map(item => ({
+            const formatted: Message[] = [...data].reverse().map(item => ({
               id: item.id,
               senderId: item.sender_id,
               senderName: item.sender_name,
@@ -583,7 +589,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR') {
+            console.error("Realtime channel error in MessageriePremium");
+          }
+        });
 
       return () => {
         supabase.removeChannel(channel);

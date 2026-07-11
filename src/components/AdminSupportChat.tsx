@@ -92,7 +92,11 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
             setMessages(prev => prev.filter(m => m.id !== payload.old.id));
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR') {
+            console.error("Realtime channel error in AdminSupportChat");
+          }
+        });
 
       return () => {
         supabase.removeChannel(channel);
