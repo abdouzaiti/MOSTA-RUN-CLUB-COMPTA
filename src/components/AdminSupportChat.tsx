@@ -732,16 +732,22 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                   onPlay={async (e) => {
                                     if (!(msg as any).mediaUrl) {
                                       const target = e.currentTarget;
+                                      const loadingSpan = target.parentElement?.querySelector('.loading-text');
+                                      if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
+                                      
                                       target.pause();
                                       try {
                                         const url = await dbService.getMessageMedia(msg.id, 'support_messages');
                                         if (url) {
-                                          (msg as any).mediaUrl = url;
+                                          setMessages(prev => prev.map(m => 
+                                            m.id === msg.id ? { ...m, mediaUrl: url } : m
+                                          ));
                                           target.src = url;
                                           target.play();
                                         }
                                       } catch (err) {
                                         console.error("Error lazy loading video:", err);
+                                        if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
                                       }
                                     }
                                   }}
@@ -749,34 +755,41 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                 {(msg as any).fileSize && (
                                   <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
                                     {(msg as any).fileSize}
-                                    {!(msg as any).mediaUrl && <span className="ml-2">Click to load</span>}
+                                    {!(msg as any).mediaUrl && <span className="loading-text ml-2">{isRtl ? 'اضغط للتحميل' : 'Click to load'}</span>}
                                   </div>
                                 )}
                               </div>
                             ) : (msg as any).type === 'image' ? (
-                              <div className="relative group/img cursor-pointer" onClick={async () => {
+                              <div className="relative group/img cursor-pointer" onClick={async (e) => {
                                 if (!(msg as any).mediaUrl) {
+                                  const target = e.currentTarget;
+                                  const loadingSpan = target.querySelector('.loading-text');
+                                  if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
+
                                   try {
                                     const url = await dbService.getMessageMedia(msg.id, 'support_messages');
                                     if (url) {
-                                      (msg as any).mediaUrl = url;
+                                      setMessages(prev => prev.map(m => 
+                                        m.id === msg.id ? { ...m, mediaUrl: url } : m
+                                      ));
                                       setZoomedImage(url);
                                     }
                                   } catch (err) {
                                     console.error("Error lazy loading image:", err);
+                                    if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
                                   }
                                 } else {
                                   setZoomedImage((msg as any).mediaUrl);
                                 }
                               }}>
                                 <img 
-                                  src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=Click+to+load+image'} 
+                                  src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=...'} 
                                   alt="Shared" 
                                   className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
                                 />
                                 {!(msg as any).mediaUrl && (
                                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
-                                    <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Load Image</span>
+                                    <span className="loading-text text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{isRtl ? 'تحميل الصورة' : 'Load Image'}</span>
                                   </div>
                                 )}
                                 <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
@@ -1092,16 +1105,22 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                           onPlay={async (e) => {
                             if (!(msg as any).mediaUrl) {
                               const target = e.currentTarget;
+                              const loadingSpan = target.parentElement?.querySelector('.loading-text');
+                              if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
+
                               target.pause();
                               try {
                                 const url = await dbService.getMessageMedia(msg.id, 'support_messages');
                                 if (url) {
-                                  (msg as any).mediaUrl = url;
+                                  setMessages(prev => prev.map(m => 
+                                    m.id === msg.id ? { ...m, mediaUrl: url } : m
+                                  ));
                                   target.src = url;
                                   target.play();
                                 }
                               } catch (err) {
                                 console.error("Error lazy loading video:", err);
+                                if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
                               }
                             }
                           }}
@@ -1109,34 +1128,41 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                         {(msg as any).fileSize && (
                           <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
                             {(msg as any).fileSize}
-                            {!(msg as any).mediaUrl && <span className="ml-2">Click to load</span>}
+                            {!(msg as any).mediaUrl && <span className="loading-text ml-2">{isRtl ? 'اضغط للتحميل' : 'Click to load'}</span>}
                           </div>
                         )}
                       </div>
                     ) : (msg as any).type === 'image' ? (
-                      <div className="relative group/img cursor-pointer" onClick={async () => {
+                      <div className="relative group/img cursor-pointer" onClick={async (e) => {
                         if (!(msg as any).mediaUrl) {
+                          const target = e.currentTarget;
+                          const loadingSpan = target.querySelector('.loading-text');
+                          if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
+
                           try {
                             const url = await dbService.getMessageMedia(msg.id, 'support_messages');
                             if (url) {
-                              (msg as any).mediaUrl = url;
+                              setMessages(prev => prev.map(m => 
+                                m.id === msg.id ? { ...m, mediaUrl: url } : m
+                              ));
                               setZoomedImage(url);
                             }
                           } catch (err) {
                             console.error("Error lazy loading image:", err);
+                            if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل' : 'Échec';
                           }
                         } else {
                           setZoomedImage((msg as any).mediaUrl);
                         }
                       }}>
                         <img 
-                          src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=Click+to+load+image'} 
+                          src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=...'} 
                           alt="Shared" 
                           className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
                         />
                         {!(msg as any).mediaUrl && (
                           <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
-                            <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Load Image</span>
+                            <span className="loading-text text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">{isRtl ? 'تحميل الصورة' : 'Load Image'}</span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">

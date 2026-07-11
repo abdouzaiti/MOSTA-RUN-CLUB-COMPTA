@@ -2313,15 +2313,49 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                     ) : message.type === 'image' ? (
                       <div className="space-y-2">
                         <div 
-                          className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 cursor-pointer relative group/img"
-                          onClick={() => setZoomedImage(message.mediaUrl)}
+                          className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 cursor-pointer relative group/img bg-slate-100 min-h-[150px] flex items-center justify-center"
+                          onClick={async (e) => {
+                            if (!message.mediaUrl) {
+                              const target = e.currentTarget;
+                              const loadingSpan = target.querySelector('.loading-text');
+                              if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
+                              
+                              try {
+                                const url = await dbService.getMessageMedia(message.id, 'mrc_messages');
+                                if (url) {
+                                  // Update state to trigger re-render
+                                  setChannelMessages(prev => {
+                                    const currentChanId = activeChannelId;
+                                    const chanMsgs = prev[currentChanId] || [];
+                                    return {
+                                      ...prev,
+                                      [currentChanId]: chanMsgs.map(m => 
+                                        m.id === message.id ? { ...m, mediaUrl: url } : m
+                                      )
+                                    };
+                                  });
+                                  setZoomedImage(url);
+                                }
+                              } catch (err) {
+                                console.error("Error lazy loading image in MessageriePremium:", err);
+                                if (loadingSpan) loadingSpan.textContent = isRtl ? 'فشل التحميل' : 'Échec';
+                              }
+                            } else {
+                              setZoomedImage(message.mediaUrl);
+                            }
+                          }}
                         >
                           <img 
-                            src={message.mediaUrl} 
+                            src={message.mediaUrl || 'https://via.placeholder.com/400x300?text=...'} 
                             alt="shared pic" 
                             className="w-full h-full object-contain bg-black/5" 
                             referrerPolicy="no-referrer" 
                           />
+                          {!message.mediaUrl && (
+                            <div className="absolute inset-0 bg-black/5 flex flex-col items-center justify-center">
+                              <span className="loading-text text-slate-500 text-xs font-medium">{isRtl ? 'اضغط لتحميل الصورة' : 'Charger l\'image'}</span>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                           </div>
                         </div>
@@ -2340,8 +2374,16 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                                 try {
                                   const url = await dbService.getMessageMedia(message.id, 'mrc_messages');
                                   if (url) {
-                                    // Update locally
-                                    message.mediaUrl = url;
+                                    // Update state to trigger re-render
+                                    setChannelMessages(prev => {
+                                      const chanMsgs = prev[activeChannelId] || [];
+                                      return {
+                                        ...prev,
+                                        [activeChannelId]: chanMsgs.map(m => 
+                                          m.id === message.id ? { ...m, mediaUrl: url } : m
+                                        )
+                                      };
+                                    });
                                     target.src = url;
                                     target.play();
                                   }
