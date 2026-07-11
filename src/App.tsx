@@ -1021,6 +1021,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                       <UserProfileSettings
                         currentUser={currentUser}
                         onUpdateCurrentUser={handleUpdateCurrentUser}
+                        onLogout={handleLogout}
                         language={language || 'fr'}
                         setLanguage={setLanguage}
                         girlMode={girlMode}

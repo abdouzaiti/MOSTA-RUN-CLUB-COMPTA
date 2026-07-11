@@ -6,6 +6,7 @@ import { Language } from '../translations';
 interface UserProfileSettingsProps {
   currentUser: Runner;
   onUpdateCurrentUser: (user: Runner) => void;
+  onLogout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
   girlMode: boolean;
@@ -113,6 +114,7 @@ const dict = {
 export default function UserProfileSettings({
   currentUser,
   onUpdateCurrentUser,
+  onLogout,
   language,
   setLanguage,
   girlMode,
@@ -945,10 +947,19 @@ export default function UserProfileSettings({
         </div>
 
         {/* Action Button */}
-        <div className={`pt-2 flex ${isRtl ? 'justify-start' : 'justify-end'}`}>
+        <div className={`pt-2 flex flex-col sm:flex-row items-center justify-between gap-4`}>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full sm:w-auto px-6 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition border border-rose-200 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>{language === 'ar' ? 'تسجيل الخروج' : 'Se déconnecter'}</span>
+          </button>
+
           <button
             type="submit"
-            className="px-6 py-2.5 bg-[#1034A6] hover:bg-blue-700 text-white font-bold text-xs shrink-0 rounded-xl transition shadow-xs cursor-pointer flex items-center gap-1.5"
+            className="w-full sm:w-auto px-6 py-2.5 bg-[#1034A6] hover:bg-blue-700 text-white font-bold text-xs shrink-0 rounded-xl transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
           >
             <Check className="w-3.5 h-3.5" />
             <span>{t.saveBtn}</span>
