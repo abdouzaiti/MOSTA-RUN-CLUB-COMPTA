@@ -304,55 +304,80 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
   return (
     <div 
-      className={`min-h-screen grid grid-cols-1 lg:grid-cols-2 items-start lg:items-center gap-12 p-4 pt-12 sm:pt-20 lg:pt-4 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
-      dir={language === 'ar' ? 'rtl' : 'ltr'}
+      className={`min-h-screen relative grid grid-cols-1 lg:grid-cols-2 items-center p-4 pt-16 sm:pt-24 lg:p-12 xl:p-16 bg-cover bg-center bg-fixed ${language === 'ar' ? 'font-arabic' : ''}`} 
+      dir="ltr"
       style={{ backgroundImage: "url('/back.png')" }}
     >
-      {/* Left Content: Hero Branding */}
-      <div className="flex flex-col items-center lg:items-start text-center lg:text-right space-y-6 animate-fade-in order-2 lg:order-1 lg:-mt-20">
-        <div className="relative inline-block">
-          <img 
-            src="/logo.png" 
-            alt="Mosta Run Club" 
-            className="w-32 h-32 sm:w-48 sm:h-48 object-contain drop-shadow-2xl animate-float" 
-          />
-        </div>
-        
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-4xl font-black text-blue-950 tracking-tighter shadow-white drop-shadow-sm">
-            نجري معا
-          </h1>
-          <h1 className="text-2xl sm:text-4xl font-black text-blue-950 tracking-tighter shadow-white drop-shadow-sm">
-            نتحدى حدودنا
-          </h1>
-        </div>
-
-        <div className="space-y-0.5">
-          <p className="text-xs sm:text-sm font-bold text-slate-600/80 leading-tight">
-            إنضم ألى مجتمع مستغانم
-          </p>
-          <p className="text-xs sm:text-sm font-bold text-slate-600/80 leading-tight">
-            للركض وكن جزءا من التغيير
-          </p>
+      {/* Top Left Logo */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 animate-fade-in flex items-center gap-3">
+        <img 
+          src="/logo.png" 
+          alt="Mosta Run Club" 
+          className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-lg" 
+        />
+        <div className="flex flex-col text-left leading-tight">
+          <span className="text-base sm:text-lg font-black text-brand-blue tracking-wider uppercase drop-shadow-sm font-sans">
+            One Club
+          </span>
+          <span className="text-xs sm:text-sm font-bold text-white italic tracking-wide font-sans drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+            One Family...
+          </span>
         </div>
       </div>
 
-      {/* Right Content: Login Form */}
-      <div className="flex justify-center lg:justify-end order-1 lg:order-2">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[3rem] border border-natural-border shadow-2xl overflow-hidden p-8 sm:p-10 animate-fade-in text-xs space-y-6">
-          <div className="flex justify-center gap-3 mb-2">
-            <button onClick={() => setLanguage('ar')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'ar' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>AR</button>
-            <button onClick={() => setLanguage('fr')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'fr' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>FR</button>
-            <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${language === 'en' ? 'bg-natural-olive text-white scale-110 shadow-md' : 'bg-white text-natural-olive border border-natural-olive/20 hover:bg-natural-bone'}`}>EN</button>
-          </div>
+      {/* Spacer on the left for large screens */}
+      <div className="hidden lg:block" />
 
+      {/* Right Content: Login Form */}
+      <div 
+        dir="ltr"
+        className="flex flex-col items-center justify-center w-full max-w-md gap-4 z-10 lg:justify-self-end justify-self-center"
+      >
+        {/* Floating Language Selector */}
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2 animate-fade-in z-10">
+          <button 
+            onClick={() => setLanguage('en')} 
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[9px] sm:text-[10px] tracking-wider font-extrabold transition-all duration-200 uppercase shadow-sm hover:scale-105 active:scale-95 ${
+              language === 'en' 
+                ? 'bg-blue-600 text-white shadow-blue-500/20 ring-2 ring-blue-600/5' 
+                : 'bg-white text-slate-500 hover:text-slate-700 border border-slate-100 hover:bg-slate-50'
+            }`}
+          >
+            ENGLISH
+          </button>
+          <button 
+            onClick={() => setLanguage('fr')} 
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[9px] sm:text-[10px] tracking-wider font-extrabold transition-all duration-200 uppercase shadow-sm hover:scale-105 active:scale-95 ${
+              language === 'fr' 
+                ? 'bg-blue-600 text-white shadow-blue-500/20 ring-2 ring-blue-600/5' 
+                : 'bg-white text-slate-500 hover:text-slate-700 border border-slate-100 hover:bg-slate-50'
+            }`}
+          >
+            FRANÇAIS
+          </button>
+          <button 
+            onClick={() => setLanguage('ar')} 
+            className={`px-3.5 py-1.5 sm:px-4.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 ${
+              language === 'ar' 
+                ? 'bg-blue-600 text-white font-arabic shadow-blue-500/20 ring-2 ring-blue-600/5' 
+                : 'bg-white text-slate-500 hover:text-slate-700 border border-slate-100 hover:bg-slate-50 font-arabic'
+            }`}
+          >
+            العربية
+          </button>
+        </div>
+
+        <div 
+          dir={language === 'ar' ? 'rtl' : 'ltr'}
+          className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[3rem] border border-natural-border shadow-2xl overflow-hidden p-8 sm:p-10 animate-fade-in text-xs space-y-6"
+        >
           <div className="border-b border-natural-divider pb-4 text-center">
-            <h2 className="font-bold font-serif italic text-natural-olive text-lg uppercase tracking-widest">{t('login')}</h2>
-            <p className="text-[11px] text-natural-sage font-bold mt-1 font-mono uppercase opacity-80 letter-spacing-1">{t('welcome')}</p>
+            <h2 className="font-extrabold font-sans text-natural-olive text-xl uppercase tracking-wider">{t('login')}</h2>
+            <p className="text-[11px] text-natural-sage font-bold mt-1 font-sans uppercase opacity-80 tracking-wider">{t('welcome')}</p>
           </div>
 
           {errorMsg && (
-            <div className="p-4 bg-rose-50 text-rose-700 font-bold rounded-2xl border border-rose-100 leading-relaxed font-mono text-[11px] flex items-center gap-2">
+            <div className="p-4 bg-rose-50 text-rose-700 font-bold rounded-2xl border border-rose-100 leading-relaxed font-sans text-[11px] flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 shrink-0" />
               {errorMsg}
             </div>
@@ -360,39 +385,39 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
           <form onSubmit={handleLoginSubmit} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-natural-olive px-1 font-mono uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
                 {t('username')}
               </label>
               <div className="relative group">
-                <User className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors" />
+                <User className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
                 <input
                   type="text"
                   required
                   value={identifier}
                   onChange={e => setIdentifier(e.target.value)}
                   placeholder={t('searchPlaceholder')}
-                  className="w-full pl-11 pr-4 py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-mono transition-all"
+                  className={`w-full ${language === 'ar' ? 'pr-11 pl-4 text-right' : 'pl-11 pr-4'} py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans transition-all`}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-natural-olive px-1 font-mono uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-natural-olive px-1 font-sans uppercase tracking-wider">
                 {t('password')}
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors" />
+                <Lock className={`absolute ${language === 'ar' ? 'right-3.5' : 'left-3.5'} top-3.5 w-4.5 h-4.5 text-natural-sage group-focus-within:text-natural-olive transition-colors`} />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-mono text-sm transition-all"
+                  className={`w-full ${language === 'ar' ? 'pr-11 pl-12 text-right' : 'pl-11 pr-12'} py-3.5 bg-natural-bone/50 text-natural-text border border-natural-border rounded-2xl focus:outline-none focus:ring-2 focus:ring-natural-olive/20 focus:border-natural-olive font-semibold font-sans text-sm transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3.5 text-natural-sage hover:text-natural-olive transition-colors p-0.5"
+                  className={`absolute ${language === 'ar' ? 'left-3.5' : 'right-3.5'} top-3.5 text-natural-sage hover:text-natural-olive transition-colors p-0.5`}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -401,9 +426,9 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
 
             <button
               type="submit"
-              className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer font-serif italic text-sm shadow-lg hover:shadow-xl active:scale-95 group"
+              className="w-full bg-natural-olive hover:bg-natural-olive-hover text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer font-sans text-sm shadow-lg hover:shadow-xl active:scale-95 group"
             >
-              <span className="uppercase tracking-widest">{t('login')}</span>
+              <span className="uppercase tracking-widest font-extrabold">{t('login')}</span>
               <LogIn className="w-5 h-5 text-natural-accent group-hover:translate-x-1 transition-transform" />
             </button>
           </form>

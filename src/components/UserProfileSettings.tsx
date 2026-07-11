@@ -8,6 +8,8 @@ interface UserProfileSettingsProps {
   onUpdateCurrentUser: (user: Runner) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  girlMode: boolean;
+  setGirlMode: (enabled: boolean) => void;
 }
 
 const PRESET_AVATARS = [
@@ -48,7 +50,9 @@ const dict = {
     panYLabel: "الإزاحة العمودية",
     borderWidthLabel: "سمك الإطار",
     borderColorLabel: "نمط ولون الإطار",
-    shapeLabel: "شكل الصورة"
+    shapeLabel: "شكل الصورة",
+    girlModeLabel: "وضع البنات 🌸 (Girl Mode)",
+    girlModeDesc: "تفعيل هذا الخيار يحول مظهر التطبيق بالكامل إلى اللون الوردي والأبيض بدلاً من الأزرق."
   },
   fr: {
     sectionTitle: "Éditer Mon Profil & Paramètres",
@@ -73,7 +77,9 @@ const dict = {
     panYLabel: "Position Verticale (Y)",
     borderWidthLabel: "Épaisseur Bordure",
     borderColorLabel: "Style & Couleur de Bordure",
-    shapeLabel: "Forme de Découpe"
+    shapeLabel: "Forme de Découpe",
+    girlModeLabel: "Mode Filles 🌸 (Girl Mode)",
+    girlModeDesc: "Activez cette option pour transformer tout l'affichage de l'application en rose au lieu du bleu."
   },
   en: {
     sectionTitle: "Edit My Profile & Preferences",
@@ -98,7 +104,9 @@ const dict = {
     panYLabel: "Vertical Position (Y)",
     borderWidthLabel: "Border Thickness",
     borderColorLabel: "Border Style & Color",
-    shapeLabel: "Crop Shape"
+    shapeLabel: "Crop Shape",
+    girlModeLabel: "Girl Mode 🌸 (No Premium)",
+    girlModeDesc: "Enable this to transform the entire application's blue accent colors into pink."
   }
 };
 
@@ -106,7 +114,9 @@ export default function UserProfileSettings({
   currentUser,
   onUpdateCurrentUser,
   language,
-  setLanguage
+  setLanguage,
+  girlMode,
+  setGirlMode
 }: UserProfileSettingsProps) {
   const [formName, setFormName] = useState(currentUser.name);
   const [formPhone, setFormPhone] = useState(currentUser.phone || '');
@@ -430,6 +440,43 @@ export default function UserProfileSettings({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Girl Mode Option Toggle */}
+      <div className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+        girlMode 
+          ? 'bg-rose-50/50 border-rose-200/80 shadow-sm shadow-rose-100' 
+          : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'
+      } ${isRtl ? 'sm:flex-row-reverse text-right' : 'text-left'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300 ${
+            girlMode ? 'bg-pink-100 text-pink-600' : 'bg-slate-100 text-slate-500'
+          }`}>
+            <span className="text-xl">🌸</span>
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+              {t.girlModeLabel}
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+              {t.girlModeDesc}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setGirlMode(!girlMode)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            girlMode ? 'bg-pink-500' : 'bg-slate-200'
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+              girlMode ? (isRtl ? 'translate-x-0' : 'translate-x-5') : (isRtl ? 'translate-x-5' : 'translate-x-0')
+            }`}
+          />
+        </button>
       </div>
 
       {showSuccess && (

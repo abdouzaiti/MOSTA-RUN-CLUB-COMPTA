@@ -30,6 +30,15 @@ export default function App() {
     return saved as Language || null;
   });
 
+  const [girlMode, setGirlMode] = useState<boolean>(() => {
+    return localStorage.getItem('mrc_girl_mode') === 'true';
+  });
+
+  const handleSetGirlMode = (enabled: boolean) => {
+    setGirlMode(enabled);
+    localStorage.setItem('mrc_girl_mode', enabled ? 'true' : 'false');
+  };
+
   const t = (key: string) => {
     if (!language) return key;
     return (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
@@ -806,7 +815,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
 
   return (
     <div 
-      className={`min-h-screen text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive bg-white ${language === 'ar' ? 'font-arabic' : ''}`} 
+      className={`min-h-screen text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive bg-white ${language === 'ar' ? 'font-arabic' : ''} ${girlMode ? 'girl-mode' : ''}`} 
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
       {!currentUser ? (
@@ -852,10 +861,10 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
           />
 
           {/* Right Main Scrollable View Panel */}
-          <div className={`flex-1 flex flex-col h-full relative ${
+          <div className={`flex-1 flex flex-col h-full relative lg:-translate-x-[3cm] lg:w-[calc(100%+3cm)] lg:max-w-[calc(100%+3cm)] ${
             activeTab === 'messagerie'
               ? 'overflow-hidden p-0' 
-              : 'overflow-y-auto p-4 lg:p-6 lg:no-scrollbar'
+              : 'overflow-y-auto pt-4 pb-4 pr-4 pl-2 lg:pt-6 lg:pb-6 lg:pr-6 lg:pl-3 lg:no-scrollbar'
           }`}>
             
             {!isLoadingDb && currentUser && (
@@ -981,6 +990,8 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                         onUpdateCurrentUser={handleUpdateCurrentUser}
                         language={language || 'fr'}
                         setLanguage={setLanguage}
+                        girlMode={girlMode}
+                        setGirlMode={handleSetGirlMode}
                       />
 
 

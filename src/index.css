@@ -1,10 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cairo:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,600;1,700&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Lora", "Georgia", serif;
-  
+:root {
   --color-natural-bg: #F0F4FA;
   --color-natural-text: #0E1E38;
   --color-natural-olive: #1D4ED8;
@@ -15,6 +12,136 @@
   --color-natural-bone: #FFFFFF;
   --color-natural-border: #D1E1F7;
   --color-natural-divider: #E8F0FC;
+  --color-brand-blue: #0076A8;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+}
+
+.girl-mode {
+  --color-natural-bg: #FFF5F7;
+  --color-natural-text: #4C0519;
+  --color-natural-olive: #EC4899;
+  --color-natural-olive-hover: #DB2777;
+  --color-natural-sage: #A15D83;
+  --color-natural-sage-light: #FCE7F3;
+  --color-natural-accent: #FB7185;
+  --color-natural-bone: #FFFFFF;
+  --color-natural-border: #FBCFE8;
+  --color-natural-divider: #FDF2F8;
+  --color-brand-blue: #EC4899;
+
+  --color-blue-50: #FFF1F2;
+  --color-blue-100: #FFE4E6;
+  --color-blue-200: #FECDD3;
+  --color-blue-300: #FDA4AF;
+  --color-blue-400: #FB7185;
+  --color-blue-500: #F43F5E;
+  --color-blue-600: #E11D48;
+  --color-blue-700: #BE123C;
+  --color-blue-800: #9F1239;
+  --color-blue-900: #881337;
+  --color-blue-950: #4C0519;
+}
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", "Georgia", serif;
+  --font-arabic: "Cairo", sans-serif;
+  
+  --color-natural-bg: var(--color-natural-bg);
+  --color-natural-text: var(--color-natural-text);
+  --color-natural-olive: var(--color-natural-olive);
+  --color-natural-olive-hover: var(--color-natural-olive-hover);
+  --color-natural-sage: var(--color-natural-sage);
+  --color-natural-sage-light: var(--color-natural-sage-light);
+  --color-natural-accent: var(--color-natural-accent);
+  --color-natural-bone: var(--color-natural-bone);
+  --color-natural-border: var(--color-natural-border);
+  --color-natural-divider: var(--color-natural-divider);
+  --color-brand-blue: var(--color-brand-blue);
+
+  --color-blue-50: var(--color-blue-50);
+  --color-blue-100: var(--color-blue-100);
+  --color-blue-200: var(--color-blue-200);
+  --color-blue-300: var(--color-blue-300);
+  --color-blue-400: var(--color-blue-400);
+  --color-blue-500: var(--color-blue-500);
+  --color-blue-600: var(--color-blue-600);
+  --color-blue-700: var(--color-blue-700);
+  --color-blue-800: var(--color-blue-800);
+  --color-blue-900: var(--color-blue-900);
+  --color-blue-950: var(--color-blue-950);
+}
+
+/* Girl Mode Custom CSS Utility overrides */
+.girl-mode .bg-\[\#F3F6FF\] {
+  background-color: #FFF5F7 !important;
+}
+.girl-mode .text-\[\#1034A6\] {
+  color: #EC4899 !important;
+}
+.girl-mode .bg-\[\#1034A6\] {
+  background-color: #EC4899 !important;
+}
+.girl-mode .border-\[\#1034A6\] {
+  border-color: #EC4899 !important;
+}
+.girl-mode .hover\:text-\[\#1034A6\]:hover {
+  color: #DB2777 !important;
+}
+.girl-mode .hover\:bg-\[\#1034A6\]:hover {
+  background-color: #DB2777 !important;
+}
+.girl-mode .bg-\[\#1034A6\]\/10 {
+  background-color: rgba(236, 72, 153, 0.1) !important;
+}
+.girl-mode .border-\[\#1034A6\]\/20 {
+  border-color: rgba(236, 72, 153, 0.2) !important;
+}
+.girl-mode .focus\:ring-\[\#1034A6\]:focus {
+  --tw-ring-color: #EC4899 !important;
+}
+
+/* Gradients */
+.girl-mode .from-\[\#1034A6\] {
+  --tw-gradient-from: #EC4899 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(236, 72, 153, 0)) !important;
+}
+.girl-mode .to-\[\#1E56A0\] {
+  --tw-gradient-to: #F472B6 !important;
+}
+.girl-mode .via-\[\#1E56A0\] {
+  --tw-gradient-to: rgba(244, 114, 182, 0) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #F472B6 !important, var(--tw-gradient-to) !important;
+}
+.girl-mode .to-\[\#2F89FC\] {
+  --tw-gradient-to: #F472B6 !important;
+}
+.girl-mode .to-\[\#0A1950\] {
+  --tw-gradient-to: #4C0519 !important;
+}
+.girl-mode .text-\[\#2F89FC\] {
+  color: #F472B6 !important;
+}
+.girl-mode .hover\:bg-\[\#1E56A0\]:hover {
+  background-color: #DB2777 !important;
+}
+.girl-mode .bg-\[\#1E56A0\] {
+  background-color: #F472B6 !important;
+}
+
+.font-arabic {
+  font-family: "Cairo", "Plus Jakarta Sans", sans-serif;
 }
 
 /* Custom scrollbar and ambient grid styling */
