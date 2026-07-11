@@ -30,6 +30,33 @@ export default function App() {
     return saved as Language || null;
   });
 
+  const [showBottomNav, setShowBottomNav] = useState(true);
+  const lastScrollTop = React.useRef(0);
+
+  useEffect(() => {
+    setShowBottomNav(true);
+  }, [activeTab]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollTop = target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+    
+    // Check if we reached near the bottom (within 40px)
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 40;
+    
+    if (scrollTop > lastScrollTop.current && scrollTop > 50) {
+      // Scrolling down
+      setShowBottomNav(false);
+    } else if (scrollTop < lastScrollTop.current) {
+      // Scrolling up
+      setShowBottomNav(true);
+    }
+    
+    lastScrollTop.current = scrollTop <= 0 ? 0 : scrollTop;
+  };
+
   const [girlMode, setGirlMode] = useState<boolean>(() => {
     return localStorage.getItem('mrc_girl_mode') === 'true';
   });
@@ -864,11 +891,14 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
           />
 
           {/* Right Main Scrollable View Panel */}
-          <div className={`flex-1 flex flex-col h-full relative ${
-            activeTab === 'messagerie'
-              ? 'overflow-hidden p-0' 
-              : 'overflow-y-auto pt-4 pb-4 pr-4 pl-2 lg:pt-6 lg:pb-6 lg:pr-6 lg:pl-3 lg:no-scrollbar'
-          }`}>
+          <div 
+            onScroll={handleScroll}
+            className={`flex-1 flex flex-col h-full relative ${
+              activeTab === 'messagerie'
+                ? 'overflow-hidden p-0' 
+                : 'overflow-y-auto pt-4 pb-4 pr-4 pl-2 lg:pt-6 lg:pb-6 lg:pr-6 lg:pl-3 lg:no-scrollbar'
+            }`}
+          >
             
             {!isLoadingDb && currentUser && (
               <>
@@ -1109,7 +1139,9 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
           </div>
 
           {/* Mobile Bottom Navigation Bar */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-3 py-2 flex items-center justify-around bg-white/95 border-slate-100/90">
+          <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md border-t shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-3 py-2 flex items-center justify-around bg-white/95 border-slate-100/90 transition-all duration-300 ${
+            showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+          }`}>
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
