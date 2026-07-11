@@ -4,7 +4,7 @@ import { Language } from '../translations';
 import { supabase, dbService } from '../supabaseClient';
 import { 
   Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle,
-  Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause, Trash2, Database,
+  Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause, Trash2, Database, Camera,
   Image as ImageIcon, Paperclip
 } from 'lucide-react';
 
@@ -114,6 +114,8 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
 
   // Hidden file inputs refs
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Call States
@@ -437,6 +439,35 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const mediaUrl = URL.createObjectURL(file);
+    const receiverId = isAdmin ? selectedUserId : adminId;
+
+    const newSupportMsg: SupportMessage = {
+      id: `support-msg-vid-${Date.now()}`,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatarUrl || null,
+      receiverId,
+      text: '',
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+
+    (newSupportMsg as any).type = 'video';
+    (newSupportMsg as any).mediaUrl = mediaUrl;
+    (newSupportMsg as any).fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+
+    dbService.sendSupportMessage(newSupportMsg).catch(err => {
+      console.error("Error sending support video:", err);
+    });
+    e.target.value = '';
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -662,9 +693,11 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                             <span className="text-[8px] text-slate-400 font-mono">{formatTime(msg.timestamp)}</span>
                           </div>
                           <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs relative group ${
-                            isMe 
-                              ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
-                              : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
+                            (msg as any).type === 'image' || (msg as any).type === 'video'
+                              ? 'bg-transparent border-transparent shadow-none !p-0'
+                              : isMe 
+                                ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
+                                : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
                           }`}>
                             {(msg as any).type === 'voice' ? (
                               <div className="flex items-center gap-2 min-w-[120px]">
@@ -675,6 +708,19 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                   <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
                                 </div>
                                 <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
+                              </div>
+                            ) : (msg as any).type === 'video' ? (
+                              <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px]">
+                                <video 
+                                  src={(msg as any).mediaUrl} 
+                                  controls 
+                                  className="w-full h-full object-contain"
+                                />
+                                {(msg as any).fileSize && (
+                                  <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
+                                    {(msg as any).fileSize}
+                                  </div>
+                                )}
                               </div>
                             ) : (msg as any).type === 'image' ? (
                               <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
@@ -769,6 +815,21 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                 />
                 <input 
                   type="file" 
+                  ref={cameraInputRef} 
+                  accept="image/*" 
+                  capture="environment"
+                  className="hidden" 
+                  onChange={handlePhotoUpload} 
+                />
+                <input 
+                  type="file" 
+                  ref={videoInputRef} 
+                  accept="video/*" 
+                  className="hidden" 
+                  onChange={handleVideoUpload} 
+                />
+                <input 
+                  type="file" 
                   ref={fileInputRef} 
                   className="hidden" 
                   onChange={handleFileUpload} 
@@ -803,6 +864,20 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                           className="p-1.5 text-slate-400 hover:text-blue-600 transition"
                         >
                           <ImageIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => videoInputRef.current?.click()}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                        >
+                          <Video className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                        >
+                          <Camera className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
@@ -942,7 +1017,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                     <span className="text-[8px] text-slate-400 font-mono">{formatTime(msg.timestamp)}</span>
                   </div>
                   <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs relative group/msg ${
-                    (msg as any).type === 'image' 
+                    (msg as any).type === 'image' || (msg as any).type === 'video'
                       ? 'bg-transparent border-transparent shadow-none !p-0' 
                       : isMe 
                         ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
@@ -957,6 +1032,19 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                           <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
                         </div>
                         <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
+                      </div>
+                    ) : (msg as any).type === 'video' ? (
+                      <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px]">
+                        <video 
+                          src={(msg as any).mediaUrl} 
+                          controls 
+                          className="w-full h-full object-contain"
+                        />
+                        {(msg as any).fileSize && (
+                          <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
+                            {(msg as any).fileSize}
+                          </div>
+                        )}
                       </div>
                     ) : (msg as any).type === 'image' ? (
                       <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
@@ -1056,6 +1144,20 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                     className="p-1.5 text-slate-400 hover:text-blue-600 transition"
                   >
                     <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                  >
+                    <Video className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                  >
+                    <Camera className="w-4 h-4" />
                   </button>
                   <button
                     type="button"

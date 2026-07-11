@@ -185,6 +185,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Hidden file inputs refs
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Dynamic list of group members combining currentUser and all other runners from the database
@@ -1146,7 +1148,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         senderName: currentUser.name,
         senderRole: currentUser.runClubRole || 'Membre',
         avatarUrl: currentUser.avatarUrl || null,
-        text: file.name,
+        text: '',
         time: timestamp,
         type: 'image',
         mediaUrl: dataUrl,
@@ -1171,10 +1173,79 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         }
         return c;
       }));
-
     };
     reader.readAsDataURL(file);
     // Reset input value to allow selecting same photo again
+    e.target.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const mediaUrl = URL.createObjectURL(file);
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+
+    if (isSupport) {
+      const receiverId = activeChannelId === 'support-channel-admin' ? adminId : activeChannelId.replace('support-user-', '');
+      
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-vid-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl || null,
+        receiverId,
+        text: '',
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      (newSupportMsg as any).type = 'video';
+      (newSupportMsg as any).mediaUrl = mediaUrl;
+      (newSupportMsg as any).fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+
+      dbService.sendSupportMessage(newSupportMsg).catch(err => {
+        console.error("Error sending support video:", err);
+      });
+      return;
+    }
+
+    const newMsg: Message = {
+      id: 'm-video-' + Date.now(),
+      senderId: currentUser.id || 'usr-1',
+      senderName: currentUser.name,
+      senderRole: currentUser.runClubRole || 'Membre',
+      avatarUrl: currentUser.avatarUrl || null,
+      text: '',
+      time: timestamp,
+      type: 'video',
+      mediaUrl: mediaUrl,
+      fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+      read: false
+    };
+
+    setChannelMessages(prev => ({
+      ...prev,
+      [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
+    }));
+
+    // Sync to Supabase
+    syncMessageToSupabase(newMsg);
+
+    setChannels(prev => prev.map(c => {
+      if (c.id === activeChannelId) {
+        return {
+          ...c,
+          lastMessage: `${currentUser.name.split(' ')[0]}: 🎥 Vidéo`,
+          lastMessageTime: timestamp
+        };
+      }
+      return c;
+    }));
+    
     e.target.value = '';
   };
 
@@ -2245,6 +2316,19 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                           </div>
                         </div>
                       </div>
+                    ) : message.type === 'video' ? (
+                      <div className="space-y-2">
+                        <div className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 bg-black">
+                          <video 
+                            src={message.mediaUrl} 
+                            controls 
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        {message.fileSize && (
+                          <p className="text-[10px] opacity-60 px-1 italic">{message.fileSize}</p>
+                        )}
+                      </div>
                     ) : message.type === 'file' ? (
                       <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
                         <Paperclip className="w-5 h-5 shrink-0" />
@@ -2446,6 +2530,21 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             />
             <input 
               type="file" 
+              ref={cameraInputRef} 
+              accept="image/*" 
+              capture="environment"
+              className="hidden" 
+              onChange={handlePhotoUpload} 
+            />
+            <input 
+              type="file" 
+              ref={videoInputRef} 
+              accept="video/*" 
+              className="hidden" 
+              onChange={handleVideoUpload} 
+            />
+            <input 
+              type="file" 
               ref={fileInputRef} 
               className="hidden" 
               onChange={handleFileUpload} 
@@ -2460,6 +2559,22 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 title={isRtl ? 'مشاركة صورة' : 'Partager Image'}
               >
                 <ImageIcon className="w-4 h-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                title={isRtl ? 'كاميرا' : 'Caméra'}
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+              <button 
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                title={isRtl ? 'فيديو' : 'Vidéo'}
+              >
+                <Video className="w-4 h-4" />
               </button>
               <button 
                 type="button"
