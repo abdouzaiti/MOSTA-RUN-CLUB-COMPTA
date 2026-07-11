@@ -117,6 +117,19 @@ export default function Sidebar({
         
         {/* Right Section Actions - Theme Mod Toggle Trigger & Quick controls */}
         <div className="flex items-center gap-1.5">
+          {/* Mode Toggle Trigger */}
+          <button
+            onClick={() => setGirlMode && setGirlMode(!girlMode)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-300 active:scale-95 cursor-pointer text-[10px] font-black uppercase tracking-wider ${
+              girlMode 
+                ? 'bg-pink-50 border-pink-200 text-pink-600 shadow-sm' 
+                : 'bg-blue-50 border-blue-100 text-blue-600 shadow-sm'
+            }`}
+          >
+            <span className="animate-pulse">🌸</span>
+            <span>{language === 'ar' ? 'الوضع' : 'MODE'}</span>
+          </button>
+
           {/* Notifications Trigger */}
           <button
             onClick={() => setActiveTab('notifications')}

@@ -872,6 +872,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               language={language}
               setLanguage={setLanguage}
               girlMode={girlMode}
+              setGirlMode={handleSetGirlMode}
             />
           )}
         </>

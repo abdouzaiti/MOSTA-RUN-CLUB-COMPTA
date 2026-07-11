@@ -11,9 +11,10 @@ interface LoginScreenProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   girlMode?: boolean;
+  setGirlMode?: (mode: boolean) => void;
 }
 
-export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage, girlMode }: LoginScreenProps) {
+export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage, girlMode, setGirlMode }: LoginScreenProps) {
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   
   // Authentication states
@@ -365,6 +366,19 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
             }`}
           >
             العربية
+          </button>
+
+          {/* Mode Toggle Trigger */}
+          <button
+            onClick={() => setGirlMode && setGirlMode(!girlMode)}
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-[9px] sm:text-[10px] tracking-wider font-extrabold transition-all duration-200 uppercase shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1.5 border ${
+              girlMode 
+                ? 'bg-pink-50 border-pink-200 text-pink-600 shadow-pink-100/50' 
+                : 'bg-blue-50 border-blue-100 text-blue-600 shadow-blue-100/50'
+            }`}
+          >
+            <span className="animate-pulse">🌸</span>
+            <span>{language === 'ar' ? 'الوضع' : 'MODE'}</span>
           </button>
         </div>
 
