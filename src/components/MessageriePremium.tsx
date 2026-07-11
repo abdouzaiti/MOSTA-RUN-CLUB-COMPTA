@@ -41,6 +41,7 @@ interface Message {
   reactions?: { [key: string]: any };
   replyTo?: { id: string; sender: string; text: string } | null;
   read?: boolean;
+  createdAt?: string;
 }
 
 interface ChatChannel {
@@ -399,10 +400,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     return defaultChannels;
   });
 
-  const allChannels = React.useMemo<ChatChannel[]>(() => {
-    return [...channels, ...supportChannels];
-  }, [channels, supportChannels]);
-
   const [channelMessages, setChannelMessages] = useState<{ [chanId: string]: Message[] }>(() => {
     const saved = localStorage.getItem('mrc_real_chat_messages');
     if (saved) {
@@ -418,6 +415,72 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     localStorage.setItem('mrc_real_chat_messages', JSON.stringify(defaultMessages));
     return defaultMessages;
   });
+
+  const getMessageTimestamp = (msg: Message): number => {
+    if (!msg) return 0;
+    if (msg.createdAt) {
+      const t = new Date(msg.createdAt).getTime();
+      if (!isNaN(t)) return t;
+    }
+    const match = msg.id && typeof msg.id === 'string' && msg.id.match(/\d+$/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      if (num > 1600000000000) return num;
+    }
+    return 0;
+  };
+
+  const getChannelLastMessageTimestamp = (channel: ChatChannel): number => {
+    if (channel.id === 'chan-group-1') {
+      const groupMsgs = channelMessages['chan-group-1'] || [];
+      if (groupMsgs.length > 0) {
+        const lastMsg = groupMsgs[groupMsgs.length - 1];
+        return getMessageTimestamp(lastMsg);
+      }
+      return 0;
+    }
+
+    if (channel.id === 'support-channel-admin') {
+      const userMessages = supportMessages.filter(
+        msg => (msg.senderId === currentUser.id && msg.receiverId === adminId) || 
+               (msg.senderId === adminId && msg.receiverId === currentUser.id) ||
+               (msg.receiverId === 'default' || msg.receiverId === 'all')
+      );
+      if (userMessages.length > 0) {
+        const lastMsg = userMessages[userMessages.length - 1];
+        return new Date(lastMsg.timestamp).getTime();
+      }
+      return 0;
+    }
+
+    if (channel.id.startsWith('support-user-')) {
+      const runnerId = channel.id.replace('support-user-', '');
+      const userMessages = supportMessages.filter(
+        msg => (msg.senderId === runnerId && msg.receiverId === currentUser.id) || 
+               (msg.senderId === currentUser.id && msg.receiverId === runnerId)
+      );
+      if (userMessages.length > 0) {
+        const lastMsg = userMessages[userMessages.length - 1];
+        return new Date(lastMsg.timestamp).getTime();
+      }
+      return 0;
+    }
+
+    return 0;
+  };
+
+  const allChannels = React.useMemo<ChatChannel[]>(() => {
+    const list = [...channels, ...supportChannels];
+    list.sort((a, b) => {
+      const timeA = getChannelLastMessageTimestamp(a);
+      const timeB = getChannelLastMessageTimestamp(b);
+      if (timeA !== timeB) {
+        return timeB - timeA; // Descending (newest first)
+      }
+      return a.name.localeCompare(b.name); // Alphabetical fallback
+    });
+    return list;
+  }, [channels, supportChannels, channelMessages, supportMessages, currentUser.id, adminId]);
 
   // Keep localStorage updated and enforce single group setup on start
   useEffect(() => {
@@ -505,7 +568,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       // 1. Fetch existing messages from Supabase (limit 50, omitting media_url to avoid timeout)
       supabase
         .from('mrc_messages')
-        .select('id, sender_id, sender_name, sender_role, avatar_url, text, time, type, file_size, duration, reply_to, reactions, read')
+        .select('id, sender_id, sender_name, sender_role, avatar_url, text, time, type, file_size, duration, reply_to, reactions, read, created_at')
         .order('created_at', { ascending: false })
         .limit(50)
         .then(({ data, error }) => {
@@ -526,7 +589,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               duration: item.duration,
               replyTo: item.reply_to,
               reactions: item.reactions || {},
-              read: item.read
+              read: item.read,
+              createdAt: (item as any).created_at
             }));
             
             setChannelMessages(prev => ({
@@ -575,7 +639,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 duration: newRow.duration,
                 replyTo: newRow.reply_to,
                 reactions: newRow.reactions || {},
-                read: newRow.read
+                read: newRow.read,
+                createdAt: newRow.created_at
               };
 
               setChannelMessages(prev => {
