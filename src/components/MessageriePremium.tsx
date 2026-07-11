@@ -2267,8 +2267,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                             className="w-full h-full object-contain bg-black/5" 
                             referrerPolicy="no-referrer" 
                           />
-                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-white" />
+                          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                           </div>
                         </div>
                         {message.text && message.text !== '📷 Photo' && (
@@ -3341,7 +3340,6 @@ alter publication supabase_realtime add table public.mrc_messages;`}
                 downloadImage(zoomedImage);
               }}
             >
-              <Sparkles className="w-4 h-4 text-[#1034A6]" />
               {isRtl ? 'تحميل الصورة' : 'Télécharger la photo'}
             </button>
           </div>

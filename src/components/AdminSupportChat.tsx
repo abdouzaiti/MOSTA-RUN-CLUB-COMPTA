@@ -683,8 +683,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                   alt="Shared" 
                                   className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
                                 />
-                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-                                  <Sparkles className="w-5 h-5 text-white" />
+                                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                                 </div>
                                 {msg.text && msg.text !== '📷 Photo' && <p className="mt-1">{msg.text.replace('📷 Photo: ', '')}</p>}
                               </div>
@@ -698,7 +697,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                   <p className="text-[8px] opacity-60">{(msg as any).fileSize || 'Unknown size'}</p>
                                 </div>
                                 <button className="p-1.5 hover:bg-white/10 rounded-lg transition">
-                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <Database className="w-3.5 h-3.5 opacity-50" />
                                 </button>
                               </div>
                             ) : msg.text}
@@ -940,12 +939,69 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                     </span>
                     <span className="text-[8px] text-slate-400 font-mono">{formatTime(msg.timestamp)}</span>
                   </div>
-                  <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs ${
+                  <div className={`p-2.5 rounded-2xl text-[11px] font-medium leading-relaxed max-w-[85%] border shadow-3xs relative group/msg ${
                     isMe 
                       ? 'bg-[#1034A6] text-white border-transparent rounded-tr-none' 
                       : 'bg-white text-slate-800 border-slate-200/80 rounded-tl-none'
                   }`}>
-                    {msg.text}
+                    {(msg as any).type === 'voice' ? (
+                      <div className="flex items-center gap-2 min-w-[120px]">
+                        <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#1034A6]'}`}>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                        <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
+                          <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
+                        </div>
+                        <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
+                      </div>
+                    ) : (msg as any).type === 'image' ? (
+                      <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
+                        <img 
+                          src={(msg as any).mediaUrl} 
+                          alt="Shared" 
+                          className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
+                        />
+                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                        </div>
+                        {msg.text && msg.text !== '📷 Photo' && <p className="mt-1">{msg.text.replace('📷 Photo: ', '')}</p>}
+                      </div>
+                    ) : (msg as any).type === 'file' ? (
+                      <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="p-2 bg-blue-500/20 rounded-lg">
+                          <Database className="w-4 h-4 text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-bold text-[10px]">{msg.text.replace('📁 Document: ', '')}</p>
+                          <p className="text-[8px] opacity-60">{(msg as any).fileSize || 'Unknown size'}</p>
+                        </div>
+                        <button className="p-1.5 hover:bg-white/10 rounded-lg transition">
+                          <Database className="w-3.5 h-3.5 opacity-50" />
+                        </button>
+                      </div>
+                    ) : msg.text}
+
+                    {/* Hover reactions menu */}
+                    <div className={`absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-slate-200 shadow-lg rounded-full px-1 py-0.5 flex gap-1 z-10 ${
+                      isMe ? 'right-0' : 'left-0'
+                    }`}>
+                      {quickReactions.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleAddReaction(msg.id, emoji)}
+                          className="hover:scale-125 transition-transform p-0.5"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                      {isMe && (
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="p-1 text-slate-400 hover:text-rose-500 transition ml-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -1031,6 +1087,36 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>
+        </div>
+      )}
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in" onClick={() => setZoomedImage(null)}>
+          <button 
+            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+            onClick={() => setZoomedImage(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          <img 
+            src={zoomedImage} 
+            alt="Zoomed" 
+            className="max-w-full max-h-[85vh] object-contain shadow-2xl animate-zoom-in" 
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          <div className="mt-6 flex gap-4">
+            <button 
+              className="px-6 py-2.5 bg-white text-black font-black rounded-xl flex items-center gap-2 hover:bg-slate-100 transition"
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadImage(zoomedImage);
+              }}
+            >
+              {isRtl ? 'تحميل الصورة' : 'Télécharger la photo'}
+            </button>
+          </div>
         </div>
       )}
     </div>
