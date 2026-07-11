@@ -83,19 +83,35 @@ export const triggerPhoneNotification = (title: string, body: string) => {
   if (!('Notification' in window)) return;
   
   if (Notification.permission === 'granted') {
-    try {
-      const options = {
-        body: body,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: 'mrc-notification-' + Date.now(),
-        vibrate: [120, 80, 120]
-      };
-      const notification = new Notification(title, options);
-      // Auto-dismiss after 6 seconds to avoid notification spam
-      setTimeout(() => notification.close(), 6000);
-    } catch (e) {
-      console.warn("Failed to trigger Notification API:", e);
+    const options = {
+      body: body,
+      icon: '/logo.png', // High-res club logo for the push alert!
+      badge: '/logo.png', // Badge icon for mobile status bars
+      tag: 'mrc-notification-' + Date.now(),
+      vibrate: [120, 80, 120],
+      requireInteraction: false
+    };
+
+    // Try showing using the Service Worker (the ONLY reliable way on Android Chrome & iOS Safari!)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((registration) => {
+          registration.showNotification(title, options);
+        })
+        .catch((err) => {
+          console.warn("Service worker not ready, falling back to standard notification:", err);
+          try {
+            new Notification(title, options);
+          } catch (e) {
+            console.error("Standard Notification constructor failed:", e);
+          }
+        });
+    } else {
+      try {
+        new Notification(title, options);
+      } catch (e) {
+        console.error("Standard Notification constructor failed:", e);
+      }
     }
   }
 };

@@ -68,60 +68,7 @@ export default function NotificationsPanel({ currentUser, language }: Notificati
   };
   
   // Custom mock notifications matching a real running club
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      type: 'run_signup',
-      title: 'Nouvelle inscription au run !',
-      titleAr: 'تسجيل جديد في الخرجة !',
-      description: 'Yacine Runner s\'est inscrit à la sortie "Mosta Long Trail" de vendredi.',
-      descriptionAr: 'قام ياسين بالتسجيل في خرجة "موستى لونج ترايل" المقررة يوم الجمعة.',
-      time: 'Il y a 5 min',
-      timeAr: 'منذ 5 دقائق',
-      read: false,
-      avatarIcon: <UserPlus className="w-4 h-4" />,
-      accentColor: 'bg-blue-100 text-[#1034A6] border-blue-200'
-    },
-    {
-      id: 'notif-2',
-      type: 'coach_tip',
-      title: 'Recommandation importante du Coach',
-      titleAr: 'توصية هامة من المدرب',
-      description: 'Coach Redouane a publié un nouveau guide de nutrition de course à lire.',
-      descriptionAr: 'نشر المدرب رضوان دليلاً جديداً للتغذية الرياضية ينصح بقراءته.',
-      time: 'Il y a 1 heure',
-      timeAr: 'منذ ساعة',
-      read: false,
-      avatarIcon: <Flame className="w-4 h-4 text-amber-600" />,
-      accentColor: 'bg-amber-100 text-amber-700 border-amber-200'
-    },
-    {
-      id: 'notif-3',
-      type: 'achievement',
-      title: 'Objectif collectif débloqué ! 🏆',
-      titleAr: 'تم فك قفل الهدف الجماعي ! 🏆',
-      description: 'Le club a dépassé la barre cumulée des 1 200 km réels enregistrés cette saison !',
-      descriptionAr: 'تجاوز النادي عتبة 1200 كيلومتر جماعية مسجلة هذا الموسم !',
-      time: 'Hier',
-      timeAr: 'أمس',
-      read: true,
-      avatarIcon: <Award className="w-4 h-4 text-emerald-600" />,
-      accentColor: 'bg-emerald-100 text-emerald-700 border-emerald-200'
-    },
-    {
-      id: 'notif-4',
-      type: 'general',
-      title: 'Attribution de Dossard',
-      titleAr: 'تخصيص أرقام الصدريات',
-      description: 'Abdou Zaiti vous a attribué le Dossard N° 127 pour le Trail de Mostaganem.',
-      descriptionAr: 'قام عبدو زايتي بتخصيص الصدرية رقم 127 لك في سباق مستغانم.',
-      time: 'Il y a 2 jours',
-      timeAr: 'منذ يومين',
-      read: true,
-      avatarIcon: <CheckCircle2 className="w-4 h-4 text-indigo-600" />,
-      accentColor: 'bg-indigo-100 text-indigo-700 border-indigo-200'
-    }
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread'>('all');
 

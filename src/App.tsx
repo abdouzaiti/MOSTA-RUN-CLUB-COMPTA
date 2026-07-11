@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import InscriptionsAndProfile from './components/InscriptionsAndProfile';
 import OutingsPlanning from './components/OutingsPlanning';
 import ReportsSummary from './components/ReportsSummary';
@@ -147,6 +148,26 @@ export default function App() {
   const [isSupportChatOpen, setIsSupportChatOpen] = useState<boolean>(false);
   const [unreadSupportCount, setUnreadSupportCount] = useState<number>(0);
 
+  // Real-time custom in-app notification banner (Instagram-style)
+  interface ActiveInAppNotification {
+    id: string;
+    title: string;
+    body: string;
+    type: 'message' | 'announcement' | 'support';
+    avatarUrl?: string;
+  }
+  const [activeBanner, setActiveBanner] = useState<ActiveInAppNotification | null>(null);
+
+  const triggerInAppNotification = (title: string, body: string, type: 'message' | 'announcement' | 'support', avatarUrl?: string) => {
+    const id = Date.now().toString();
+    setActiveBanner({ id, title, body, type, avatarUrl });
+    
+    // Auto-dismiss after 4.5 seconds
+    setTimeout(() => {
+      setActiveBanner(prev => prev && prev.id === id ? null : prev);
+    }, 4500);
+  };
+
   // Listen for real-time support messages for notifications
   useEffect(() => {
     if (!currentUser || !supabase) return;
@@ -197,11 +218,17 @@ export default function App() {
           if (isTarget && !msg.read) {
             setUnreadSupportCount(prev => prev + 1);
             
-            // Trigger Phone chime & browser notification
+            // Trigger Phone chime, browser notification & gorgeous Instagram-style banner
             playMessageChime();
             triggerPhoneNotification(
               isAr ? `💬 رسالة جديدة من ${msg.sender_name || 'الدعم'}` : `💬 Nouveau message de ${msg.sender_name || 'Support'}`,
               msg.text || ''
+            );
+            triggerInAppNotification(
+              isAr ? `💬 رسالة جديدة من ${msg.sender_name || 'الدعم'}` : `💬 Message de ${msg.sender_name || 'Support'}`,
+              msg.text || '',
+              'support',
+              msg.avatar_url || '/logo.png'
             );
           }
         } else if (payload.eventType === 'UPDATE') {
@@ -233,6 +260,12 @@ export default function App() {
             isAr ? `👥 محادثة النادي: ${msg.sender_name || 'عضو'}` : `👥 Chat Club: ${msg.sender_name || 'Membre'}`,
             msg.text || (isAr ? "أرسل ملفاً أو صورة" : "A envoyé un média/fichier")
           );
+          triggerInAppNotification(
+            isAr ? `👥 ${msg.sender_name || 'عضو في النادي'}` : `👥 ${msg.sender_name || 'Membre du Club'}`,
+            msg.text || (isAr ? "أرسل ملفاً أو صورة" : "A envoyé un média/fichier"),
+            'message',
+            msg.avatar_url || '/logo.png'
+          );
         }
       })
       .on('postgres_changes', {
@@ -249,6 +282,12 @@ export default function App() {
           triggerPhoneNotification(
             isAr ? `🚨 إعلان جديد من ${ann.author_name || 'المدرب'}` : `🚨 Nouvelle annonce de ${ann.author_name || 'Coach'}`,
             ann.content || ''
+          );
+          triggerInAppNotification(
+            isAr ? `🚨 إعلان جديد من ${ann.author_name || 'المدرب'}` : `🚨 Annonce de ${ann.author_name || 'Coach'}`,
+            ann.content || '',
+            'announcement',
+            ann.author_avatar_url || '/logo.png'
           );
         }
       })
@@ -959,6 +998,78 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
       className={`min-h-screen text-natural-text font-sans selection:bg-natural-sage-light selection:text-natural-olive bg-white ${language === 'ar' ? 'font-arabic' : ''} ${girlMode ? 'girl-mode' : ''}`} 
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
+      {/* Instagram-Style Floating Notification Banner */}
+      <AnimatePresence>
+        {activeBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -100, x: '-50%', scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
+            exit={{ opacity: 0, y: -80, x: '-50%', scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            onClick={() => {
+              // Handle tapping the banner like standard smartphone push alerts
+              if (activeBanner.type === 'support') {
+                setActiveTab('notifications');
+                setIsSupportChatOpen(true);
+              } else if (activeBanner.type === 'message') {
+                setActiveTab('messagerie');
+              } else if (activeBanner.type === 'announcement') {
+                setActiveTab('dashboard');
+              }
+              setActiveBanner(null);
+            }}
+            className="fixed top-4 left-1/2 z-[999999] w-[calc(100%-1.5rem)] max-w-sm sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2.5xl border border-slate-200/50 dark:border-slate-800/50 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.18)] p-3.5 flex items-start gap-3.5 cursor-pointer select-none group hover:scale-101 active:scale-99 transition-transform"
+          >
+            {/* Left side: Avatar/Logo with small application indicator badge */}
+            <div className="relative shrink-0">
+              <img 
+                src={activeBanner.avatarUrl || '/logo.png'} 
+                alt="Sender Avatar" 
+                className="w-10 h-10 rounded-2xl object-cover border border-slate-100/10 shadow-sm"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center border border-white text-[9px] font-bold">
+                {activeBanner.type === 'announcement' ? '🚨' : activeBanner.type === 'support' ? '💬' : '👥'}
+              </div>
+            </div>
+
+            {/* Middle: Content */}
+            <div className="flex-1 min-w-0 space-y-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-black text-blue-600 tracking-wider uppercase">
+                  {activeBanner.type === 'announcement' ? 'PostaGang Annonce' : activeBanner.type === 'support' ? 'PostaGang Support' : 'PostaGang Chat'}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400">
+                  {language === 'ar' ? 'الآن' : 'maintenant'}
+                </span>
+              </div>
+              <h5 className="text-[12px] font-extrabold text-slate-800 dark:text-slate-100 truncate">
+                {activeBanner.title}
+              </h5>
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                {activeBanner.body}
+              </p>
+            </div>
+
+            {/* Right side: Dismiss X button */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveBanner(null);
+              }}
+              className="shrink-0 p-1.5 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-50/50 transition self-center"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {!currentUser ? (
         <>
           {/* Global Loading state spinner for DB */}
