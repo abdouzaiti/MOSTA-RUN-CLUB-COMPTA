@@ -946,7 +946,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                   }`}>
                     {(msg as any).type === 'voice' ? (
                       <div className="flex items-center gap-2 min-w-[120px]">
-                        <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#1034A6]'}`}>
+                        <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
                           <Play className="w-3.5 h-3.5 fill-current" />
                         </button>
                         <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
@@ -967,11 +967,10 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                       </div>
                     ) : (msg as any).type === 'file' ? (
                       <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="p-2 bg-blue-500/20 rounded-lg">
-                          <Database className="w-4 h-4 text-blue-400" />
+                        <div className="p-2 bg-slate-500/20 rounded-lg">
+                          <Database className="w-4 h-4 text-slate-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="truncate font-bold text-[10px]">{msg.text.replace('📁 Document: ', '')}</p>
                           <p className="text-[8px] opacity-60">{(msg as any).fileSize || 'Unknown size'}</p>
                         </div>
                         <button className="p-1.5 hover:bg-white/10 rounded-lg transition">

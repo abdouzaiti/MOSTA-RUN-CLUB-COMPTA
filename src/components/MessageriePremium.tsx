@@ -2228,7 +2228,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                         <button 
                           onClick={() => handleToggleVoicePlay(message)}
                           className={`w-8 h-8 rounded-full flex items-center justify-center shadow-3xs cursor-pointer ${
-                            isMe ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'
+                            isMe ? 'bg-white text-slate-900' : 'bg-slate-800 text-white'
                           }`}
                         >
                           {playingVoiceId === message.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
@@ -2278,7 +2278,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                       <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
                         <Paperclip className="w-5 h-5 shrink-0" />
                         <div className="flex-1 min-w-0 text-[11px] font-bold">
-                          <p className="truncate text-slate-800">{message.text}</p>
                           <span className="text-[9px] opacity-75 font-mono block">{message.fileSize}</span>
                         </div>
                       </div>
