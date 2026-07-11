@@ -107,6 +107,16 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const [activeChannelId, setActiveChannelId] = useState('chan-group-1');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  const downloadImage = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `photo_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [copiedSql, setCopiedSql] = useState(false);
 
@@ -217,8 +227,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               receiverId: payload.new.receiver_id,
               text: payload.new.text,
               timestamp: payload.new.timestamp,
-              read: payload.new.read
+              read: payload.new.read,
+              reactions: payload.new.reactions || {}
             };
+            // Add optional fields
+            if (payload.new.type) (newMsg as any).type = payload.new.type;
+            if (payload.new.media_url) (newMsg as any).mediaUrl = payload.new.media_url;
+            if (payload.new.duration) (newMsg as any).duration = payload.new.duration;
+            if (payload.new.file_size) (newMsg as any).fileSize = payload.new.file_size;
+
             setSupportMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
@@ -227,8 +244,14 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             setSupportMessages(prev => prev.map(m => m.id === payload.new.id ? { 
               ...m, 
               read: payload.new.read,
-              reactions: payload.new.reactions || m.reactions
+              reactions: payload.new.reactions || m.reactions,
+              type: payload.new.type || (m as any).type,
+              mediaUrl: payload.new.media_url || (m as any).mediaUrl,
+              duration: payload.new.duration || (m as any).duration,
+              fileSize: payload.new.file_size || (m as any).fileSize
             } : m));
+          } else if (payload.eventType === 'DELETE') {
+            setSupportMessages(prev => prev.filter(m => m.id !== payload.old.id));
           }
         })
         .subscribe();
@@ -596,6 +619,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           type: (msg as any).type || 'text',
           mediaUrl: (msg as any).mediaUrl,
           duration: (msg as any).duration,
+          fileSize: (msg as any).fileSize,
           reactions: msg.reactions || {},
           read: msg.read
         }));
@@ -619,6 +643,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           type: (msg as any).type || 'text',
           mediaUrl: (msg as any).mediaUrl,
           duration: (msg as any).duration,
+          fileSize: (msg as any).fileSize,
           reactions: msg.reactions || {},
           read: msg.read
         }));
@@ -1090,6 +1115,31 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       const dataUrl = event.target?.result as string;
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
+      const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+
+      if (isSupport) {
+        const receiverId = activeChannelId === 'support-channel-admin' ? adminId : activeChannelId.replace('support-user-', '');
+        
+        const newSupportMsg: SupportMessage = {
+          id: `support-msg-${Date.now()}`,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatarUrl || null,
+          receiverId,
+          text: '', // Direct image sending
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+
+        (newSupportMsg as any).type = 'image';
+        (newSupportMsg as any).mediaUrl = dataUrl;
+
+        dbService.sendSupportMessage(newSupportMsg).catch(err => {
+          console.error("Error sending support photo:", err);
+        });
+        return;
+      }
+
       const newMsg: Message = {
         id: 'm-photo-' + Date.now(),
         senderId: currentUser.id || 'usr-1',
@@ -1136,6 +1186,34 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
     
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+
+    if (isSupport) {
+      const receiverId = activeChannelId === 'support-channel-admin' ? adminId : activeChannelId.replace('support-user-', '');
+      
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl || null,
+        receiverId,
+        text: `📁 Document: ${file.name}`,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      (newSupportMsg as any).type = 'file';
+      (newSupportMsg as any).fileSize = `${sizeInMb} MB`;
+
+      dbService.sendSupportMessage(newSupportMsg).catch(err => {
+        console.error("Error sending support file:", err);
+      });
+      
+      // Reset input value
+      e.target.value = '';
+      return;
+    }
+
     const newMsg: Message = {
       id: 'm-file-' + Date.now(),
       senderId: currentUser.id || 'usr-1',
@@ -1646,6 +1724,15 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
   // Delete / Retract a message
   const handleDeleteMessage = (msgId: string) => {
+    const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+    
+    if (isSupport) {
+      dbService.deleteSupportMessage(msgId).catch(err => {
+        console.error("Error deleting support message:", err);
+      });
+      return;
+    }
+
     // 1. Update local messages state
     setChannelMessages(prev => {
       const current = prev[activeChannelId] || [];
@@ -2170,10 +2257,23 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                       </div>
                     ) : message.type === 'image' ? (
                       <div className="space-y-2">
-                        <div className="rounded-xl overflow-hidden shadow-sm max-h-48 border border-slate-100">
-                          <img src={message.mediaUrl} alt="shared pic" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div 
+                          className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 cursor-pointer relative group/img"
+                          onClick={() => setZoomedImage(message.mediaUrl)}
+                        >
+                          <img 
+                            src={message.mediaUrl} 
+                            alt="shared pic" 
+                            className="w-full h-full object-contain bg-black/5" 
+                            referrerPolicy="no-referrer" 
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                            <Sparkles className="w-5 h-5 text-white" />
+                          </div>
                         </div>
-                        <p className="text-xs font-semibold">{message.text}</p>
+                        {message.text && message.text !== '📷 Photo' && (
+                          <p className="text-xs font-semibold">{message.text}</p>
+                        )}
                       </div>
                     ) : message.type === 'file' ? (
                       <div className="flex items-center gap-3 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition">
@@ -3216,6 +3316,37 @@ alter publication supabase_realtime add table public.mrc_messages;`}
         </div>
       )}
 
+      {/* Image Zoom Modal */}
+      {zoomedImage && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in" onClick={() => setZoomedImage(null)}>
+          <button 
+            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+            onClick={() => setZoomedImage(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          <img 
+            src={zoomedImage} 
+            alt="Zoomed" 
+            className="max-w-full max-h-[85vh] object-contain shadow-2xl animate-zoom-in" 
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          <div className="mt-6 flex gap-4">
+            <button 
+              className="px-6 py-2.5 bg-white text-black font-black rounded-xl flex items-center gap-2 hover:bg-slate-100 transition"
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadImage(zoomedImage);
+              }}
+            >
+              <Sparkles className="w-4 h-4 text-[#1034A6]" />
+              {isRtl ? 'تحميل الصورة' : 'Télécharger la photo'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

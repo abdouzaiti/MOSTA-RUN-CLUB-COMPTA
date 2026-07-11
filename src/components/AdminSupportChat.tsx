@@ -4,7 +4,8 @@ import { Language } from '../translations';
 import { supabase, dbService } from '../supabaseClient';
 import { 
   Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle,
-  Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause
+  Smile, Heart, ThumbsUp, Flame, Star, Phone, Video, Mic, X, Play, Pause, Trash2, Database,
+  Image as ImageIcon, Paperclip
 } from 'lucide-react';
 
 interface AdminSupportChatProps {
@@ -66,6 +67,12 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
               read: payload.new.read,
               reactions: payload.new.reactions || {}
             };
+            // Add optional fields
+            if (payload.new.type) (newMsg as any).type = payload.new.type;
+            if (payload.new.media_url) (newMsg as any).mediaUrl = payload.new.media_url;
+            if (payload.new.duration) (newMsg as any).duration = payload.new.duration;
+            if (payload.new.file_size) (newMsg as any).fileSize = payload.new.file_size;
+
             setMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
@@ -74,8 +81,14 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
             setMessages(prev => prev.map(m => m.id === payload.new.id ? { 
               ...m, 
               read: payload.new.read,
-              reactions: payload.new.reactions || m.reactions 
+              reactions: payload.new.reactions || m.reactions,
+              type: payload.new.type || (m as any).type,
+              mediaUrl: payload.new.media_url || (m as any).mediaUrl,
+              duration: payload.new.duration || (m as any).duration,
+              fileSize: payload.new.file_size || (m as any).fileSize
             } : m));
+          } else if (payload.eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id !== payload.old.id));
           }
         })
         .subscribe();
@@ -98,6 +111,10 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<any>(null);
+
+  // Hidden file inputs refs
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Call States
   const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; status: 'ringing' | 'connected' | 'ended' } | null>(null);
@@ -348,6 +365,15 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      await dbService.deleteSupportMessage(id);
+      // Local state update via subscription
+    } catch (err) {
+      console.error("Error deleting support message:", err);
+    }
+  };
+
   const quickReactions = ['❤️', '👍', '🔥', '👏', '😮', '😢'];
 
   const startCall = (type: 'voice' | 'video') => {
@@ -366,6 +392,79 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const endCall = () => {
     setActiveCall(null);
     if (callIntervalRef.current) clearInterval(callIntervalRef.current);
+  };
+
+  // Image Viewer State
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  const downloadImage = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `photo_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string;
+      const receiverId = isAdmin ? selectedUserId : adminId;
+
+      const newSupportMsg: SupportMessage = {
+        id: `support-msg-${Date.now()}`,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatarUrl || null,
+        receiverId,
+        text: '', // Empty text for direct image sending
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      (newSupportMsg as any).type = 'image';
+      (newSupportMsg as any).mediaUrl = dataUrl;
+
+      try {
+        await dbService.sendSupportMessage(newSupportMsg);
+      } catch (err) {
+        console.error("Error sending support photo:", err);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+    const receiverId = isAdmin ? selectedUserId : adminId;
+
+    const newSupportMsg: SupportMessage = {
+      id: `support-msg-${Date.now()}`,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatarUrl || null,
+      receiverId,
+      text: `📁 Document: ${file.name}`,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+
+    (newSupportMsg as any).type = 'file';
+    (newSupportMsg as any).fileSize = `${sizeInMb} MB`;
+
+    dbService.sendSupportMessage(newSupportMsg).catch(err => {
+      console.error("Error sending support file:", err);
+    });
+
+    e.target.value = '';
   };
 
   // Filter messages for current thread
@@ -577,6 +676,31 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                 </div>
                                 <span className="text-[9px] font-mono opacity-80">{(msg as any).duration || '0:00'}</span>
                               </div>
+                            ) : (msg as any).type === 'image' ? (
+                              <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
+                                <img 
+                                  src={(msg as any).mediaUrl} 
+                                  alt="Shared" 
+                                  className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
+                                />
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                                  <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                {msg.text && msg.text !== '📷 Photo' && <p className="mt-1">{msg.text.replace('📷 Photo: ', '')}</p>}
+                              </div>
+                            ) : (msg as any).type === 'file' ? (
+                              <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg border border-white/10">
+                                <div className="p-2 bg-blue-500/20 rounded-lg">
+                                  <Database className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="truncate font-bold text-[10px]">{msg.text.replace('📁 Document: ', '')}</p>
+                                  <p className="text-[8px] opacity-60">{(msg as any).fileSize || 'Unknown size'}</p>
+                                </div>
+                                <button className="p-1.5 hover:bg-white/10 rounded-lg transition">
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             ) : msg.text}
 
                             {/* Hover reactions menu */}
@@ -592,6 +716,14 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                                   {emoji}
                                 </button>
                               ))}
+                              {isMe && (
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="p-1 text-slate-400 hover:text-rose-500 transition ml-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                             
                             {/* Displayed reactions */}
@@ -629,6 +761,19 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                 </div>
 
                 {/* Admin send input */}
+                <input 
+                  type="file" 
+                  ref={photoInputRef} 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handlePhotoUpload} 
+                />
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={handleFileUpload} 
+                />
                 <form 
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -652,13 +797,29 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                     </div>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={startRecording}
-                        className="p-2 text-slate-400 hover:text-blue-600 transition"
-                      >
-                        <Mic className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => photoInputRef.current?.click()}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={startRecording}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                        >
+                          <Mic className="w-4 h-4" />
+                        </button>
+                      </div>
                       <input
                         type="text"
                         value={inputText}
@@ -830,13 +991,29 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
               </div>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="p-2 text-slate-400 hover:text-blue-600 transition"
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 transition"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={inputText}

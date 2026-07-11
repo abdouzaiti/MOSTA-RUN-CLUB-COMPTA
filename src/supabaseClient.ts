@@ -359,6 +359,7 @@ function mapSupportMessageFromDb(dbItem: any): SupportMessage {
   if (dbItem.type) (msg as any).type = dbItem.type;
   if (dbItem.media_url) (msg as any).mediaUrl = dbItem.media_url;
   if (dbItem.duration) (msg as any).duration = dbItem.duration;
+  if (dbItem.file_size) (msg as any).fileSize = dbItem.file_size;
   
   return msg;
 }
@@ -377,9 +378,10 @@ function mapSupportMessageToDb(item: SupportMessage): any {
   };
 
   // Add optional fields
-  if ((item as any).type) dbItem.type = (item as any).type;
-  if ((item as any).mediaUrl) dbItem.media_url = (item as any).mediaUrl;
-  if ((item as any).duration) dbItem.duration = (item as any).duration;
+  if ((item as any).type) (dbItem as any).type = (item as any).type;
+  if ((item as any).mediaUrl) (dbItem as any).media_url = (item as any).mediaUrl;
+  if ((item as any).duration) (dbItem as any).duration = (item as any).duration;
+  if ((item as any).fileSize) (dbItem as any).file_size = (item as any).fileSize;
 
   return dbItem;
 }
@@ -695,6 +697,19 @@ export const dbService = {
 
     if (error) {
       console.error('Error updating support message reactions:', error.message);
+      throw error;
+    }
+  },
+
+  async deleteSupportMessage(id: string): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('support_messages')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting support message:', error.message);
       throw error;
     }
   }
