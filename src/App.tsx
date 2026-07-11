@@ -14,7 +14,7 @@ import AdminSupportChat from './components/AdminSupportChat';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
-import { isSupabaseConfigured, dbService } from './supabaseClient';
+import { isSupabaseConfigured, dbService, supabase } from './supabaseClient';
 import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
@@ -144,6 +144,78 @@ export default function App() {
   const [showSqlSetup, setShowSqlSetup] = useState<boolean>(false);
   const [sqlCopied, setSqlCopied] = useState<boolean>(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState<boolean>(false);
+  const [unreadSupportCount, setUnreadSupportCount] = useState<number>(0);
+
+  // Listen for real-time support messages for notifications
+  useEffect(() => {
+    if (!currentUser || !supabase) return;
+
+    // Initial check for unread messages
+    const checkUnread = async () => {
+      try {
+        const msgs = await dbService.getSupportMessages();
+        const isAdmin = currentUser.runClubRole === 'Admin';
+        const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+        const adminId = adminRunner ? adminRunner.id : 'usr-1';
+
+        const unread = msgs.filter(m => {
+          if (isAdmin) {
+            // Admin sees unread messages sent to admin
+            return m.receiverId === adminId && m.senderId !== currentUser.id && !m.read;
+          } else {
+            // User sees unread messages sent to them from admin
+            return m.receiverId === currentUser.id && !m.read;
+          }
+        });
+        setUnreadSupportCount(unread.length);
+      } catch (err) {
+        console.error("Error checking unread support messages:", err);
+      }
+    };
+
+    checkUnread();
+
+    const channel = supabase
+      .channel('support_notifications')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'support_messages' 
+      }, (payload) => {
+        const isAdmin = currentUser.runClubRole === 'Admin';
+        const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+        const adminId = adminRunner ? adminRunner.id : 'usr-1';
+
+        if (payload.eventType === 'INSERT') {
+          const msg = payload.new;
+          const isTarget = isAdmin 
+            ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
+            : (msg.receiver_id === currentUser.id);
+
+          if (isTarget && !msg.read) {
+            setUnreadSupportCount(prev => prev + 1);
+            // Optional: browser notification or sound
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          // If a message was marked read, decrement count
+          if (payload.new.read && !payload.old.read) {
+            const msg = payload.new;
+            const isTarget = isAdmin 
+              ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
+              : (msg.receiver_id === currentUser.id);
+            
+            if (isTarget) {
+              setUnreadSupportCount(prev => Math.max(0, prev - 1));
+            }
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, runners]);
 
   // Load asynchronously from Supabase if configured
   useEffect(() => {
@@ -889,6 +961,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
             setLanguage={setLanguage}
             girlMode={girlMode}
             setGirlMode={handleSetGirlMode}
+            unreadSupportCount={unreadSupportCount}
           />
 
           {/* Right Main Scrollable View Panel */}

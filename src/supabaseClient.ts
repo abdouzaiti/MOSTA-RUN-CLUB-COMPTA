@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Runner, Run, RunReport, CustomList, Announcement } from './types';
+import { Runner, Run, RunReport, CustomList, Announcement, SupportMessage } from './types';
 
 // Read Supabase credentials from client-side environment variables
 const SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL || '';
@@ -145,6 +145,25 @@ DROP POLICY IF EXISTS "Allow public read on announcements" ON announcements;
 DROP POLICY IF EXISTS "Allow public write on announcements" ON announcements;
 CREATE POLICY "Allow public read on announcements" ON announcements FOR SELECT USING (true);
 CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USING (true);
+
+-- 6. Table des messages de support (Support)
+CREATE TABLE IF NOT EXISTS support_messages (
+  id TEXT PRIMARY KEY,
+  sender_id TEXT NOT NULL,
+  receiver_id TEXT NOT NULL,
+  text TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  read BOOLEAN DEFAULT FALSE,
+  sender_name TEXT,
+  sender_avatar TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read on support_messages" ON support_messages;
+DROP POLICY IF EXISTS "Allow public write on support_messages" ON support_messages;
+CREATE POLICY "Allow public read on support_messages" ON support_messages FOR SELECT USING (true);
+CREATE POLICY "Allow public write on support_messages" ON support_messages FOR ALL USING (true);
  */
 
 // Helper to handle conversion from snake_case database schema to camelCase front-end TypeScript interfaces
@@ -316,6 +335,32 @@ function mapAnnouncementToDb(item: Announcement): any {
     likes: item.likes,
     liked_by: item.likedBy,
     comments: item.comments
+  };
+}
+
+function mapSupportMessageFromDb(dbItem: any): SupportMessage {
+  return {
+    id: dbItem.id,
+    senderId: dbItem.sender_id,
+    senderName: dbItem.sender_name || 'Runner',
+    senderAvatar: dbItem.sender_avatar || null,
+    receiverId: dbItem.receiver_id,
+    text: dbItem.text,
+    timestamp: dbItem.timestamp,
+    read: Boolean(dbItem.read)
+  };
+}
+
+function mapSupportMessageToDb(item: SupportMessage): any {
+  return {
+    id: item.id,
+    sender_id: item.senderId,
+    sender_name: item.senderName,
+    sender_avatar: item.senderAvatar || null,
+    receiver_id: item.receiverId,
+    text: item.text,
+    timestamp: item.timestamp,
+    read: item.read ?? false
   };
 }
 
@@ -568,6 +613,56 @@ export const dbService = {
       }
     } catch (e: any) {
       console.warn('Delete announcement failed, table likely missing:', e?.message || e);
+    }
+  },
+
+  // --- SUPPORT MESSAGES ---
+  async getSupportMessages(): Promise<SupportMessage[]> {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .order('timestamp', { ascending: true });
+
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          console.warn("Table 'support_messages' does not exist.");
+          return [];
+        }
+        console.error('Error fetching support messages:', error.message);
+        throw error;
+      }
+      return (data || []).map(mapSupportMessageFromDb);
+    } catch (e) {
+      console.error('Db service getSupportMessages failed:', e);
+      return [];
+    }
+  },
+
+  async sendSupportMessage(message: SupportMessage): Promise<void> {
+    if (!supabase) return;
+    const dbMsg = mapSupportMessageToDb(message);
+    const { error } = await supabase
+      .from('support_messages')
+      .insert(dbMsg);
+
+    if (error) {
+      console.error('Error sending support message:', error.message);
+      throw error;
+    }
+  },
+
+  async markSupportMessageAsRead(id: string): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('support_messages')
+      .update({ read: true })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error marking support message as read:', error.message);
+      throw error;
     }
   }
 };

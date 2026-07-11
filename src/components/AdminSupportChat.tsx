@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Runner } from '../types';
+import { Runner, SupportMessage } from '../types';
 import { Language } from '../translations';
+import { supabase, dbService } from '../supabaseClient';
 import { 
   Send, HelpCircle, User, Shield, MessageSquare, Clock, Check, CheckCheck, Sparkles, AlertCircle
 } from 'lucide-react';
-
-interface SupportMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar?: string | null;
-  receiverId: string;
-  text: string;
-  timestamp: string; // ISO String
-  read?: boolean;
-}
 
 interface AdminSupportChatProps {
   currentUser: Runner;
@@ -34,29 +24,61 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
 
   const isGirlMode = typeof window !== 'undefined' && localStorage.getItem('mrc_girl_mode') === 'true';
 
-  // Load support messages from localStorage
-  const [messages, setMessages] = useState<SupportMessage[]>(() => {
-    const saved = localStorage.getItem('mrc_support_messages');
-    if (saved) {
+  // State for messages
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load initial messages from Supabase
+  useEffect(() => {
+    const loadMessages = async () => {
+      setLoading(true);
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error reading support messages:", e);
+        const msgs = await dbService.getSupportMessages();
+        setMessages(msgs);
+      } catch (err) {
+        console.error("Error loading support messages:", err);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    loadMessages();
+
+    // Subscribe to real-time changes
+    if (supabase) {
+      const channel = supabase
+        .channel('support_messages_admin_chat')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'support_messages' 
+        }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMsg: SupportMessage = {
+              id: payload.new.id,
+              senderId: payload.new.sender_id,
+              senderName: payload.new.sender_name,
+              senderAvatar: payload.new.sender_avatar,
+              receiverId: payload.new.receiver_id,
+              text: payload.new.text,
+              timestamp: payload.new.timestamp,
+              read: payload.new.read
+            };
+            setMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, read: payload.new.read } : m));
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-    // Default messages
-    return [
-      {
-        id: 'welcome-1',
-        senderId: 'usr-1',
-        senderName: 'Abdou Zaiti',
-        receiverId: 'default',
-        text: "Salam! Bienvenue sur le support de Mosta Run Club. N'hésite pas à me poser tes questions ou à me signaler tout problème technique ou organisationnel ici. L-khardt, tkair w l-javasa t3-shat! 🏃‍♂️🔥",
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
-        read: true
-      }
-    ];
-  });
+  }, []);
 
   // Selected thread (user ID) for Admin
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -64,38 +86,68 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const [isTyping, setIsTyping] = useState(false);
 
   // Filter messages related to the current thread
-  const activeThreadUserId = isAdmin ? selectedUserId : currentUser.id;
+  const activeThreadUserId = isAdmin ? selectedUserId : adminId;
 
   // Filter runners who have initiated a chat (for admin view)
   const chatThreads = React.useMemo(() => {
     if (!isAdmin) return [];
 
-    // Map all runners (except current Admin user) to threads
-    return runners
-      .filter(r => r.id !== currentUser.id)
-      .map(runner => {
-        const userMessages = messages.filter(
-          msg => (msg.senderId === runner.id && msg.receiverId === currentUser.id) || 
-                 (msg.senderId === currentUser.id && msg.receiverId === runner.id)
-        );
-        const lastMsg = userMessages[userMessages.length - 1];
-        const unreadCount = userMessages.filter(msg => msg.senderId === runner.id && !msg.read).length;
+    // Map all people (runners or guests) who have exchanged messages
+    const participantsMap = new Map<string, { runner: Runner; lastMsg?: SupportMessage; unreadCount: number }>();
 
-        return {
-          runner,
-          lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message'),
-          lastMessageTime: lastMsg ? formatTime(lastMsg.timestamp) : '',
-          unreadCount,
-          timestamp: lastMsg ? new Date(lastMsg.timestamp).getTime() : 0
-        };
-      })
+    // First add all runners as potential threads
+    runners.forEach(r => {
+      if (r.id !== currentUser.id) {
+        participantsMap.set(r.id, { runner: r, unreadCount: 0 });
+      }
+    });
+
+    // Then process messages to find active threads including guests
+    messages.forEach(msg => {
+      const otherId = msg.senderId === currentUser.id ? msg.receiverId : msg.senderId;
+      
+      // Ignore broadcast messages for thread listing
+      if (otherId === 'default' || otherId === 'all') return;
+      if (otherId === currentUser.id) return;
+
+      if (!participantsMap.has(otherId)) {
+        // This is likely a guest
+        participantsMap.set(otherId, {
+          runner: {
+            id: otherId,
+            name: msg.senderId === otherId ? msg.senderName : (isRtl ? 'زائر' : 'Visiteur'),
+            runClubRole: (isRtl ? 'زائر' : 'Visiteur') as any,
+            phone: 'N/A',
+            email: 'N/A',
+            bloodType: 'N/A'
+          },
+          unreadCount: 0
+        });
+      }
+
+      const thread = participantsMap.get(otherId)!;
+      
+      // Update last message
+      if (!thread.lastMsg || new Date(msg.timestamp) > new Date(thread.lastMsg.timestamp)) {
+        thread.lastMsg = msg;
+      }
+
+      // Update unread count (if sent to admin)
+      if (msg.senderId === otherId && msg.receiverId === currentUser.id && !msg.read) {
+        thread.unreadCount++;
+      }
+    });
+
+    return Array.from(participantsMap.values())
+      .map(thread => ({
+        runner: thread.runner,
+        lastMessage: thread.lastMsg ? thread.lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message'),
+        lastMessageTime: thread.lastMsg ? formatTime(thread.lastMsg.timestamp) : '',
+        unreadCount: thread.unreadCount,
+        timestamp: thread.lastMsg ? new Date(thread.lastMsg.timestamp).getTime() : 0
+      }))
       .sort((a, b) => {
-        // Active threads with messages go first
-        if (a.timestamp > 0 && b.timestamp > 0) {
-          return b.timestamp - a.timestamp;
-        }
-        if (a.timestamp > 0) return -1;
-        if (b.timestamp > 0) return 1;
+        if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp;
         return a.runner.name.localeCompare(b.runner.name);
       });
   }, [messages, runners, isAdmin, isRtl, currentUser.id]);
@@ -107,31 +159,25 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     }
   }, [isAdmin, chatThreads, selectedUserId]);
 
-  // Save messages to localStorage on change
+  // Handle marking messages as read
   useEffect(() => {
-    localStorage.setItem('mrc_support_messages', JSON.stringify(messages));
-    // Scroll to bottom
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Mark active messages as read
-  useEffect(() => {
-    if (!activeThreadUserId) return;
+    if (!activeThreadUserId || !isAdmin) return;
     
-    const hasUnread = messages.some(
+    const unreadMessages = messages.filter(
       msg => msg.senderId === activeThreadUserId && msg.receiverId === currentUser.id && !msg.read
     );
 
-    if (hasUnread) {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.senderId === activeThreadUserId && msg.receiverId === currentUser.id
-            ? { ...msg, read: true }
-            : msg
-        )
-      );
+    if (unreadMessages.length > 0) {
+      unreadMessages.forEach(msg => {
+        dbService.markSupportMessageAsRead(msg.id);
+      });
     }
-  }, [messages, activeThreadUserId, currentUser.id]);
+  }, [messages, activeThreadUserId, currentUser.id, isAdmin]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedUserId]);
 
   function formatTime(isoString: string) {
     try {
@@ -142,22 +188,28 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     }
   }
 
-  const handleSendMessage = (textToSend: string) => {
+  const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim()) return;
+
+    const receiverId = isAdmin ? selectedUserId : adminId;
 
     const newMessage: SupportMessage = {
       id: `support-msg-${Date.now()}`,
       senderId: currentUser.id,
       senderName: currentUser.name,
-      senderAvatar: currentUser.avatarUrl,
-      receiverId: isAdmin ? selectedUserId : adminId,
+      senderAvatar: currentUser.avatarUrl || null,
+      receiverId: receiverId,
       text: textToSend,
       timestamp: new Date().toISOString(),
       read: false
     };
 
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
+    try {
+      await dbService.sendSupportMessage(newMessage);
+      setInputText('');
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
   };
 
   // Filter messages for current thread
@@ -299,7 +351,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                 })()}
 
                 {/* Messages feed */}
-                <div className="flex-1 p-3.5 space-y-3.5 overflow-y-auto max-h-[250px] bg-slate-50/30">
+                <div className="flex-1 p-3.5 space-y-3.5 overflow-y-auto min-h-0 bg-slate-50/30">
                   {threadMessages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-2">
                       <HelpCircle className="w-7 h-7 text-slate-300" />
@@ -407,7 +459,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
           </div>
 
           {/* Message Feed Area */}
-          <div className="flex-1 p-4 space-y-3.5 overflow-y-auto max-h-[220px] bg-slate-50/30">
+          <div className="flex-1 p-4 space-y-3.5 overflow-y-auto min-h-0 bg-slate-50/30">
             {threadMessages.map((msg) => {
               const isMe = msg.senderId === currentUser.id;
               return (

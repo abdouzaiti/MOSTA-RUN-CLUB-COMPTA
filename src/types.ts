@@ -114,3 +114,14 @@ export interface Announcement {
   createdAt?: string;
 }
 
+export interface SupportMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  receiverId: string;
+  text: string;
+  timestamp: string; // ISO String
+  read?: boolean;
+}
+

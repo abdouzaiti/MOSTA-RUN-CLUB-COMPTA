@@ -31,6 +31,7 @@ interface SidebarProps {
   setLanguage: (lang: Language) => void;
   girlMode?: boolean;
   setGirlMode?: (enabled: boolean) => void;
+  unreadSupportCount?: number;
 }
 
 export default function Sidebar({ 
@@ -42,7 +43,8 @@ export default function Sidebar({
   language, 
   setLanguage, 
   girlMode,
-  setGirlMode
+  setGirlMode,
+  unreadSupportCount = 0
 }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,15 +187,20 @@ export default function Sidebar({
                 );
               })}
               
-              <button
-                onClick={() => handleTabClick('help')}
-                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold transition mt-4 bg-white/10 ${
-                  activeTab === 'help' ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
-                }`}
-              >
-                <HelpCircle className="w-5 h-5" />
-                <span>{language === 'ar' ? 'المساعدة والدعم' : 'Aide & Support'}</span>
-              </button>
+                <button
+                  onClick={() => handleTabClick('help')}
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold transition mt-4 bg-white/10 relative ${
+                    activeTab === 'help' ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <HelpCircle className="w-5 h-5" />
+                  <span>{language === 'ar' ? 'المساعدة والدعم' : 'Aide & Support'}</span>
+                  {unreadSupportCount > 0 && (
+                    <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white animate-pulse">
+                      {unreadSupportCount}
+                    </span>
+                  )}
+                </button>
             </nav>
 
             <div className="pt-6 border-t border-white/10 space-y-4 pb-24 sm:pb-8">
@@ -297,12 +304,17 @@ export default function Sidebar({
               <button
                 onClick={() => handleTabClick('help')}
                 className={`
-                  w-full flex items-center justify-center gap-2 px-4.5 py-2 mt-2 rounded-xl text-[10px] font-bold border border-white/10 hover:border-white/20 transition duration-300 cursor-pointer text-slate-200 hover:text-white bg-white/5 hover:bg-white/10
+                  w-full flex items-center justify-center gap-2 px-4.5 py-2 mt-2 rounded-xl text-[10px] font-bold border border-white/10 hover:border-white/20 transition duration-300 cursor-pointer text-slate-200 hover:text-white bg-white/5 hover:bg-white/10 relative
                   ${activeTab === 'help' ? 'bg-blue-600 border-blue-500 font-bold' : ''}
                 `}
               >
                 <HelpCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>{language === 'ar' ? 'المساعدة والدعم' : language === 'en' ? 'Help & Support' : 'Aide & Support'}</span>
+                {unreadSupportCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] text-white shadow-lg animate-bounce border border-white/20">
+                    {unreadSupportCount}
+                  </span>
+                )}
               </button>
             </nav>
           </div>

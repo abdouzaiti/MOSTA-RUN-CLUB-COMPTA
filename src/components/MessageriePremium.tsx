@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Runner } from '../types';
+import { Runner, SupportMessage } from '../types';
 import { Language, translations } from '../translations';
 import { 
   MessageSquare, Search, Send, Pin, Phone, Video, Info, 
@@ -8,7 +8,7 @@ import {
   VideoOff, MicOff, PhoneOff, Camera, VolumeX, Users,
   Database, Wifi, WifiOff, Copy, Zap, Sparkles, Trash2
 } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, dbService } from '../supabaseClient';
 import { AgoraManager, isAgoraConfigured } from '../lib/agora';
 import MountainVistaBackground from './MountainVistaBackground';
 
@@ -87,17 +87,6 @@ const emojiCategories = [
   }
 ];
 
-interface SupportMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar?: string | null;
-  receiverId: string;
-  text: string;
-  timestamp: string; // ISO String
-  read?: boolean;
-}
-
 interface MessageriePremiumProps {
   currentUser: Runner;
   runners: Runner[];
@@ -171,6 +160,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [callParticipants, setCallParticipants] = useState<CallParticipant[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [loadingSupport, setLoadingSupport] = useState(true);
   const [micMuted, setMicMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -192,33 +183,57 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     ...(runners || []).filter(r => r.id !== currentUser.id)
   ];
 
-  // Load support messages from localStorage
-  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>(() => {
-    const saved = localStorage.getItem('mrc_support_messages');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error reading support messages:", e);
-      }
-    }
-    return [
-      {
-        id: 'welcome-1',
-        senderId: 'usr-1',
-        senderName: 'Abdou Zaiti',
-        receiverId: 'default',
-        text: "Salam! Bienvenue sur le support de Mosta Run Club. N'hésite pas à me poser tes questions ou à me signaler tout problème technique ou organisationnel ici. L-khardt, tkair w l-javasa t3-shat! 🏃‍♂️🔥",
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-        read: true
-      }
-    ];
-  });
-
-  // Save support messages to localStorage on change
+  // Load support messages from Supabase
   useEffect(() => {
-    localStorage.setItem('mrc_support_messages', JSON.stringify(supportMessages));
-  }, [supportMessages]);
+    const loadSupportMessages = async () => {
+      setLoadingSupport(true);
+      try {
+        const msgs = await dbService.getSupportMessages();
+        setSupportMessages(msgs);
+      } catch (err) {
+        console.error("Error loading support messages:", err);
+      } finally {
+        setLoadingSupport(false);
+      }
+    };
+
+    loadSupportMessages();
+
+    // Subscribe to real-time changes for support messages
+    if (supabase) {
+      const channel = supabase
+        .channel('support_messages_premium')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'support_messages' 
+        }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMsg: SupportMessage = {
+              id: payload.new.id,
+              senderId: payload.new.sender_id,
+              senderName: payload.new.sender_name,
+              senderAvatar: payload.new.sender_avatar,
+              receiverId: payload.new.receiver_id,
+              text: payload.new.text,
+              timestamp: payload.new.timestamp,
+              read: payload.new.read
+            };
+            setSupportMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setSupportMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, read: payload.new.read } : m));
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, []);
 
   // Support Admin details
   const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
@@ -1538,7 +1553,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   }, [messages, typingChannel]);
 
   // Handle Send Message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
@@ -1552,17 +1567,21 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         id: `support-msg-${Date.now()}`,
         senderId: currentUser.id,
         senderName: currentUser.name,
-        senderAvatar: currentUser.avatarUrl,
+        senderAvatar: currentUser.avatarUrl || null,
         receiverId,
         text: inputText,
         timestamp: new Date().toISOString(),
         read: false
       };
 
-      setSupportMessages(prev => [...prev, newSupportMsg]);
-      setInputText('');
-      setReplyingTo(null);
-      setShowEmojiPicker(false);
+      try {
+        await dbService.sendSupportMessage(newSupportMsg);
+        setInputText('');
+        setReplyingTo(null);
+        setShowEmojiPicker(false);
+      } catch (err) {
+        console.error("Error sending support message:", err);
+      }
       return;
     }
 
