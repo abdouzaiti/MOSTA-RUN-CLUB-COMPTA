@@ -11,6 +11,7 @@ import DashboardSocial from './components/DashboardSocial';
 import MessageriePremium from './components/MessageriePremium';
 import NotificationsPanel from './components/NotificationsPanel';
 import AdminSupportChat from './components/AdminSupportChat';
+import { playMessageChime, playAnnouncementChime, triggerPhoneNotification } from './utils/audioHelper';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
 import { INITIAL_RUNNERS, INITIAL_RUNS, INITIAL_REPORTS } from './initialData';
@@ -176,7 +177,7 @@ export default function App() {
     checkUnread();
 
     const channel = supabase
-      .channel('support_notifications')
+      .channel('realtime_global_notifications')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
@@ -185,6 +186,7 @@ export default function App() {
         const isAdmin = currentUser.runClubRole === 'Admin';
         const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
         const adminId = adminRunner ? adminRunner.id : 'usr-1';
+        const isAr = language === 'ar';
 
         if (payload.eventType === 'INSERT') {
           const msg = payload.new;
@@ -194,7 +196,13 @@ export default function App() {
 
           if (isTarget && !msg.read) {
             setUnreadSupportCount(prev => prev + 1);
-            // Optional: browser notification or sound
+            
+            // Trigger Phone chime & browser notification
+            playMessageChime();
+            triggerPhoneNotification(
+              isAr ? `💬 رسالة جديدة من ${msg.sender_name || 'الدعم'}` : `💬 Nouveau message de ${msg.sender_name || 'Support'}`,
+              msg.text || ''
+            );
           }
         } else if (payload.eventType === 'UPDATE') {
           // If a message was marked read, decrement count
@@ -210,12 +218,46 @@ export default function App() {
           }
         }
       })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'mrc_messages'
+      }, (payload) => {
+        const msg = payload.new;
+        const isAr = language === 'ar';
+
+        // Notify if message is sent by someone else
+        if (msg && msg.sender_id !== currentUser.id) {
+          playMessageChime();
+          triggerPhoneNotification(
+            isAr ? `👥 محادثة النادي: ${msg.sender_name || 'عضو'}` : `👥 Chat Club: ${msg.sender_name || 'Membre'}`,
+            msg.text || (isAr ? "أرسل ملفاً أو صورة" : "A envoyé un média/fichier")
+          );
+        }
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'announcements'
+      }, (payload) => {
+        const ann = payload.new;
+        const isAr = language === 'ar';
+
+        // Notify if announcement is created by someone else
+        if (ann && ann.author_name !== currentUser.name) {
+          playAnnouncementChime();
+          triggerPhoneNotification(
+            isAr ? `🚨 إعلان جديد من ${ann.author_name || 'المدرب'}` : `🚨 Nouvelle annonce de ${ann.author_name || 'Coach'}`,
+            ann.content || ''
+          );
+        }
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, runners]);
+  }, [currentUser, runners, language]);
 
   // Load asynchronously from Supabase if configured
   useEffect(() => {
