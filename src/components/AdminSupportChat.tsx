@@ -727,22 +727,58 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                               <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px]">
                                 <video 
                                   src={(msg as any).mediaUrl} 
-                                  controls 
-                                  className="w-full h-full object-contain"
+                                  controls={!!(msg as any).mediaUrl}
+                                  className="w-full h-full object-contain cursor-pointer"
+                                  onPlay={async (e) => {
+                                    if (!(msg as any).mediaUrl) {
+                                      const target = e.currentTarget;
+                                      target.pause();
+                                      try {
+                                        const url = await dbService.getMessageMedia(msg.id, 'support_messages');
+                                        if (url) {
+                                          (msg as any).mediaUrl = url;
+                                          target.src = url;
+                                          target.play();
+                                        }
+                                      } catch (err) {
+                                        console.error("Error lazy loading video:", err);
+                                      }
+                                    }
+                                  }}
                                 />
                                 {(msg as any).fileSize && (
                                   <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
                                     {(msg as any).fileSize}
+                                    {!(msg as any).mediaUrl && <span className="ml-2">Click to load</span>}
                                   </div>
                                 )}
                               </div>
                             ) : (msg as any).type === 'image' ? (
-                              <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
+                              <div className="relative group/img cursor-pointer" onClick={async () => {
+                                if (!(msg as any).mediaUrl) {
+                                  try {
+                                    const url = await dbService.getMessageMedia(msg.id, 'support_messages');
+                                    if (url) {
+                                      (msg as any).mediaUrl = url;
+                                      setZoomedImage(url);
+                                    }
+                                  } catch (err) {
+                                    console.error("Error lazy loading image:", err);
+                                  }
+                                } else {
+                                  setZoomedImage((msg as any).mediaUrl);
+                                }
+                              }}>
                                 <img 
-                                  src={(msg as any).mediaUrl} 
+                                  src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=Click+to+load+image'} 
                                   alt="Shared" 
                                   className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
                                 />
+                                {!(msg as any).mediaUrl && (
+                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
+                                    <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Load Image</span>
+                                  </div>
+                                )}
                                 <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                                 </div>
                                 {msg.text && msg.text !== '📷 Photo' && <p className="mt-1">{msg.text.replace('📷 Photo: ', '')}</p>}
@@ -1051,22 +1087,58 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                       <div className="rounded-lg overflow-hidden bg-black max-w-full max-h-[300px]">
                         <video 
                           src={(msg as any).mediaUrl} 
-                          controls 
-                          className="w-full h-full object-contain"
+                          controls={!!(msg as any).mediaUrl}
+                          className="w-full h-full object-contain cursor-pointer"
+                          onPlay={async (e) => {
+                            if (!(msg as any).mediaUrl) {
+                              const target = e.currentTarget;
+                              target.pause();
+                              try {
+                                const url = await dbService.getMessageMedia(msg.id, 'support_messages');
+                                if (url) {
+                                  (msg as any).mediaUrl = url;
+                                  target.src = url;
+                                  target.play();
+                                }
+                              } catch (err) {
+                                console.error("Error lazy loading video:", err);
+                              }
+                            }
+                          }}
                         />
                         {(msg as any).fileSize && (
                           <div className="bg-black/40 text-white text-[8px] px-2 py-1 font-mono">
                             {(msg as any).fileSize}
+                            {!(msg as any).mediaUrl && <span className="ml-2">Click to load</span>}
                           </div>
                         )}
                       </div>
                     ) : (msg as any).type === 'image' ? (
-                      <div className="relative group/img cursor-pointer" onClick={() => setZoomedImage((msg as any).mediaUrl)}>
+                      <div className="relative group/img cursor-pointer" onClick={async () => {
+                        if (!(msg as any).mediaUrl) {
+                          try {
+                            const url = await dbService.getMessageMedia(msg.id, 'support_messages');
+                            if (url) {
+                              (msg as any).mediaUrl = url;
+                              setZoomedImage(url);
+                            }
+                          } catch (err) {
+                            console.error("Error lazy loading image:", err);
+                          }
+                        } else {
+                          setZoomedImage((msg as any).mediaUrl);
+                        }
+                      }}>
                         <img 
-                          src={(msg as any).mediaUrl} 
+                          src={(msg as any).mediaUrl || 'https://via.placeholder.com/300x200?text=Click+to+load+image'} 
                           alt="Shared" 
                           className="rounded-lg max-w-full max-h-[300px] object-contain bg-black/5"
                         />
+                        {!(msg as any).mediaUrl && (
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
+                            <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Load Image</span>
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
                         </div>
                       </div>

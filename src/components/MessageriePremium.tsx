@@ -465,12 +465,12 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Supabase Realtime synchronization effect
   useEffect(() => {
     if (isSupabaseConfigured && supabase) {
-      // 1. Fetch existing messages from Supabase (limit 10 to avoid "Failed to fetch" with large videos)
+      // 1. Fetch existing messages from Supabase (limit 50, omitting media_url to avoid timeout)
       supabase
         .from('mrc_messages')
-        .select('*')
+        .select('id, sender_id, sender_name, sender_role, avatar_url, text, time, type, file_size, duration, reply_to, reactions, read')
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(50)
         .then(({ data, error }) => {
           if (error) {
             console.error("Error loading messages from Supabase:", error);
@@ -484,7 +484,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               text: item.text || '',
               time: item.time,
               type: item.type as any,
-              mediaUrl: item.media_url,
+              mediaUrl: undefined, // Fetched on demand
               fileSize: item.file_size,
               duration: item.duration,
               replyTo: item.reply_to,
@@ -2331,8 +2331,25 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                         <div className="rounded-xl overflow-hidden shadow-sm max-h-80 border border-slate-100 bg-black">
                           <video 
                             src={message.mediaUrl} 
-                            controls 
-                            className="w-full h-full object-contain"
+                            controls={!!message.mediaUrl}
+                            className="w-full h-full object-contain cursor-pointer"
+                            onPlay={async (e) => {
+                              if (!message.mediaUrl) {
+                                const target = e.currentTarget;
+                                target.pause();
+                                try {
+                                  const url = await dbService.getMessageMedia(message.id, 'mrc_messages');
+                                  if (url) {
+                                    // Update locally
+                                    message.mediaUrl = url;
+                                    target.src = url;
+                                    target.play();
+                                  }
+                                } catch (err) {
+                                  console.error("Error lazy loading video:", err);
+                                }
+                              }
+                            }}
                           />
                         </div>
                         {message.fileSize && (

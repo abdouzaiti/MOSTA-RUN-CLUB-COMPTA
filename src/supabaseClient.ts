@@ -667,12 +667,12 @@ export const dbService = {
   async getSupportMessages(): Promise<SupportMessage[]> {
     if (!supabase) return [];
     try {
-      // Limit to 10 most recent messages to avoid "Failed to fetch" with massive base64 payloads
+      // Limit columns and count to avoid timeout. We fetch media_url separately if it's too big.
       const { data, error } = await supabase
         .from('support_messages')
-        .select('*')
+        .select('id, sender_id, receiver_id, text, timestamp, read, sender_name, sender_avatar, type, file_size, reactions')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) {
         if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
@@ -687,6 +687,23 @@ export const dbService = {
     } catch (e) {
       console.error('Db service getSupportMessages failed:', e);
       return [];
+    }
+  },
+
+  async getMessageMedia(id: string, table: 'support_messages' | 'mrc_messages' = 'support_messages'): Promise<string | null> {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from(table)
+        .select('media_url')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data?.media_url || null;
+    } catch (err) {
+      console.error(`Error fetching media for ${id} from ${table}:`, err);
+      return null;
     }
   },
 
