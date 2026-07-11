@@ -460,12 +460,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   // Supabase Realtime synchronization effect
   useEffect(() => {
     if (isSupabaseConfigured && supabase) {
-      // 1. Fetch existing messages from Supabase (Limit to last 100)
+      // 1. Fetch existing messages from Supabase
       supabase
         .from('mrc_messages')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
+        .order('created_at', { ascending: true })
         .then(({ data, error }) => {
           if (error) {
             console.error("Error loading messages from Supabase:", error);
@@ -487,14 +486,6 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               read: item.read
             }));
             
-            // Sort back to chronological
-            formatted.sort((a, b) => {
-              // Extract ID timestamps or use a stable sort if needed, 
-              // but since we have 'created_at' in DB we should probably use that if we mapped it.
-              // For now, simple ID comparison or just trusting the reversed order from DESC.
-              return a.id.localeCompare(b.id); 
-            });
-
             setChannelMessages(prev => ({
               ...prev,
               'chan-group-1': formatted
@@ -507,7 +498,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 if (c.id === 'chan-group-1') {
                   return {
                     ...c,
-                    lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : last.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
+                    lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
                     lastMessageTime: last.time
                   };
                 }
@@ -556,7 +547,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 if (c.id === 'chan-group-1') {
                   return {
                     ...c,
-                    lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : newRow.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
+                    lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
                     lastMessageTime: newRow.time
                   };
                 }
@@ -1842,7 +1833,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           const last = remaining[remaining.length - 1];
           return {
             ...c,
-            lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : last.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
+            lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
             lastMessageTime: last.time
           };
         } else {

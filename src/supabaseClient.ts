@@ -598,8 +598,7 @@ export const dbService = {
       const { data, error } = await supabase
         .from('announcements')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
 
       if (error) {
         // If the table doesn't exist, return null to signify a missing table
@@ -663,12 +662,10 @@ export const dbService = {
   async getSupportMessages(): Promise<SupportMessage[]> {
     if (!supabase) return [];
     try {
-      // Limit to last 100 messages to avoid timeout with large base64 videos
       const { data, error } = await supabase
         .from('support_messages')
         .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(100);
+        .order('timestamp', { ascending: true });
 
       if (error) {
         if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
@@ -678,10 +675,7 @@ export const dbService = {
         console.error('Error fetching support messages:', error.message);
         throw error;
       }
-      
-      // Reverse to get chronological order back
-      const msgs = (data || []).map(mapSupportMessageFromDb);
-      return msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return (data || []).map(mapSupportMessageFromDb);
     } catch (e) {
       console.error('Db service getSupportMessages failed:', e);
       return [];

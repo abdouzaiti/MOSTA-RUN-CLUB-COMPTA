@@ -180,9 +180,7 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
     return Array.from(participantsMap.values())
       .map(thread => ({
         runner: thread.runner,
-        lastMessage: thread.lastMsg 
-          ? (thread.lastMsg.text || ( (thread.lastMsg as any).type === 'image' ? '📷 Photo' : (thread.lastMsg as any).type === 'video' ? '🎥 Vidéo' : (thread.lastMsg as any).type === 'voice' ? '🎙️ Vocal' : '📎 Fichier' )) 
-          : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message'),
+        lastMessage: thread.lastMsg ? thread.lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message'),
         lastMessageTime: thread.lastMsg ? formatTime(thread.lastMsg.timestamp) : '',
         unreadCount: thread.unreadCount,
         timestamp: thread.lastMsg ? new Date(thread.lastMsg.timestamp).getTime() : 0
