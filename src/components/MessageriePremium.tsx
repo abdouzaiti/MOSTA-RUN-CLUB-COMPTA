@@ -498,7 +498,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 if (c.id === 'chan-group-1') {
                   return {
                     ...c,
-                    lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+                    lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : last.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
                     lastMessageTime: last.time
                   };
                 }
@@ -547,7 +547,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 if (c.id === 'chan-group-1') {
                   return {
                     ...c,
-                    lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+                    lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : newRow.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
                     lastMessageTime: newRow.time
                   };
                 }
@@ -1833,7 +1833,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           const last = remaining[remaining.length - 1];
           return {
             ...c,
-            lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
+            lastMessage: `${last.senderName.split(' ')[0]}: ${last.text || (last.type === 'image' ? '📷 Photo' : last.type === 'video' ? '🎥 Vidéo' : '🎙️ Vocal')}`,
             lastMessageTime: last.time
           };
         } else {
