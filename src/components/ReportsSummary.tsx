@@ -64,7 +64,7 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
     <div className={`space-y-6 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {/* Overview Cards (Tkarir Stats Dashboard) */}
       <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-        <h2 className={`text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+        <h2 className="text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5">
           <Award className="w-5 h-5 text-natural-accent" />
           {language === 'ar' ? 'تقارير جماعية ومحاضر (تقارير مليحة)' : language === 'en' ? 'Collective Reports & Feedback (Tkarir mlih)' : 'Rapports Collectifs & Comptes-rendus (Tkarir mlih)'}
         </h2>
@@ -112,7 +112,7 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
       </div>
 
       {/* Selector for reports */}
-      <div className={`bg-natural-sage-light/30 p-3 rounded-2xl border border-natural-border flex items-center gap-3 overflow-x-auto ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+      <div className="bg-natural-sage-light/30 p-3 rounded-2xl border border-natural-border flex items-center gap-3 overflow-x-auto">
         <span className="text-[11px] font-bold text-natural-olive uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
           {language === 'ar' ? 'اختر خرجة :' : language === 'en' ? 'Choose a run:' : 'Choisir un run :'}
         </span>
@@ -212,9 +212,9 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
           <div className="lg:col-span-2 space-y-4">
             {/* Highlights Story */}
             <div className="bg-white rounded-3xl p-6 border border-natural-border shadow-sm space-y-3">
-              <div className={`flex items-center gap-2 border-b border-natural-divider pb-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+              <div className="flex items-center gap-2 border-b border-natural-divider pb-3">
                 <Compass className="w-5 h-5 text-natural-olive" />
-                <div className={language === 'ar' ? 'text-right' : ''}>
+                <div className="text-start">
                   <h3 className="font-serif italic font-medium text-natural-olive text-md">
                     {language === 'ar' ? 'ملخص وأبرز الأحداث' : 'Résumé et Faits Marquants'}
                   </h3>
@@ -230,8 +230,8 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
 
             {/* Community Reviews & Feedback */}
             <div className="bg-white rounded-3xl p-6 border border-natural-border shadow-sm space-y-5">
-              <div className={`flex justify-between items-center border-b border-natural-divider pb-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <div className={language === 'ar' ? 'text-right' : ''}>
+              <div className="flex justify-between items-center border-b border-natural-divider pb-3">
+                <div className="text-start">
                   <h3 className="font-serif italic font-medium text-natural-olive text-md">
                     {language === 'ar' ? 'تعليقات العدائين' : 'Retours des Coureurs'}
                   </h3>
@@ -286,13 +286,13 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
 
               {/* Leave a review form */}
               <form onSubmit={handleSubmitFeedback} className="bg-natural-bone rounded-2xl p-4 border border-natural-border space-y-3">
-                <div className={`flex items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-natural-olive uppercase tracking-wide font-mono">
                     {language === 'ar' ? 'إضافة تقريري الشخصي' : 'Ajouter mon compte-rendu personnel'}
                   </h4>
 
                   {/* Rating Selector */}
-                  <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <div className="flex items-center gap-1">
                     <span className="text-[10px] text-natural-sage font-mono font-bold mr-1">{t('fealings')} :</span>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((starIdx) => (
@@ -322,7 +322,7 @@ export default function ReportsSummary({ reports, runs, currentUser, onAddFeedba
                   />
                 </div>
 
-                <div className={`flex justify-between items-center bg-transparent pt-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="flex justify-between items-center bg-transparent pt-1">
                   <span className="text-[10px] text-natural-sage font-mono leading-none font-bold">
                     {language === 'ar' ? 'مسجل كـ ' : 'Identifié en tant que '} <strong className="text-natural-olive font-bold">{currentUser.name}</strong>
                   </span>

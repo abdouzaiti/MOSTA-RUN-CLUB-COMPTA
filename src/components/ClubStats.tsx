@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Runner } from '../types';
 import { translations, Language } from '../translations';
-import { Users, Search, HeartPulse, ShieldCheck, Mail, Phone, ShieldAlert, BadgePlus, Trash2 } from 'lucide-react';
+import { Users, Search, HeartPulse, ShieldCheck, Mail, Phone, BadgePlus, Trash2 } from 'lucide-react';
 
 interface ClubStatsProps {
   runners: Runner[];
@@ -147,9 +147,9 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
   return (
     <div className={`space-y-6 ${language === 'ar' ? 'font-arabic' : ''}`}>
       {/* Roster Header */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
-        <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-          <h2 className={`text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="text-start">
+          <h2 className="text-xl font-serif italic font-bold text-natural-olive flex items-center gap-1.5">
             <Users className="w-5 h-5 text-natural-accent" />
             {language === 'ar' ? 'قائمة ودليل الأعضاء' : language === 'en' ? 'Roster & Member Directory' : 'Roster & Annuaire des Membres'}
           </h2>
@@ -342,7 +342,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                 )}
 
                 {/* Main Identity avatar and credentials */}
-                <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-xs overflow-hidden">
                     {runner.avatarUrl ? (
                       <img src={runner.avatarUrl} alt={runner.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -350,11 +350,11 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
                       runner.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
                     )}
                   </div>
-                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                  <div className="text-start">
                     <h3 className="font-serif italic font-extrabold text-natural-text text-base tracking-wide">
                       {runner.name} {isMe && <span className="text-xs text-natural-accent font-bold font-mono">(Moi)</span>}
                     </h3>
-                    <div className={`flex flex-wrap items-center gap-1.5 mt-1 ${language === 'ar' ? 'justify-end' : ''}`}>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className="text-xs text-natural-sage font-bold font-mono tracking-wider">ID: #{runner.id}</span>
                       {runner.username && (
                         <span className="text-xs bg-natural-sage-light/50 text-natural-olive border border-natural-border/60 font-mono font-bold px-2 py-0.5 rounded">
@@ -391,14 +391,14 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
 
                 {/* Critical emergency medical badges footer */}
                 <div className="mt-4 pt-4 border-t border-natural-divider/60 flex items-center justify-between">
-                  <div className={`flex items-center gap-1.5 text-natural-text font-bold ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <div className="flex items-center gap-1.5 text-natural-text font-bold">
                     <HeartPulse className="w-4.5 h-4.5 shrink-0 text-natural-accent" />
                     <span className="text-xs text-natural-sage">{t('bloodType')}:</span>
                     <span className="text-sm font-mono font-bold text-natural-olive">{runner.bloodType || 'O+'}</span>
                   </div>
 
                   {/* Let the user delete runners if they are not the active currentUser */}
-                  <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <div className="flex items-center gap-1">
                     {(isMe || currentUser.runClubRole === 'Admin') && (
                       <button
                         onClick={() => handleStartEdit(runner)}
@@ -427,16 +427,7 @@ export default function ClubStats({ runners, currentUser, onAddRunner, onDeleteR
         </div>
       )}
 
-      {/* Safety Instructions card */}
-      <div className="p-4 bg-natural-bone border border-natural-border text-natural-text rounded-3xl flex flex-col md:flex-row items-start gap-3 text-xs leading-relaxed">
-        <ShieldAlert className="w-5 h-5 text-natural-accent shrink-0 mt-0.5 animate-pulse" />
-        <div>
-          <p className="font-bold font-serif italic text-natural-olive flex items-center gap-1">Note de Responsabilité (Alerte d'organisation) :</p>
-          <p className="mt-1 text-natural-text font-medium">
-            En tant qu'administrateur ou organisateur de parcours de course, vérifiez toujours les conditions météorologiques sur la côte de Mostaganem (Sablettes, Kharouba) avant de valider la sortie. Assurez-vous que la présence d'au moins deux trousses de secours de premier secours est confirmée auprès des entraîneurs participants.
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 }

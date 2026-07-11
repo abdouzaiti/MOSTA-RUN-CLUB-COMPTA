@@ -409,7 +409,7 @@ export default function UserProfileSettings({
     <div className={`p-6 bg-white rounded-3xl border border-slate-100 shadow-3xs space-y-6 ${isRtl ? 'text-right' : 'text-left'}`}>
       
       {/* Tab Head */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-100 gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-100 gap-4">
         <div>
           <h3 className="text-base font-black text-[#1034A6] font-serif italic flex items-center gap-2">
             <User className="w-5 h-5 text-blue-600" />
@@ -421,7 +421,7 @@ export default function UserProfileSettings({
         </div>
 
         {/* Live Language selector directly inside the Profile preferences */}
-        <div className={`flex items-center gap-1.5 self-start md:self-auto ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center gap-1.5 self-start md:self-auto">
           <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">{t.language}:</span>
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/50">
             {(['fr', 'ar', 'en'] as Language[]).map((lang) => (
@@ -447,7 +447,7 @@ export default function UserProfileSettings({
         girlMode 
           ? 'bg-rose-50/50 border-rose-200/80 shadow-sm shadow-rose-100' 
           : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'
-      } ${isRtl ? 'sm:flex-row-reverse text-right' : 'text-left'}`}>
+      } text-start`}>
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300 ${
             girlMode ? 'bg-pink-100 text-pink-600' : 'bg-slate-100 text-slate-500'
@@ -490,7 +490,7 @@ export default function UserProfileSettings({
       <form onSubmit={handleSave} className="space-y-6">
         
         {/* Profile photo block customization */}
-        <div className={`flex flex-col sm:flex-row items-start gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
+        <div className="flex flex-col sm:flex-row items-start gap-6 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
           
           {/* Avatar Preview */}
           <div className="relative group shrink-0 self-center sm:self-start">

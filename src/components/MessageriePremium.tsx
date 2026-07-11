@@ -1859,11 +1859,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                     }
                   }
                 }}
-                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition text-left cursor-pointer ${
+                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition text-start cursor-pointer ${
                   isActive 
                     ? 'bg-blue-50 border border-blue-100/50 shadow-3xs' 
                     : 'hover:bg-slate-50/50 border border-transparent'
-                } ${isRtl ? 'flex-row-reverse text-right' : ''}`}
+                }`}
               >
                 {/* Avatar Icon */}
                 <div className="relative shrink-0">
@@ -1925,7 +1925,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         
         {/* Active chat header toolbar */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between shadow-3xs bg-white/90 backdrop-blur-md relative z-10">
-          <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div className="flex items-center gap-3">
             {mobileView === 'chat' && (
               <button 
                 onClick={() => setMobileView('list')}
@@ -1945,7 +1945,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 )
               )}
             </div>
-            <div className={isRtl ? 'text-right' : 'text-left'}>
+            <div className="text-start">
               <h3 className="font-serif italic font-black text-sm sm:text-base text-slate-800 flex items-center gap-1">
                 {activeChannel.name}
               </h3>
@@ -2025,7 +2025,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                 <div 
                   key={message.id} 
                   className={`flex flex-col max-w-[85%] sm:max-w-[70%] group relative ${
-                    isMe ? 'ml-auto items-end' : 'mr-auto items-start'
+                    isMe ? 'ms-auto items-end' : 'me-auto items-start'
                   }`}
               >
                 {/* Sender Title meta */}
@@ -2212,7 +2212,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
           {/* Typing feedback loader indicator */}
           {typingChannel === activeChannelId && (
-            <div className="flex items-center gap-2 mr-auto max-w-sm">
+            <div className="flex items-center gap-2 me-auto max-w-sm">
               <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-black border">
                 ✍️
               </div>
@@ -2549,7 +2549,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                       </span>
                     </div>
 
-                    <div className="border-t border-slate-100 pt-4 text-left">
+                    <div className="border-t border-slate-100 pt-4 text-start">
                       <h6 className="text-[10px] font-extrabold text-slate-400 font-mono uppercase tracking-wider mb-2">
                         {isRtl ? 'معلومات الاتصال الطارئة' : 'Informations d\'urgence'}
                       </h6>
@@ -2571,7 +2571,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                       </ul>
                     </div>
 
-                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 text-left text-xs leading-relaxed text-slate-600">
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 text-start text-xs leading-relaxed text-slate-600">
                       <p className="font-bold text-blue-800 mb-1">
                         {isRtl ? 'تعليمات السلامة' : 'Directives de Sécurité'}
                       </p>
@@ -3097,7 +3097,7 @@ alter publication supabase_realtime add table public.mrc_messages;`}
                   setReplyingTo(selectedMobileMsg);
                   setSelectedMobileMsg(null);
                 }}
-                className={`w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 text-start"
               >
                 <Reply className="w-4 h-4 text-blue-500 shrink-0" />
                 <span className="flex-1">{isRtl ? 'رد على الرسالة' : 'Répondre au message'}</span>
@@ -3111,7 +3111,7 @@ alter publication supabase_realtime add table public.mrc_messages;`}
                     if (navigator.vibrate) navigator.vibrate(40);
                     setSelectedMobileMsg(null);
                   }}
-                  className={`w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl transition cursor-pointer text-xs font-bold text-slate-700 text-start"
                 >
                   <Copy className="w-4 h-4 text-slate-400 shrink-0" />
                   <span className="flex-1">{isRtl ? 'نسخ النص' : 'Copier le texte'}</span>
@@ -3126,7 +3126,7 @@ alter publication supabase_realtime add table public.mrc_messages;`}
                     if (navigator.vibrate) navigator.vibrate(50);
                     setSelectedMobileMsg(null);
                   }}
-                  className={`w-full flex items-center gap-3 p-3 hover:bg-rose-50 border border-rose-100 rounded-2xl transition cursor-pointer text-xs font-bold text-rose-600 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-rose-50 border border-rose-100 rounded-2xl transition cursor-pointer text-xs font-bold text-rose-600 text-start"
                 >
                   <Trash2 className="w-4 h-4 text-rose-500 shrink-0" />
                   <span className="flex-1">{isRtl ? 'سحب الرسالة (حذف)' : 'Retirer le message (Supprimer)'}</span>
