@@ -109,6 +109,61 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
+  // Voice playback states
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+      }
+    };
+  }, []);
+
+  const handlePlayVoice = async (msg: SupportMessage) => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+
+    if (playingVoiceId === msg.id) {
+      setPlayingVoiceId(null);
+    } else {
+      setPlayingVoiceId(msg.id);
+      
+      let audioUrl = (msg as any).mediaUrl;
+      if (!audioUrl) {
+        try {
+          const url = await dbService.getMessageMedia(msg.id, 'support_messages');
+          if (url) {
+            audioUrl = url;
+            setMessages(prev => prev.map(m => 
+              m.id === msg.id ? { ...m, mediaUrl: url } : m
+            ));
+          }
+        } catch (err) {
+          console.error("Error fetching voice media on demand in AdminSupportChat:", err);
+        }
+      }
+
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        activeAudioRef.current = audio;
+        audio.play().catch(err => {
+          console.error("Failed to play voice message:", err);
+          setPlayingVoiceId(null);
+        });
+        audio.onended = () => {
+          setPlayingVoiceId(null);
+          activeAudioRef.current = null;
+        };
+      } else {
+        setPlayingVoiceId(null);
+      }
+    }
+  };
+
   // Voice Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -715,8 +770,15 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                           }`}>
                             {(msg as any).type === 'voice' ? (
                               <div className="flex items-center gap-2 min-w-[120px]">
-                                <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#1034A6]'}`}>
-                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                <button 
+                                  onClick={() => handlePlayVoice(msg)}
+                                  className={`p-1.5 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition ${isMe ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-blue-100 text-[#1034A6] hover:bg-blue-200'}`}
+                                >
+                                  {playingVoiceId === msg.id ? (
+                                    <Pause className="w-3.5 h-3.5 fill-current" />
+                                  ) : (
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                  )}
                                 </button>
                                 <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
                                   <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>
@@ -1088,8 +1150,15 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
                   }`}>
                     {(msg as any).type === 'voice' ? (
                       <div className="flex items-center gap-2 min-w-[120px]">
-                        <button className={`p-1.5 rounded-full ${isMe ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                          <Play className="w-3.5 h-3.5 fill-current" />
+                        <button 
+                          onClick={() => handlePlayVoice(msg)}
+                          className={`p-1.5 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition ${isMe ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {playingVoiceId === msg.id ? (
+                            <Pause className="w-3.5 h-3.5 fill-current" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          )}
                         </button>
                         <div className="flex-1 h-1 bg-slate-200/30 rounded-full relative overflow-hidden">
                           <div className={`absolute inset-0 bg-current opacity-40`} style={{ width: '30%' }}></div>

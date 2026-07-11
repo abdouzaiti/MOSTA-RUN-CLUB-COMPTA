@@ -667,12 +667,12 @@ export const dbService = {
   async getSupportMessages(): Promise<SupportMessage[]> {
     if (!supabase) return [];
     try {
-      // Limit columns and count to avoid timeout. We fetch media_url separately if it's too big.
+      // Fetch columns including duration and media_url to avoid disappearing state, limit up to 50
       const { data, error } = await supabase
         .from('support_messages')
-        .select('id, sender_id, receiver_id, text, timestamp, read, sender_name, sender_avatar, type, file_size, reactions')
+        .select('id, sender_id, receiver_id, text, timestamp, read, sender_name, sender_avatar, type, duration, file_size, reactions, media_url')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) {
         if (error.code === '42P01' || error.message?.includes('schema cache') || error.message?.includes('does not exist')) {

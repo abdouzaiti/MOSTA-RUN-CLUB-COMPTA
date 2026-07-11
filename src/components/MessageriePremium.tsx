@@ -523,6 +523,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           (payload) => {
             if (payload.eventType === 'INSERT') {
               const newRow = payload.new;
+              const channelId = newRow.channel_id || 'chan-group-1';
               const newMsg: Message = {
                 id: newRow.id,
                 senderId: newRow.sender_id,
@@ -541,36 +542,40 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               };
 
               setChannelMessages(prev => {
-                const current = prev['chan-group-1'] || [];
-                if (current.some(m => m.id === newMsg.id)) return prev;
+                const chanMsgs = prev[channelId] || [];
+                if (chanMsgs.some(m => m.id === newMsg.id)) return prev;
                 return {
                   ...prev,
-                  'chan-group-1': [...current, newMsg]
+                  [channelId]: [...chanMsgs, newMsg]
                 };
               });
 
               setChannels(prev => prev.map(c => {
-                if (c.id === 'chan-group-1') {
+                if (c.id === channelId) {
                   return {
                     ...c,
                     lastMessage: `${newRow.sender_name.split(' ')[0]}: ${newRow.text || (newRow.type === 'image' ? '📷 Photo' : '🎙️ Vocal')}`,
-                    lastMessageTime: newRow.time
+                    lastMessageTime: newRow.time,
+                    unreadCount: channelId === activeChannelId ? 0 : (c.unreadCount || 0) + 1
                   };
                 }
                 return c;
               }));
             } else if (payload.eventType === 'UPDATE') {
               const updatedRow = payload.new;
+              const channelId = updatedRow.channel_id || 'chan-group-1';
               setChannelMessages(prev => {
-                const current = prev['chan-group-1'] || [];
+                const current = prev[channelId] || [];
                 return {
                   ...prev,
-                  'chan-group-1': current.map(m => {
+                  [channelId]: current.map(m => {
                     if (m.id === updatedRow.id) {
                       return {
                         ...m,
-                        reactions: updatedRow.reactions || {},
-                        read: updatedRow.read
+                        reactions: updatedRow.reactions || m.reactions || {},
+                        read: updatedRow.read,
+                        text: updatedRow.text || m.text,
+                        mediaUrl: updatedRow.media_url || m.mediaUrl // Preserve existing if updated is null/undefined
                       };
                     }
                     return m;
@@ -580,10 +585,11 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             } else if (payload.eventType === 'DELETE') {
               const oldRow = payload.old;
               setChannelMessages(prev => {
-                const current = prev['chan-group-1'] || [];
+                const channelId = oldRow.channel_id || 'chan-group-1';
+                const current = prev[channelId] || [];
                 return {
                   ...prev,
-                  'chan-group-1': current.filter(m => m.id !== oldRow.id)
+                  [channelId]: current.filter(m => m.id !== oldRow.id)
                 };
               });
             }
@@ -783,7 +789,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   };
 
   // Play/Pause vocal message handler
-  const handleToggleVoicePlay = (msg: Message) => {
+  const handleToggleVoicePlay = async (msg: Message) => {
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
       activeAudioRef.current = null;
@@ -798,9 +804,39 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
     } else {
       setPlayingVoiceId(msg.id);
       
-      if (msg.mediaUrl) {
+      let audioUrl = msg.mediaUrl;
+      if (!audioUrl) {
+        try {
+          const isSupport = activeChannelId === 'support-channel-admin' || activeChannelId.startsWith('support-user-');
+          const tableName = isSupport ? 'support_messages' : 'mrc_messages';
+          const fetchedUrl = await dbService.getMessageMedia(msg.id, tableName);
+          if (fetchedUrl) {
+            audioUrl = fetchedUrl;
+            // Update local state to avoid refetching next time
+            if (isSupport) {
+              setSupportMessages(prev => prev.map(m => 
+                m.id === msg.id ? { ...m, mediaUrl: fetchedUrl } : m
+              ));
+            } else {
+              setChannelMessages(prev => {
+                const chanMsgs = prev[activeChannelId] || [];
+                return {
+                  ...prev,
+                  [activeChannelId]: chanMsgs.map(m => 
+                    m.id === msg.id ? { ...m, mediaUrl: fetchedUrl } : m
+                  )
+                };
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching voice media on demand:", err);
+        }
+      }
+
+      if (audioUrl) {
         // Play real recorded voice message
-        const audio = new Audio(msg.mediaUrl);
+        const audio = new Audio(audioUrl);
         activeAudioRef.current = audio;
         audio.play().catch(err => {
           console.error("Failed to play real audio:", err);
@@ -2321,19 +2357,27 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                               if (loadingSpan) loadingSpan.textContent = isRtl ? 'جاري التحميل...' : 'Chargement...';
                               
                               try {
-                                const url = await dbService.getMessageMedia(message.id, 'mrc_messages');
+                                const isSupport = activeChannelId.includes('support');
+                                const tableName = isSupport ? 'support_messages' : 'mrc_messages';
+                                const url = await dbService.getMessageMedia(message.id, tableName);
+                                
                                 if (url) {
-                                  // Update state to trigger re-render
-                                  setChannelMessages(prev => {
-                                    const currentChanId = activeChannelId;
-                                    const chanMsgs = prev[currentChanId] || [];
-                                    return {
-                                      ...prev,
-                                      [currentChanId]: chanMsgs.map(m => 
-                                        m.id === message.id ? { ...m, mediaUrl: url } : m
-                                      )
-                                    };
-                                  });
+                                  if (isSupport) {
+                                    setSupportMessages(prev => prev.map(m => 
+                                      m.id === message.id ? { ...m, mediaUrl: url } : m
+                                    ));
+                                  } else {
+                                    setChannelMessages(prev => {
+                                      const currentChanId = activeChannelId;
+                                      const chanMsgs = prev[currentChanId] || [];
+                                      return {
+                                        ...prev,
+                                        [currentChanId]: chanMsgs.map(m => 
+                                          m.id === message.id ? { ...m, mediaUrl: url } : m
+                                        )
+                                      };
+                                    });
+                                  }
                                   setZoomedImage(url);
                                 }
                               } catch (err) {
@@ -2372,18 +2416,27 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                                 const target = e.currentTarget;
                                 target.pause();
                                 try {
-                                  const url = await dbService.getMessageMedia(message.id, 'mrc_messages');
+                                  const isSupport = activeChannelId.includes('support');
+                                  const tableName = isSupport ? 'support_messages' : 'mrc_messages';
+                                  const url = await dbService.getMessageMedia(message.id, tableName);
+                                  
                                   if (url) {
-                                    // Update state to trigger re-render
-                                    setChannelMessages(prev => {
-                                      const chanMsgs = prev[activeChannelId] || [];
-                                      return {
-                                        ...prev,
-                                        [activeChannelId]: chanMsgs.map(m => 
-                                          m.id === message.id ? { ...m, mediaUrl: url } : m
-                                        )
-                                      };
-                                    });
+                                    if (isSupport) {
+                                      setSupportMessages(prev => prev.map(m => 
+                                        m.id === message.id ? { ...m, mediaUrl: url } : m
+                                      ));
+                                    } else {
+                                      setChannelMessages(prev => {
+                                        const currentChanId = activeChannelId;
+                                        const chanMsgs = prev[currentChanId] || [];
+                                        return {
+                                          ...prev,
+                                          [currentChanId]: chanMsgs.map(m => 
+                                            m.id === message.id ? { ...m, mediaUrl: url } : m
+                                          )
+                                        };
+                                      });
+                                    }
                                     target.src = url;
                                     target.play();
                                   }
