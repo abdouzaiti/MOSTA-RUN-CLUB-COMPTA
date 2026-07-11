@@ -268,11 +268,13 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
   const adminId = adminRunner ? adminRunner.id : 'usr-1';
   const isAdmin = currentUser.runClubRole === 'Admin' || currentUser.id === adminId;
+  const isCoach = currentUser.runClubRole === 'Coach';
+  const isPrivileged = isAdmin || isCoach;
 
   // Compute support channels dynamically
   const supportChannels = React.useMemo<ChatChannel[]>(() => {
-    if (isAdmin) {
-      // Admin sees a channel for every other runner (so they can chat with them)
+    if (isPrivileged) {
+      // Admin and Coaches see a channel for every other runner (so they can chat with them)
       return runners
         .filter(r => r.id !== currentUser.id)
         .map(runner => {
@@ -305,7 +307,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
           };
         });
     } else {
-      // Regular user sees a single "Support & Assistance" channel (Abdou) and then channels for every other runner
+      // Regular user sees a single "Support & Assistance" channel (Abdou) and then channels for Coaches only
       const userMessages = supportMessages.filter(
         msg => (msg.senderId === currentUser.id && msg.receiverId === adminId) || 
                (msg.senderId === adminId && msg.receiverId === currentUser.id) ||
@@ -326,7 +328,8 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         membersCount: 2
       };
 
-      const otherRunners = runners.filter(r => r.id !== currentUser.id && r.id !== adminId);
+      // Only show Coaches to regular runners
+      const otherRunners = runners.filter(r => r.id !== currentUser.id && r.id !== adminId && r.runClubRole === 'Coach');
       const otherChans = otherRunners.map(runner => {
         const directMsgs = supportMessages.filter(
           msg => (msg.senderId === currentUser.id && msg.receiverId === runner.id) || 
@@ -335,20 +338,13 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         const lastDirectMsg = directMsgs[directMsgs.length - 1];
         const unreadDirectCount = directMsgs.filter(msg => msg.senderId === runner.id && !msg.read).length;
 
-        let roleBadge = '';
-        if (runner.runClubRole === 'Admin') {
-          roleBadge = isRtl ? ' (مسؤول)' : ' (Admin)';
-        } else if (runner.runClubRole === 'Coach') {
-          roleBadge = isRtl ? ' (مدرب)' : ' (Coach)';
-        } else {
-          roleBadge = isRtl ? ' (رياضي)' : ' (Athlète)';
-        }
+        let roleBadge = isRtl ? ' (مدرب)' : ' (Coach)';
 
         return {
           id: `support-user-${runner.id}`,
           name: `${runner.name}${roleBadge}`,
           isGroup: false,
-          pinned: runner.runClubRole === 'Coach',
+          pinned: true,
           unreadCount: unreadDirectCount,
           lastMessage: lastDirectMsg ? lastDirectMsg.text : (isRtl ? 'تواصل مباشرة هنا' : 'Discutez en direct ici'),
           lastMessageTime: lastDirectMsg ? new Date(lastDirectMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
@@ -357,16 +353,12 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
         };
       });
 
-      // Sort other channels: pinned (Coaches) first, then alphabetically
-      otherChans.sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-        return a.name.localeCompare(b.name);
-      });
+      // Sort other channels alphabetically
+      otherChans.sort((a, b) => a.name.localeCompare(b.name));
 
       return [adminChan, ...otherChans];
     }
-  }, [supportMessages, runners, isAdmin, isRtl, currentUser.id, adminId, adminRunner]);
+  }, [supportMessages, runners, isPrivileged, isRtl, currentUser.id, adminId, adminRunner]);
 
   // Load channels and messages from localStorage to ensure realistic, fully durable storage
   const [channels, setChannels] = useState<ChatChannel[]>(() => {

@@ -21,7 +21,8 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
   const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
   const adminId = adminRunner ? adminRunner.id : 'usr-1';
 
-  const isAdmin = currentUser.runClubRole === 'Admin' || currentUser.id === adminId;
+  const isCoach = currentUser.runClubRole === 'Coach';
+  const isAdmin = currentUser.runClubRole === 'Admin' || currentUser.id === adminId || isCoach;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isGirlMode = typeof window !== 'undefined' && localStorage.getItem('mrc_girl_mode') === 'true';
