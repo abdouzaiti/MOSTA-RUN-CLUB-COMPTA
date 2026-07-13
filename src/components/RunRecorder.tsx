@@ -161,9 +161,9 @@ export default function RunRecorder({ language, currentUser }: { language: 'en' 
     // Recalculate pace for saving
     let savePace = '--:--';
     const saveDistKm = distance / 1000;
-    if (saveDistKm > 0.05) {
+    if (saveDistKm > 0) {
       const paceSeconds = elapsedTime / saveDistKm;
-      if (paceSeconds < 3600) {
+      if (paceSeconds < 5999) {
         const pm = Math.floor(paceSeconds / 60);
         const ps = Math.floor(paceSeconds % 60);
         savePace = `${pm}:${ps.toString().padStart(2, '0')}`;
@@ -208,9 +208,9 @@ export default function RunRecorder({ language, currentUser }: { language: 'en' 
   // Calculate Pace (minutes per km)
   let paceStr = '--:--';
   const distKm = distance / 1000;
-  if (distKm > 0.05) { // Need at least 50m to show meaningful pace
+  if (distKm > 0) { // Calculate pace as long as we have distance
     const paceSeconds = elapsedTime / distKm;
-    if (paceSeconds < 3600) { // cap at 60 min/km
+    if (paceSeconds < 5999) { // cap at 99 min/km
       const pm = Math.floor(paceSeconds / 60);
       const ps = Math.floor(paceSeconds % 60);
       paceStr = `${pm}:${ps.toString().padStart(2, '0')}`;
