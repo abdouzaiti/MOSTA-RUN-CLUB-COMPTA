@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Runner, Run, Announcement } from '../types';
 import { Language, translations } from '../translations';
 import { isSupabaseConfigured, dbService } from '../supabaseClient';
-import { 
-  Sparkles, Flame, Trophy, MapPin, Calendar, Heart, 
+import ShareCard from './ShareCard';
+import {
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
   ShoppingBag, ExternalLink, Clock, Trash2, Database, Send,
-  Image, X, Headphones, Check, Sliders, Upload, Activity
+  Image, X, Headphones, Check, Sliders, Upload, Activity, Sparkles, Heart
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -255,6 +255,7 @@ export default function DashboardSocial({
 
   const gpxFileInputRef = useRef<HTMLInputElement>(null);
   const [attachedActivity, setAttachedActivity] = useState<any | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('mrc_shop_orders_history', JSON.stringify(ordersList));
@@ -475,14 +476,22 @@ export default function DashboardSocial({
       ? `🏃‍♂️ لقد أكملت حصة جري جديدة (${source})! \n\n📍 العنوان: ${activity.name}\n🏁 المسافة: ${dist} كلم\n⏱️ الوقت: ${timeStr}\n⚡ السرعة: ${paceStr}\n${elev}`
       : `🏃‍♂️ Nouvelle activité de course (${source}) ! \n\n📍 Titre : ${activity.name}\n🏁 Distance : ${dist} km\n⏱️ Temps : ${timeStr}\n⚡ Allure : ${paceStr}\n${elev}`;
     
-    setNewPostText(shareText);
-    setAttachedActivity(activity);
-    
-    const postForm = document.getElementById('post-form');
-    if (postForm) {
-      postForm.scrollIntoView({ behavior: 'smooth' });
+    if (navigator.share) {
+      navigator.share({
+        title: activity.name,
+        text: shareText,
+      }).catch(console.error);
     } else {
-      alert(isRtl ? "تم نقل تفاصيل الحصة، يمكنك نشرها الآن من حقل النشر!" : "Activité chargée ! Vous pouvez maintenant la publier à partir de la boîte de discussion du Club.");
+      setNewPostText(shareText);
+      setAttachedActivity(activity);
+      setShowShareModal(true);
+      
+      const postForm = document.getElementById('post-form');
+      if (postForm) {
+        postForm.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        alert(isRtl ? "تم نقل تفاصيل الحصة، يمكنك نشرها الآن من حقل النشر!" : "Activité chargée ! Vous pouvez maintenant la publier à partir de la boîte de discussion du Club.");
+      }
     }
   };
 
@@ -1760,95 +1769,7 @@ export default function DashboardSocial({
                 </div>
               </div>
 
-              {/* Garmin Row */}
-              <div 
-                onClick={() => !garminConnected && handleConnectGps('garmin')}
-                className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between ${
-                  garminConnected 
-                    ? 'bg-blue-50/40 border-blue-100 hover:bg-blue-50/60' 
-                    : 'bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    garminConnected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
-                  }`}>
-                    <span className="font-extrabold text-xs">▲</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] font-black text-slate-800">Garmin Connect</h4>
-                    <span className="text-[8px] text-slate-400 block font-semibold">
-                      {garminConnected ? (isRtl ? 'متصل ⚡ ومزامن' : 'Données physiologiques') : (isRtl ? 'غير متصل' : 'Non connecté')}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {garminConnected ? (
-                    <>
-                      <span className="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
-                        {isRtl ? 'متصل' : 'SYNCR'}
-                      </span>
-                      <button 
-                        type="button"
-                        onClick={(e) => handleDisconnectGps('garmin', e)}
-                        className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-[9px] font-black text-[#1034A6] hover:underline cursor-pointer">
-                      {isRtl ? 'ربط' : 'CONNECTER'}
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              {/* Suunto & Coros Row */}
-              <div 
-                onClick={() => !suuntoConnected && handleConnectGps('suunto')}
-                className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between ${
-                  suuntoConnected 
-                    ? 'bg-slate-900/10 border-slate-950/20 hover:bg-slate-900/15' 
-                    : 'bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    suuntoConnected ? 'bg-cyan-500 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
-                  }`}>
-                    <span className="font-extrabold text-xs">●</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] font-black text-slate-800">Suunto & Coros</h4>
-                    <span className="text-[8px] text-slate-400 block font-semibold">
-                      {suuntoConnected ? (isRtl ? 'متصل ⚡ ومزامن' : 'Suivi Multisports') : (isRtl ? 'غير متصل' : 'Non connecté')}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {suuntoConnected ? (
-                    <>
-                      <span className="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
-                        {isRtl ? 'متصل' : 'SYNCR'}
-                      </span>
-                      <button 
-                        type="button"
-                        onClick={(e) => handleDisconnectGps('suunto', e)}
-                        className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-[9px] font-black text-[#1034A6] hover:underline cursor-pointer">
-                      {isRtl ? 'ربط' : 'CONNECTER'}
-                    </span>
-                  )}
-                </div>
-              </div>
 
               {/* GPX Importer Row (100% Free manual backup) */}
               <div 
@@ -2515,6 +2436,7 @@ export default function DashboardSocial({
           </div>
         </div>
       )}
+      {showShareModal && attachedActivity && <ShareCard activity={attachedActivity} onClose={() => setShowShareModal(false)} />}
 
     </div>
   );
