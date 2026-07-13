@@ -9,6 +9,7 @@ import CustomLists from './components/CustomLists';
 import Sidebar from './components/Sidebar';
 import UserProfileSettings from './components/UserProfileSettings';
 import DashboardSocial from './components/DashboardSocial';
+import RunRecorder from './components/RunRecorder';
 import MessageriePremium from './components/MessageriePremium';
 import NotificationsPanel from './components/NotificationsPanel';
 import AdminSupportChat from './components/AdminSupportChat';
@@ -21,7 +22,7 @@ import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
   Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe,
-  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Bell, Camera,
+  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Activity, Bell, Camera,
   ArrowLeft, Headphones
 } from 'lucide-react';
 
@@ -1165,6 +1166,10 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                   'pb-24 lg:pb-6'
                 }`}>
                   {/* TAB 0: DASHBOARD SOCIAL */}
+                  {activeTab === 'run-recorder' && (
+                    <RunRecorder language={language || 'fr'} />
+                  )}
+
                   {activeTab === 'dashboard' && (
                     <DashboardSocial
                       runners={runners}
@@ -1331,6 +1336,15 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               <MessageSquare className="w-5 h-5" />
               <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الرسائل' : 'Tchat'}</span>
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
+            </button>
+            <button
+              onClick={() => setActiveTab('run-recorder')}
+              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
+                activeTab === 'run-recorder' ? 'text-orange-500 font-extrabold scale-110' : 'text-slate-400 hover:text-orange-500'
+              }`}
+            >
+              <Activity className="w-5 h-5" />
+              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الجري' : 'Courir'}</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}

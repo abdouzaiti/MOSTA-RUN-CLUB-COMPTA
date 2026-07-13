@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Runner } from '../types';
 import { Language } from '../translations';
 import { 
-  Calendar, 
+  Activity, Calendar, 
   BarChart3, 
   Map, 
   Users, 
@@ -50,6 +50,7 @@ export default function Sidebar({
 
   const menuItems = [
     { id: 'dashboard', label: language === 'ar' ? 'الرئيسية' : language === 'en' ? 'Dashboard' : 'Tableau de bord', icon: Compass },
+    { id: 'run-recorder', label: language === 'ar' ? 'لنجري' : language === 'en' ? "Let's Run" : 'Allons Courir', icon: Activity },
     { id: 'planning', label: language === 'ar' ? 'التخطيط' : language === 'en' ? 'Planning' : 'Planning', icon: Calendar },
     { id: 'reports', label: language === 'ar' ? 'خرجات النادي' : language === 'en' ? 'List of Runs' : 'Liste des Runs', icon: Map },
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },
