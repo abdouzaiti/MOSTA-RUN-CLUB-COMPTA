@@ -176,7 +176,14 @@ export default function Sidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleTabClick(item.id)}
+                    onClick={() => {
+                      console.log('Mobile button clicked:', item.id);
+                      if (item.id === 'run-recorder') {
+                        alert('Feature under development');
+                      } else {
+                        handleTabClick(item.id);
+                      }
+                    }}
                     className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-bold transition ${
                       isSelected ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'
                     }`}
@@ -269,7 +276,14 @@ export default function Sidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleTabClick(item.id)}
+                    onClick={() => {
+                      console.log('Desktop button clicked:', item.id);
+                      if (item.id === 'run-recorder') {
+                        alert('Feature under development');
+                      } else {
+                        handleTabClick(item.id);
+                      }
+                    }}
                     className={`
                       w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[11px] transition-all tracking-wide font-semibold cursor-pointer
                       ${isSelected 
