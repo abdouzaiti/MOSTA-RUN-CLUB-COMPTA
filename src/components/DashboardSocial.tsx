@@ -23,7 +23,7 @@ const isImageUrl = (str: string) => {
   return s.startsWith('http://') || s.startsWith('https://') || s.startsWith('data:image/') || s.includes('images.unsplash.com') || s.endsWith('.jpg') || s.endsWith('.jpeg') || s.endsWith('.png') || s.endsWith('.gif') || s.endsWith('.webp');
 };
 
-import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, CircleMarker, LayersControl } from 'react-leaflet';
 
 function ActivityRouteMap({ points }: { points: { lat: number; lon: number }[] }) {
   if (!points || points.length === 0) return null;
@@ -47,18 +47,21 @@ function ActivityRouteMap({ points }: { points: { lat: number; lon: number }[] }
         bounds={bounds}
         boundsOptions={{ padding: [20, 20] }}
         style={{ height: '100%', width: '100%', zIndex: 0 }}
-        zoomControl={false}
         attributionControl={false}
-        dragging={false}
-        touchZoom={false}
-        doubleClickZoom={false}
-        scrollWheelZoom={false}
-        boxZoom={false}
-        keyboard={false}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        />
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="Normal">
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="Satellite">
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
         <Polyline positions={positions} pathOptions={{ color: '#FC4C02', weight: 4, opacity: 0.8 }} />
         <CircleMarker center={start} radius={4} pathOptions={{ color: '#10B981', fillColor: '#10B981', fillOpacity: 1, weight: 1 }} />
         <CircleMarker center={end} radius={4} pathOptions={{ color: '#EF4444', fillColor: '#EF4444', fillOpacity: 1, weight: 1 }} />
@@ -899,6 +902,7 @@ export default function DashboardSocial({
   const [newPostText, setNewPostText] = useState('');
   const [newPostImage, setNewPostImage] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
+  const [showPostForm, setShowPostForm] = useState(false);
 
   const handleLikePost = async (postId: string) => {
     let updatedPostObj: any = null;
@@ -1093,6 +1097,7 @@ export default function DashboardSocial({
     setNewPostImage('');
     setShowImageInput(false);
     setAttachedActivity(null);
+    setShowPostForm(false);
 
     if (isSupabaseConfigured && !isTableMissing) {
       try {
@@ -1207,6 +1212,181 @@ export default function DashboardSocial({
           )}
 
           <div className="space-y-6">
+            {/* New Announcement Trigger & Form */}
+            {(currentUser.runClubRole === 'Admin' || currentUser.runClubRole === 'Coach' || true) && (
+              <div className="bg-white rounded-[2rem] p-5 sm:p-6 border border-slate-100 shadow-3xs transition-all duration-300">
+                {!showPostForm ? (
+                  <button 
+                    onClick={() => setShowPostForm(true)}
+                    className="w-full flex items-center gap-3 text-left group cursor-pointer"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden group-hover:scale-105 transition-transform">
+                      {currentUser.avatarUrl ? (
+                        <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl p-3.5 group-hover:border-blue-200 group-hover:bg-blue-50/30 transition-colors">
+                      <span className="text-xs font-semibold text-slate-500 group-hover:text-blue-600 transition-colors">
+                        {isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
+                      </span>
+                    </div>
+                  </button>
+                ) : (
+                  <div id="post-form" className="animate-fade-in space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 font-mono">
+                        {isRtl ? 'إعلان جديد' : 'Nouvelle Annonce'}
+                      </h3>
+                      <button 
+                        onClick={() => setShowPostForm(false)}
+                        className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <form onSubmit={handleCreatePost} className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden">
+                    {currentUser.avatarUrl ? (
+                      <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <textarea
+                      value={newPostText}
+                      onChange={e => setNewPostText(e.target.value)}
+                      placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
+                      rows={2}
+                      className="w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
+                    />
+
+                    {/* Attached GPS Activity Preview */}
+                    {attachedActivity && (
+                      <div className="relative rounded-2xl p-3 bg-orange-500/10 border border-dashed border-orange-300 flex items-center justify-between animate-fade-in">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                            <Activity className="w-4 h-4 animate-pulse" />
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-black text-slate-800 line-clamp-1">
+                              {attachedActivity.name}
+                            </h4>
+                            <span className="text-[8px] text-slate-400 font-bold block font-mono">
+                              🏃‍♂️ {(attachedActivity.distance / 1000).toFixed(2)} km • ⏱️ {Math.floor(attachedActivity.moving_time / 60)}m {attachedActivity.moving_time % 60}s
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAttachedActivity(null)}
+                          className="p-1 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg border border-slate-100 transition shadow-3xs cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Image preview with delete button */}
+                    {newPostImage && (
+                      <div className="relative rounded-xl overflow-hidden border border-slate-100 max-h-40 bg-slate-50">
+                        <img src={newPostImage} alt="Post attachment preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <button
+                          type="button"
+                          onClick={() => setNewPostImage('')}
+                          className="absolute top-2 right-2 p-1 bg-slate-900/65 text-white hover:bg-slate-900/80 rounded-full transition cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Expandable Image inputs */}
+                    {showImageInput && (
+                      <div className="space-y-2 p-3 bg-slate-50 border border-slate-100 rounded-xl animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            {isRtl ? 'صورة المنشور' : 'Image du post'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowImageInput(false)}
+                            className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={newPostImage}
+                          onChange={e => setNewPostImage(e.target.value)}
+                          placeholder={isRtl ? 'أدخل رابط الصورة (URL)...' : "Entrer l'URL de l'image..."}
+                          className="w-full text-[11px] bg-white border border-slate-200 focus:border-blue-300 rounded-lg px-3 py-1.5 focus:outline-none font-medium text-slate-700"
+                        />
+                        {/* Presets */}
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-slate-400 block">
+                            {isRtl ? 'أو اختر صورة جاهزة:' : 'Ou choisissez une photo :'}
+                          </span>
+                          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                            {[
+                              { url: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=400&q=80', icon: '🌅', label: isRtl ? 'صباح' : 'Matin' },
+                              { url: 'https://images.unsplash.com/photo-1502224562085-639556652f33?auto=format&fit=crop&w=400&q=80', icon: '🏃‍♂️', label: isRtl ? 'مجموعة' : 'Groupe' },
+                              { url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=400&q=80', icon: '🌲', label: isRtl ? 'طبيعة' : 'Nature' },
+                              { url: 'https://images.unsplash.com/photo-1486218119243-13883505764c?auto=format&fit=crop&w=400&q=80', icon: '👟', label: isRtl ? 'حذاء' : 'Baskets' },
+                              { url: 'https://images.unsplash.com/photo-1578873376229-25a116afcd75?auto=format&fit=crop&w=400&q=80', icon: '🏆', label: isRtl ? 'ميدالية' : 'Médaille' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setNewPostImage(p.url)}
+                                className={`flex items-center gap-1 shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
+                                  newPostImage === p.url
+                                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                    : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span>{p.icon}</span>
+                                <span>{p.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowImageInput(prev => !prev)}
+                      title={isRtl ? 'إضافة صورة' : 'Ajouter une image'}
+                      className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-center ${
+                        showImageInput || newPostImage 
+                          ? 'bg-blue-50 text-blue-600 border border-blue-100' 
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <Image className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!newPostText.trim() && !newPostImage.trim()}
+                    className="px-4 py-2 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
+                  >
+                    {isRtl ? 'أنشر' : 'Publier'}
+                  </button>
+                </div>
+              </form>
+                  </div>
+                )}
+              </div>
+            )}
             {posts.length === 0 ? (
               <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-3xs text-center space-y-3 flex flex-col items-center justify-center animate-fade-in">
                 <div className="p-3 bg-blue-50 text-[#1034A6] rounded-2xl">
@@ -1317,14 +1497,7 @@ export default function DashboardSocial({
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
-                        {gpxActivity ? (
-                          <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-mono font-bold tracking-tight border border-orange-100 flex items-center gap-1 animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                            GPS SYNCED
-                          </span>
-                        ) : (
-                          <Compass className="w-4 h-4 text-slate-300" />
-                        )}
+                        <Compass className="w-4 h-4 text-slate-300" />
                       </div>
                     </div>
 
@@ -1472,154 +1645,8 @@ export default function DashboardSocial({
                 </div>
               )})
             )}
-          </div>
 
-          {/* Create New Post Card */}
-          {true && (
-            <div id="post-form" className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs mt-auto sticky bottom-6 z-10">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 font-mono">
-                {isRtl ? 'المجتمع' : 'community'}
-              </h3>
-              <form onSubmit={handleCreatePost} className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black tracking-tighter shrink-0 border border-blue-400 shadow-sm overflow-hidden">
-                    {currentUser.avatarUrl ? (
-                      <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <textarea
-                      value={newPostText}
-                      onChange={e => setNewPostText(e.target.value)}
-                      placeholder={isRtl ? `ما الجديد لديك اليوم يا ${currentUser.name.split(' ')[0]}؟` : `Quoi de neuf aujourd'hui, ${currentUser.name.split(' ')[0]} ?`}
-                      rows={2}
-                      className="w-full text-xs bg-[#F8FAFC] border border-slate-200 focus:border-blue-300 focus:bg-white rounded-2xl p-3.5 focus:outline-none transition resize-none font-semibold text-slate-800"
-                    />
-
-                    {/* Attached GPS Activity Preview */}
-                    {attachedActivity && (
-                      <div className="relative rounded-2xl p-3 bg-orange-500/10 border border-dashed border-orange-300 flex items-center justify-between animate-fade-in">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                            <Activity className="w-4 h-4 animate-pulse" />
-                          </div>
-                          <div>
-                            <h4 className="text-[11px] font-black text-slate-800 line-clamp-1">
-                              {attachedActivity.name}
-                            </h4>
-                            <span className="text-[8px] text-slate-400 font-bold block font-mono">
-                              🏃‍♂️ {(attachedActivity.distance / 1000).toFixed(2)} km • ⏱️ {Math.floor(attachedActivity.moving_time / 60)}m {attachedActivity.moving_time % 60}s
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setAttachedActivity(null)}
-                          className="p-1 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg border border-slate-100 transition shadow-3xs cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Image preview with delete button */}
-                    {newPostImage && (
-                      <div className="relative rounded-xl overflow-hidden border border-slate-100 max-h-40 bg-slate-50">
-                        <img src={newPostImage} alt="Post attachment preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <button
-                          type="button"
-                          onClick={() => setNewPostImage('')}
-                          className="absolute top-2 right-2 p-1 bg-slate-900/65 text-white hover:bg-slate-900/80 rounded-full transition cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Expandable Image inputs */}
-                    {showImageInput && (
-                      <div className="space-y-2 p-3 bg-slate-50 border border-slate-100 rounded-xl animate-fade-in">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            {isRtl ? 'صورة المنشور' : 'Image du post'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setShowImageInput(false)}
-                            className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          value={newPostImage}
-                          onChange={e => setNewPostImage(e.target.value)}
-                          placeholder={isRtl ? 'أدخل رابط الصورة (URL)...' : "Entrer l'URL de l'image..."}
-                          className="w-full text-[11px] bg-white border border-slate-200 focus:border-blue-300 rounded-lg px-3 py-1.5 focus:outline-none font-medium text-slate-700"
-                        />
-                        {/* Presets */}
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-bold text-slate-400 block">
-                            {isRtl ? 'أو اختر صورة جاهزة:' : 'Ou choisissez une photo :'}
-                          </span>
-                          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                            {[
-                              { url: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=400&q=80', icon: '🌅', label: isRtl ? 'صباح' : 'Matin' },
-                              { url: 'https://images.unsplash.com/photo-1502224562085-639556652f33?auto=format&fit=crop&w=400&q=80', icon: '🏃‍♂️', label: isRtl ? 'مجموعة' : 'Groupe' },
-                              { url: 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=400&q=80', icon: '🌲', label: isRtl ? 'طبيعة' : 'Nature' },
-                              { url: 'https://images.unsplash.com/photo-1486218119243-13883505764c?auto=format&fit=crop&w=400&q=80', icon: '👟', label: isRtl ? 'حذاء' : 'Baskets' },
-                              { url: 'https://images.unsplash.com/photo-1578873376229-25a116afcd75?auto=format&fit=crop&w=400&q=80', icon: '🏆', label: isRtl ? 'ميدالية' : 'Médaille' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setNewPostImage(p.url)}
-                                className={`flex items-center gap-1 shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition border cursor-pointer ${
-                                  newPostImage === p.url
-                                    ? 'bg-blue-50 text-blue-600 border-blue-200'
-                                    : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
-                                }`}
-                              >
-                                <span>{p.icon}</span>
-                                <span>{p.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowImageInput(prev => !prev)}
-                      title={isRtl ? 'إضافة صورة' : 'Ajouter une image'}
-                      className={`p-2 rounded-xl transition cursor-pointer flex items-center justify-center ${
-                        showImageInput || newPostImage 
-                          ? 'bg-blue-50 text-blue-600 border border-blue-100' 
-                          : 'bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      <Image className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={!newPostText.trim() && !newPostImage.trim()}
-                    className="px-4 py-2 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 font-bold text-xs rounded-xl transition cursor-pointer disabled:opacity-50"
-                  >
-                    {isRtl ? 'أنشر' : 'Publier'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
+        </div>
         </div>
 
         {/* Right Column: Premium Sidebar Widgets (Col Span 4) */}
