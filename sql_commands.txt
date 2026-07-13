@@ -1,0 +1,36 @@
+-- 1. Create mrc_runs table
+CREATE TABLE IF NOT EXISTS mrc_runs (
+  id uuid PRIMARY KEY,
+  user_id text NOT NULL,
+  user_name text NOT NULL,
+  distance numeric NOT NULL,
+  elapsed_time numeric NOT NULL,
+  pace text NOT NULL,
+  points jsonb NOT NULL,
+  date timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE mrc_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read on mrc_runs" ON mrc_runs FOR SELECT USING (true);
+CREATE POLICY "Allow public write on mrc_runs" ON mrc_runs FOR ALL USING (true);
+
+-- 2. Ensure announcements table exists (DashboardSocial)
+CREATE TABLE IF NOT EXISTS announcements (
+  id text PRIMARY KEY,
+  author_name text NOT NULL,
+  author_avatar_url text,
+  author_role text NOT NULL,
+  author_initials text NOT NULL,
+  time_fr text NOT NULL,
+  time_ar text NOT NULL,
+  content text NOT NULL,
+  image_url text,
+  likes integer DEFAULT 0,
+  liked_by jsonb DEFAULT '[]'::jsonb,
+  comments jsonb DEFAULT '[]'::jsonb,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read on announcements" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USING (true);

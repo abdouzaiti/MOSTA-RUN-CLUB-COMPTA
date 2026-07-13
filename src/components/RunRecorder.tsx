@@ -3,7 +3,7 @@ import { Play, Square, Pause, RotateCcw, MapPin, Activity, Save, Loader2, CheckC
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { supabase, isSupabaseConfigured, dbService } from '../supabaseClient';
 
 // Fix for default marker icons in Leaflet with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -183,6 +183,23 @@ export default function RunRecorder({ language, currentUser }: { language: 'en' 
       });
       
       if (error) throw error;
+      
+      // Create an announcement
+      const newAnnouncement = {
+        id: crypto.randomUUID(),
+        authorName: currentUser.name,
+        authorAvatarUrl: currentUser.avatarUrl,
+        authorRole: currentUser.runClubRole || 'Membre',
+        authorInitials: currentUser.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2),
+        timeFr: 'À l\'instant',
+        timeAr: 'الآن',
+        content: `🏃 ${currentUser.name} a terminé une course de ${saveDistKm.toFixed(2)} km en ${formatTime(elapsedTime)} (Allure: ${savePace} /km).`,
+        likes: 0,
+        likedBy: [],
+        comments: [],
+        createdAt: new Date().toISOString()
+      };
+      await dbService.upsertAnnouncement(newAnnouncement);
       
       setSaveSuccess(true);
       setTimeout(() => {
