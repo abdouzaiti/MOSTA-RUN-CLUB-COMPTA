@@ -21,6 +21,7 @@ export interface RunParticipant extends Runner {
   roomNumber?: string;         // Numéro de chambre ou groupement (ex: "Chambre 27", "A1")
   isPaid?: boolean;            // Versement / payé (Oui / Non)
   customPrice?: number;        // Prix ajusté manuellement (Algerian DA)
+  selectedDistance?: number;   // Distance choisie par l'athlète si course multi-distances
 }
 
 export interface Run {

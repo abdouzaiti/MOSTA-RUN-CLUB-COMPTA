@@ -50,6 +50,20 @@ interface OutingsPlanningProps {
   language: Language;
 }
 
+const parseDistances = (runDescription: string, mainDistance: number): number[] => {
+  if (!runDescription) return [mainDistance];
+  const match = runDescription.match(/\[Distances:\s*([\d.,\s]+)\]/);
+  if (match) {
+    return match[1].split(',').map(d => parseFloat(d.trim())).filter(d => !isNaN(d));
+  }
+  return [mainDistance];
+};
+
+const getCleanDescription = (runDescription: string): string => {
+  if (!runDescription) return "";
+  return runDescription.replace(/\[Distances:\s*[\d.,\s]+\]/, '').trim();
+};
+
 export default function OutingsPlanning({
   runs,
   currentUser,
@@ -80,6 +94,8 @@ export default function OutingsPlanning({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [distance, setDistance] = useState<number>(10);
+  const [extraDistance2, setExtraDistance2] = useState<string>("");
+  const [extraDistance3, setExtraDistance3] = useState<string>("");
   const [elevationGain, setElevationGain] = useState<number>(50);
   const [pace, setPace] = useState("5:45 min/km");
   const [difficulty, setDifficulty] = useState<
@@ -194,9 +210,19 @@ export default function OutingsPlanning({
       return;
     }
 
+    const distancesArray = [Number(distance) || 10];
+    if (extraDistance2 && !isNaN(Number(extraDistance2))) {
+      distancesArray.push(Number(extraDistance2));
+    }
+    if (extraDistance3 && !isNaN(Number(extraDistance3))) {
+      distancesArray.push(Number(extraDistance3));
+    }
+
     const runDesc =
       description.trim() ||
       "Sortie de groupe officielle par Mosta Run Club ! Rejoignez-nous pour courir ensemble, partager la joie de l'effort physique et vivre une belle aventure d'équipe.";
+
+    const finalDescription = runDesc + (distancesArray.length > 1 ? " [Distances: " + distancesArray.join(",") + "]" : "");
 
     onAddRun({
       id: "run-" + Date.now(),
@@ -208,7 +234,7 @@ export default function OutingsPlanning({
       pace: pace || "Libre",
       difficulty: difficulty || "Moyen",
       startPoint,
-      description: runDesc,
+      description: finalDescription,
       maxParticipants: Number(maxParticipants) || 100,
       isOrWilaya,
       destinationWilaya: isOrWilaya ? destinationWilaya : undefined,
@@ -224,6 +250,8 @@ export default function OutingsPlanning({
     setDate("");
     setTime("");
     setDistance(10);
+    setExtraDistance2("");
+    setExtraDistance3("");
     setElevationGain(0);
     setPace("5:45 min/km");
     setDifficulty("Facile");
@@ -577,6 +605,43 @@ export default function OutingsPlanning({
                     </div>
                   </div>
 
+                  {/* Optional Multi-distances row */}
+                  <div className="border-t border-natural-border/40 pt-3">
+                    <label className="block text-[10px] font-bold text-natural-olive mb-1.5 uppercase">
+                      {language === "ar" ? "مسافات إضافية اختيارية (خرجة بمسافات متعددة) :" : "Distances supplémentaires optionnelles (Course multi-distances) :"}
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={language === "ar" ? "text-right" : ""}>
+                        <label className="block text-[9px] font-medium text-natural-sage mb-1">
+                          {language === "ar" ? "المسافة الثانية (كلم)" : "Distance 2 (km)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          placeholder="Ex: 21"
+                          value={extraDistance2}
+                          onChange={(e) => setExtraDistance2(e.target.value)}
+                          className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text ${language === "ar" ? "text-right" : ""}`}
+                        />
+                      </div>
+                      <div className={language === "ar" ? "text-right" : ""}>
+                        <label className="block text-[9px] font-medium text-natural-sage mb-1">
+                          {language === "ar" ? "المسافة الثالثة (كلم)" : "Distance 3 (km)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          placeholder="Ex: 42"
+                          value={extraDistance3}
+                          onChange={(e) => setExtraDistance3(e.target.value)}
+                          className={`w-full text-xs px-2.5 py-1.5 bg-natural-bone border border-natural-border rounded-xl focus:outline-none text-natural-text ${language === "ar" ? "text-right" : ""}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className={language === "ar" ? "text-right" : ""}>
                       <label className="block text-[10px] font-bold text-natural-olive mb-1 uppercase">
@@ -794,8 +859,8 @@ export default function OutingsPlanning({
                       <span className="text-xs text-natural-sage uppercase font-bold">
                         {t("distance")}
                       </span>
-                      <p className="font-serif italic font-black text-3xl text-natural-olive leading-none">
-                        {run.distance}{" "}
+                      <p className="font-serif italic font-black text-2xl md:text-3xl text-natural-olive leading-none">
+                        {parseDistances(run.description, run.distance).join(" / ")}{" "}
                         <span className="text-xs font-bold text-natural-sage">
                           {language === "ar" ? "كلم" : "KM"}
                         </span>
@@ -876,7 +941,7 @@ export default function OutingsPlanning({
                   <p
                     className={`truncate max-w-[280px] md:max-w-md text-xs md:text-sm text-natural-sage font-medium italic ${language === "ar" ? "text-right" : ""}`}
                   >
-                    {run.description}
+                    {getCleanDescription(run.description)}
                   </p>
                   {!run.completed && (
                     <span className="text-natural-olive text-xs font-black uppercase tracking-wider flex items-center gap-0.5 shrink-0">
@@ -1102,6 +1167,13 @@ export default function OutingsPlanning({
                                     >
                                       {language === "ar" ? "الرقم" : "Dossard"}
                                     </th>
+                                    {parseDistances(run.description, run.distance).length > 1 && (
+                                      <th
+                                        className={`py-2 ${language === "ar" ? "text-right" : "text-left"}`}
+                                      >
+                                        Distance
+                                      </th>
+                                    )}
                                     <th
                                       className={`py-2 ${language === "ar" ? "text-right" : "text-left"}`}
                                     >
@@ -1231,6 +1303,27 @@ export default function OutingsPlanning({
                                               className="w-18 font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1"
                                             />
                                           </td>
+                                          {parseDistances(run.description, run.distance).length > 1 && (
+                                            <td className="py-2">
+                                              <select
+                                                value={partic.selectedDistance || run.distance}
+                                                onChange={(e) =>
+                                                  onUpdateParticipant(
+                                                    run.id,
+                                                    partic.id,
+                                                    { selectedDistance: Number(e.target.value) },
+                                                  )
+                                                }
+                                                className="font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-1.5 py-1 text-[10px]"
+                                              >
+                                                {parseDistances(run.description, run.distance).map((d) => (
+                                                  <option key={d} value={d}>
+                                                    {d} KM
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            </td>
+                                          )}
                                           <td className="py-2">
                                             <select
                                               value={
@@ -1598,6 +1691,32 @@ export default function OutingsPlanning({
                                         </div>
                                       </div>
 
+                                      {/* Mobile admin distance selector */}
+                                      {parseDistances(run.description, run.distance).length > 1 && (
+                                        <div className="border-t border-natural-border/40 pt-2">
+                                          <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">
+                                            Distance de Course
+                                          </label>
+                                          <select
+                                            value={partic.selectedDistance || run.distance}
+                                            onChange={(e) =>
+                                              onUpdateParticipant(
+                                                run.id,
+                                                partic.id,
+                                                { selectedDistance: Number(e.target.value) },
+                                              )
+                                            }
+                                            className="w-full font-mono font-bold text-center border border-natural-border focus:ring-1 focus:ring-natural-olive rounded bg-white px-2 py-1.5 text-xs focus:outline-none"
+                                          >
+                                            {parseDistances(run.description, run.distance).map((d) => (
+                                              <option key={d} value={d}>
+                                                {d} KM
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      )}
+
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
                                           <label className="block text-[9px] font-bold text-natural-sage uppercase font-mono mb-0.5">
@@ -1880,7 +1999,7 @@ export default function OutingsPlanning({
                           <p
                             className={`text-natural-text leading-relaxed text-xs font-semibold ${language === "ar" ? "text-right" : ""}`}
                           >
-                            {run.description}
+                            {getCleanDescription(run.description)}
                           </p>
                         </div>
 
@@ -1949,7 +2068,7 @@ export default function OutingsPlanning({
 
                         {/* Interactive Personal Booking Settings Panel for registered athletes */}
                         {isUserRegistered &&
-                          run.isOrWilaya &&
+                          (run.isOrWilaya || parseDistances(run.description, run.distance).length > 1) &&
                           (() => {
                             const myParticipantEntry = run.participants.find(
                               (p) => p.id === currentUser.id,
@@ -1966,178 +2085,223 @@ export default function OutingsPlanning({
                                 <div className="flex items-center gap-1.5">
                                   <Settings className="w-4.5 h-4.5 text-natural-olive animate-spin-slow" />
                                   <h4 className="font-bold text-natural-olive uppercase tracking-wide text-xs">
-                                    🎯 Vos Options de Voyage (Mosta Run Club)
+                                    🎯 {language === "ar" ? "خيارات المشاركة والسباق" : "Vos Options de Course & Voyage"} (Mosta Run Club)
                                   </h4>
                                 </div>
 
                                 <p className="text-[10px] text-natural-sage font-medium">
-                                  Configurez vos réservations pour calculer le
-                                  budget global de la sortie. Elles se
-                                  synchronisent en temps réel.
+                                  {language === "ar"
+                                    ? "قم بتهيئة خيارات المسافة وحجز السفر الخاصة بك لتحديث بيانات الفريق في الوقت الفعلي."
+                                    : "Configurez votre distance et vos options de voyage. Les choix se synchronisent en temps réel."}
                                 </p>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className={run.isOrWilaya ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}>
                                   {/* Transport Toggle */}
-                                  <div className="space-y-1 bg-white p-3 rounded-xl border border-natural-border/60">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1">
-                                        <Bus className="w-3.5 h-3.5" />
-                                        Transport du Club
-                                      </span>
-                                      <span className="text-[10px] font-mono text-natural-sage font-bold">
-                                        {run.transportPrice
-                                          ? `${run.transportPrice} DA`
-                                          : "Gratuit"}
-                                      </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-1 pt-1">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onUpdateParticipant(
-                                            run.id,
-                                            currentUser.id,
-                                            { useTransport: true },
-                                          )
-                                        }
-                                        className={`py-1 text-[10px] font-bold rounded-lg border transition ${
-                                          transportChoice
-                                            ? "bg-natural-olive text-white border-transparent shadow-xs"
-                                            : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
-                                        }`}
-                                      >
-                                        Oui, Autocar
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onUpdateParticipant(
-                                            run.id,
-                                            currentUser.id,
-                                            { useTransport: false },
-                                          )
-                                        }
-                                        className={`py-1 text-[10px] font-bold rounded-lg border transition ${
-                                          !transportChoice
-                                            ? "bg-natural-olive text-white border-transparent shadow-xs"
-                                            : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
-                                        }`}
-                                      >
-                                        Non, Solo
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Overnight Toggle */}
-                                  <div className="space-y-1 bg-white p-3 rounded-xl border border-natural-border/60">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1">
-                                        <Home className="w-3.5 h-3.5" />
-                                        Lmbata / Nuitée
-                                      </span>
-                                      <span className="text-[10px] font-mono text-natural-sage font-bold">
-                                        {(() => {
-                                          const rType =
-                                            myParticipantEntry?.accommodationType ||
-                                            "room1";
-                                          if (rType === "room1")
-                                            return `${run.priceRoom1 !== undefined ? run.priceRoom1 : run.accommodationPrice || 0} DA`;
-                                          if (rType === "room2")
-                                            return `${run.priceRoom2 !== undefined ? run.priceRoom2 : run.accommodationPrice || 0} DA`;
-                                          if (rType === "room3")
-                                            return `${run.priceRoom3 !== undefined ? run.priceRoom3 : run.accommodationPrice || 0} DA`;
-                                          return `${run.accommodationPrice || 0} DA`;
-                                        })()}
-                                      </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-1 pt-1">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onUpdateParticipant(
-                                            run.id,
-                                            currentUser.id,
-                                            { useAccommodation: true },
-                                          )
-                                        }
-                                        className={`py-1 text-[10px] font-bold rounded-lg border transition ${
-                                          accommodationChoice
-                                            ? "bg-natural-olive text-white border-transparent shadow-xs"
-                                            : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
-                                        }`}
-                                      >
-                                        Oui, Nuitée
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onUpdateParticipant(
-                                            run.id,
-                                            currentUser.id,
-                                            { useAccommodation: false },
-                                          )
-                                        }
-                                        className={`py-1 text-[10px] font-bold rounded-lg border transition ${
-                                          !accommodationChoice
-                                            ? "bg-natural-olive text-white border-transparent shadow-xs"
-                                            : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
-                                        }`}
-                                      >
-                                        Non (A/R)
-                                      </button>
-                                    </div>
-
-                                    {/* Sub-select for Room type choice */}
-                                    {accommodationChoice && (
-                                      <div className="pt-2">
-                                        <label className="block text-[9px] font-mono font-bold text-natural-sage uppercase tracking-wider mb-0.5">
-                                          Taille de Chambre :
-                                        </label>
-                                        <select
-                                          value={
-                                            myParticipantEntry?.accommodationType ||
-                                            "room1"
-                                          }
-                                          onChange={(e) =>
+                                  {run.isOrWilaya && (
+                                    <div className="space-y-1 bg-white p-3 rounded-xl border border-natural-border/60">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1">
+                                          <Bus className="w-3.5 h-3.5" />
+                                          Transport du Club
+                                        </span>
+                                        <span className="text-[10px] font-mono text-natural-sage font-bold">
+                                          {run.transportPrice
+                                            ? `${run.transportPrice} DA`
+                                            : "Gratuit"}
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-1 pt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
                                             onUpdateParticipant(
                                               run.id,
                                               currentUser.id,
-                                              {
-                                                accommodationType: e.target
-                                                  .value as any,
-                                              },
+                                              { useTransport: true },
                                             )
                                           }
-                                          className="w-full text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none text-natural-text"
+                                          className={`py-1 text-[10px] font-bold rounded-lg border transition ${
+                                            transportChoice
+                                              ? "bg-natural-olive text-white border-transparent shadow-xs"
+                                              : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
+                                          }`}
                                         >
-                                          <option value="room1">
-                                            Chambre 1 place (Single) -{" "}
-                                            {run.priceRoom1 !== undefined
-                                              ? run.priceRoom1
-                                              : run.accommodationPrice ||
-                                                0}{" "}
-                                            DA
-                                          </option>
-                                          <option value="room2">
-                                            Chambre 2 places (Double) -{" "}
-                                            {run.priceRoom2 !== undefined
-                                              ? run.priceRoom2
-                                              : run.accommodationPrice ||
-                                                0}{" "}
-                                            DA
-                                          </option>
-                                          <option value="room3">
-                                            Chambre 3 places (Triple) -{" "}
-                                            {run.priceRoom3 !== undefined
-                                              ? run.priceRoom3
-                                              : run.accommodationPrice ||
-                                                0}{" "}
-                                            DA
-                                          </option>
-                                        </select>
+                                          Oui, Autocar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            onUpdateParticipant(
+                                              run.id,
+                                              currentUser.id,
+                                              { useTransport: false },
+                                            )
+                                          }
+                                          className={`py-1 text-[10px] font-bold rounded-lg border transition ${
+                                            !transportChoice
+                                              ? "bg-natural-olive text-white border-transparent shadow-xs"
+                                              : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
+                                          }`}
+                                        >
+                                          Non, Solo
+                                        </button>
                                       </div>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
+
+                                  {/* Overnight Toggle */}
+                                  {run.isOrWilaya && (
+                                    <div className="space-y-1 bg-white p-3 rounded-xl border border-natural-border/60">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1">
+                                          <Home className="w-3.5 h-3.5" />
+                                          Lmbata / Nuitée
+                                        </span>
+                                        <span className="text-[10px] font-mono text-natural-sage font-bold">
+                                          {(() => {
+                                            const rType =
+                                              myParticipantEntry?.accommodationType ||
+                                              "room1";
+                                            if (rType === "room1")
+                                              return `${run.priceRoom1 !== undefined ? run.priceRoom1 : run.accommodationPrice || 0} DA`;
+                                            if (rType === "room2")
+                                              return `${run.priceRoom2 !== undefined ? run.priceRoom2 : run.accommodationPrice || 0} DA`;
+                                            if (rType === "room3")
+                                              return `${run.priceRoom3 !== undefined ? run.priceRoom3 : run.accommodationPrice || 0} DA`;
+                                            return `${run.accommodationPrice || 0} DA`;
+                                          })()}
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-1 pt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            onUpdateParticipant(
+                                              run.id,
+                                              currentUser.id,
+                                              { useAccommodation: true },
+                                            )
+                                          }
+                                          className={`py-1 text-[10px] font-bold rounded-lg border transition ${
+                                            accommodationChoice
+                                              ? "bg-natural-olive text-white border-transparent shadow-xs"
+                                              : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
+                                          }`}
+                                        >
+                                          Oui, Nuitée
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            onUpdateParticipant(
+                                              run.id,
+                                              currentUser.id,
+                                              { useAccommodation: false },
+                                            )
+                                          }
+                                          className={`py-1 text-[10px] font-bold rounded-lg border transition ${
+                                            !accommodationChoice
+                                              ? "bg-natural-olive text-white border-transparent shadow-xs"
+                                              : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
+                                          }`}
+                                        >
+                                          Non (A/R)
+                                        </button>
+                                      </div>
+
+                                      {/* Sub-select for Room type choice */}
+                                      {accommodationChoice && (
+                                        <div className="pt-2">
+                                          <label className="block text-[9px] font-mono font-bold text-natural-sage uppercase tracking-wider mb-0.5">
+                                            Taille de Chambre :
+                                          </label>
+                                          <select
+                                            value={
+                                              myParticipantEntry?.accommodationType ||
+                                              "room1"
+                                            }
+                                            onChange={(e) =>
+                                              onUpdateParticipant(
+                                                run.id,
+                                                currentUser.id,
+                                                {
+                                                  accommodationType: e.target
+                                                    .value as any,
+                                                },
+                                              )
+                                            }
+                                            className="w-full text-[10px] font-semibold border border-natural-border rounded bg-white px-2 py-1 cursor-pointer outline-none text-natural-text"
+                                          >
+                                            <option value="room1">
+                                              Chambre 1 place (Single) -{" "}
+                                              {run.priceRoom1 !== undefined
+                                                ? run.priceRoom1
+                                                : run.accommodationPrice ||
+                                                  0}{" "}
+                                              DA
+                                            </option>
+                                            <option value="room2">
+                                              Chambre 2 places (Double) -{" "}
+                                              {run.priceRoom2 !== undefined
+                                                ? run.priceRoom2
+                                                : run.accommodationPrice ||
+                                                  0}{" "}
+                                              DA
+                                            </option>
+                                            <option value="room3">
+                                              Chambre 3 places (Triple) -{" "}
+                                              {run.priceRoom3 !== undefined
+                                                ? run.priceRoom3
+                                                : run.accommodationPrice ||
+                                                  0}{" "}
+                                              DA
+                                            </option>
+                                          </select>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Distance Choice selection */}
+                                  {parseDistances(run.description, run.distance).length > 1 && (
+                                    <div className={`space-y-1 bg-white p-3 rounded-xl border border-natural-border/60 ${run.isOrWilaya ? "sm:col-span-2" : ""}`}>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-natural-olive flex items-center gap-1">
+                                          <Compass className="w-3.5 h-3.5 text-natural-accent" />
+                                          {language === "ar" ? "مسافتك المختارة" : "Votre distance choisie"}
+                                        </span>
+                                        <span className="text-[10px] font-mono text-natural-sage font-bold">
+                                          {myParticipantEntry?.selectedDistance ? `${myParticipantEntry.selectedDistance} KM` : `${run.distance} KM`}
+                                        </span>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-1 pt-1">
+                                        {parseDistances(run.description, run.distance).map((dist) => {
+                                          const isSelected = myParticipantEntry?.selectedDistance === dist || 
+                                            (!myParticipantEntry?.selectedDistance && dist === run.distance);
+                                          return (
+                                            <button
+                                              key={dist}
+                                              type="button"
+                                              onClick={() =>
+                                                onUpdateParticipant(
+                                                  run.id,
+                                                  currentUser.id,
+                                                  { selectedDistance: dist },
+                                                )
+                                              }
+                                              className={`py-1 text-[10px] font-bold rounded-lg border transition ${
+                                                isSelected
+                                                  ? "bg-natural-olive text-white border-transparent shadow-xs"
+                                                  : "bg-natural-bone hover:bg-natural-sage-light/20 text-natural-sage border-natural-border"
+                                              }`}
+                                            >
+                                              {dist} KM
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Custom Bib inputs */}
@@ -2317,51 +2481,64 @@ export default function OutingsPlanning({
 
                                   {/* Travel Options bottom bar */}
                                   <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t border-natural-divider text-[10px]">
-                                    {run.isOrWilaya ? (
-                                      <div className="flex items-center gap-1">
-                                        {/* Transport Badge */}
-                                        <span
-                                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-0.5 border ${
-                                            partic.useTransport !== false
-                                              ? "bg-sky-50 text-sky-700 border-sky-100"
-                                              : "bg-natural-bone text-natural-sage border-natural-border/40"
-                                          }`}
-                                          title={
-                                            partic.useTransport !== false
-                                              ? "Transport Club réservé"
-                                              : "Transport indépendant"
-                                          }
-                                        >
-                                          <Bus className="w-2.5 h-2.5" />
-                                          {partic.useTransport !== false
-                                            ? "Bus"
-                                            : "Solo"}
-                                        </span>
+                                    <div className="flex items-center gap-1">
+                                      {run.isOrWilaya ? (
+                                        <>
+                                          {/* Transport Badge */}
+                                          <span
+                                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-0.5 border ${
+                                              partic.useTransport !== false
+                                                ? "bg-sky-50 text-sky-700 border-sky-100"
+                                                : "bg-natural-bone text-natural-sage border-natural-border/40"
+                                            }`}
+                                            title={
+                                              partic.useTransport !== false
+                                                ? "Transport Club réservé"
+                                                : "Transport indépendant"
+                                            }
+                                          >
+                                            <Bus className="w-2.5 h-2.5" />
+                                            {partic.useTransport !== false
+                                              ? "Bus"
+                                              : "Solo"}
+                                          </span>
 
-                                        {/* Overnight Badge */}
+                                          {/* Overnight Badge */}
+                                          <span
+                                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-0.5 border ${
+                                              partic.useAccommodation
+                                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                                : "bg-natural-bone text-natural-sage border-natural-border/40"
+                                            }`}
+                                            title={
+                                              partic.useAccommodation
+                                                ? "Nuitée avec l'équipe"
+                                                : "Aller-retour direct"
+                                            }
+                                          >
+                                            <Home className="w-2.5 h-2.5" />
+                                            {partic.useAccommodation
+                                              ? "Nuitée"
+                                              : "A/R"}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <div className="text-[10px] text-natural-sage italic font-mono">
+                                          📍 Local
+                                        </div>
+                                      )}
+
+                                      {/* Selected Distance Badge */}
+                                      {parseDistances(run.description, run.distance).length > 1 && (
                                         <span
-                                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium flex items-center gap-0.5 border ${
-                                            partic.useAccommodation
-                                              ? "bg-amber-50 text-amber-700 border-amber-100"
-                                              : "bg-natural-bone text-natural-sage border-natural-border/40"
-                                          }`}
-                                          title={
-                                            partic.useAccommodation
-                                              ? "Nuitée avec l'équipe"
-                                              : "Aller-retour direct"
-                                          }
+                                          className="text-[9px] px-1.5 py-0.5 rounded font-mono font-black bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-0.5 animate-fade-in"
+                                          title="Distance choisie"
                                         >
-                                          <Home className="w-2.5 h-2.5" />
-                                          {partic.useAccommodation
-                                            ? "Nuitée"
-                                            : "A/R"}
+                                          <Compass className="w-2.5 h-2.5 text-emerald-500" />
+                                          {partic.selectedDistance ? `${partic.selectedDistance} KM` : `${run.distance} KM`}
                                         </span>
-                                      </div>
-                                    ) : (
-                                      <div className="text-[10px] text-natural-sage italic font-mono">
-                                        📍 Local
-                                      </div>
-                                    )}
+                                      )}
+                                    </div>
 
                                     {/* Bib assigner */}
                                     {(() => {
