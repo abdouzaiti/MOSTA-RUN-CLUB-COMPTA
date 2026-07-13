@@ -1,0 +1,2 @@
+sed -i 's/export default function RunRecorder({ language }: { language: '"'"'en'"'"' | '"'"'fr'"'"' | '"'"'ar'"'"' }) {/export default function RunRecorder({ language, currentUser }: { language: '"'"'en'"'"' | '"'"'fr'"'"' | '"'"'ar'"'"', currentUser: any }) {/' src/components/RunRecorder.tsx
+sed -i "/import 'leaflet\/dist\/leaflet.css';/a import { supabase, isSupabaseConfigured } from '../supabaseClient';" src/components/RunRecorder.tsx

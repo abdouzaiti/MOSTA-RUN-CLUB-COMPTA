@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Pause, RotateCcw, MapPin, Activity } from 'lucide-react';
+import { Play, Square, Pause, RotateCcw, MapPin, Activity, Save, Loader2, CheckCircle } from 'lucide-react';
 import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 // Fix for default marker icons in Leaflet with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -18,7 +19,7 @@ interface Point {
   timestamp: number;
 }
 
-export default function RunRecorder({ language }: { language: 'en' | 'fr' | 'ar' }) {
+export default function RunRecorder({ language, currentUser }: { language: 'en' | 'fr' | 'ar', currentUser: any }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [points, setPoints] = useState<Point[]>([]);
@@ -26,6 +27,8 @@ export default function RunRecorder({ language }: { language: 'en' | 'fr' | 'ar'
   const [elapsedTime, setElapsedTime] = useState(0); // in seconds
   const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -147,6 +150,53 @@ export default function RunRecorder({ language }: { language: 'en' | 'fr' | 'ar'
     setErrorMsg('');
   };
 
+  const handleSaveRun = async () => {
+    if (!isSupabaseConfigured || !supabase || !currentUser) {
+      setErrorMsg(language === 'ar' ? 'حدث خطأ: قاعدة البيانات غير متصلة' : 'Error: Database not connected');
+      return;
+    }
+    setIsSaving(true);
+    setErrorMsg('');
+    
+    // Recalculate pace for saving
+    let savePace = '--:--';
+    const saveDistKm = distance / 1000;
+    if (saveDistKm > 0.05) {
+      const paceSeconds = elapsedTime / saveDistKm;
+      if (paceSeconds < 3600) {
+        const pm = Math.floor(paceSeconds / 60);
+        const ps = Math.floor(paceSeconds % 60);
+        savePace = `${pm}:${ps.toString().padStart(2, '0')}`;
+      }
+    }
+
+    try {
+      const { error } = await supabase.from('mrc_runs').insert({
+        id: crypto.randomUUID(),
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+        distance: distance,
+        elapsed_time: elapsedTime,
+        pace: savePace,
+        points: points,
+        date: new Date().toISOString()
+      });
+      
+      if (error) throw error;
+      
+      setSaveSuccess(true);
+      setTimeout(() => {
+        handleReset();
+        setSaveSuccess(false);
+      }, 3000);
+      
+    } catch (err: any) {
+      setErrorMsg(language === 'ar' ? 'فشل الحفظ: ' + err.message : 'Save failed: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -249,12 +299,21 @@ export default function RunRecorder({ language }: { language: 'en' | 'fr' | 'ar'
         )}
         
         {elapsedTime > 0 && !isRecording && (
+          <>
            <button 
              onClick={handleReset}
              className="w-16 h-16 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform cursor-pointer"
            >
              <RotateCcw className="w-6 h-6" />
            </button>
+           <button
+             onClick={handleSaveRun}
+             disabled={isSaving || saveSuccess}
+             className={`w-16 h-16 rounded-full flex items-center justify-center shadow-md transition-transform cursor-pointer ${saveSuccess ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:scale-105 disabled:opacity-50'}`}
+           >
+             {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : saveSuccess ? <CheckCircle className="w-6 h-6" /> : <Save className="w-6 h-6" />}
+           </button>
+          </>
         )}
       </div>
 

@@ -22,7 +22,7 @@ import { translations, Language } from './translations';
 import {
   Sparkles, Activity, Clock, Award, ShieldAlert, CheckCircle, RefreshCw,
   Database, AlertTriangle, Terminal, Cpu, Info, Copy, Check, Globe,
-  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Activity, Bell, Camera,
+  MessageSquare, Settings, HelpCircle, Compass, Calendar, Users, Bell, Camera,
   ArrowLeft, Headphones
 } from 'lucide-react';
 
@@ -1167,7 +1167,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                 }`}>
                   {/* TAB 0: DASHBOARD SOCIAL */}
                   {activeTab === 'run-recorder' && (
-                    <RunRecorder language={language || 'fr'} />
+                    <RunRecorder language={language || 'fr'} currentUser={currentUser} />
                   )}
 
                   {activeTab === 'dashboard' && (
