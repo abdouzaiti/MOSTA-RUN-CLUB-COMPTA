@@ -176,8 +176,8 @@ export default function Sidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      console.log('Mobile button clicked:', item.id);
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (item.id === 'run-recorder') {
                         alert('Feature under development');
                       } else {
@@ -276,8 +276,8 @@ export default function Sidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      console.log('Desktop button clicked:', item.id);
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (item.id === 'run-recorder') {
                         alert('Feature under development');
                       } else {

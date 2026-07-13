@@ -1338,7 +1338,10 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
             </button>
             <button
-              onClick={() => setActiveTab('run-recorder')}
+              onClick={(e) => {
+                e.stopPropagation();
+                alert('Feature under development');
+              }}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
                 activeTab === 'run-recorder' ? 'text-orange-500 font-extrabold scale-110' : 'text-slate-400 hover:text-orange-500'
               }`}
