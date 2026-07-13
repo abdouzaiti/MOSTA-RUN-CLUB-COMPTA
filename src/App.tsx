@@ -1338,18 +1338,6 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                alert('Feature under development');
-              }}
-              className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
-                activeTab === 'run-recorder' ? 'text-orange-500 font-extrabold scale-110' : 'text-slate-400 hover:text-orange-500'
-              }`}
-            >
-              <Activity className="w-5 h-5" />
-              <span className="text-[9px] font-bold tracking-tight">{language === 'ar' ? 'الجري' : 'Courir'}</span>
-            </button>
-            <button
               onClick={() => setActiveTab('settings')}
               className={`flex flex-col items-center gap-1 p-2 transition-all cursor-pointer ${
                 activeTab === 'settings' ? 'text-blue-600 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
