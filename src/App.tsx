@@ -170,26 +170,38 @@ export default function App() {
 
   // Listen for real-time support messages for notifications
   useEffect(() => {
-    if (!currentUser || !supabase) return;
+    if (!supabase) return;
+
+    const guestId = localStorage.getItem('mrc_guest_id');
 
     // Initial check for unread messages
     const checkUnread = async () => {
       try {
         const msgs = await dbService.getSupportMessages();
-        const isAdmin = currentUser.runClubRole === 'Admin';
-        const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
-        const adminId = adminRunner ? adminRunner.id : 'usr-1';
+        let unreadCount = 0;
 
-        const unread = msgs.filter(m => {
-          if (isAdmin) {
-            // Admin sees unread messages sent to admin
-            return m.receiverId === adminId && m.senderId !== currentUser.id && !m.read;
-          } else {
-            // User sees unread messages sent to them from admin
-            return m.receiverId === currentUser.id && !m.read;
-          }
-        });
-        setUnreadSupportCount(unread.length);
+        if (currentUser) {
+          const isAdmin = currentUser.runClubRole === 'Admin';
+          const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+          const adminId = adminRunner ? adminRunner.id : 'usr-1';
+
+          const unread = msgs.filter(m => {
+            if (isAdmin) {
+              // Admin sees unread messages sent to admin
+              return m.receiverId === adminId && m.senderId !== currentUser.id && !m.read;
+            } else {
+              // User sees unread messages sent to them from admin
+              return m.receiverId === currentUser.id && !m.read;
+            }
+          });
+          unreadCount = unread.length;
+        } else if (guestId) {
+          // Guest sees unread messages sent to guestId
+          const unread = msgs.filter(m => m.receiverId === guestId && !m.read);
+          unreadCount = unread.length;
+        }
+
+        setUnreadSupportCount(unreadCount);
       } catch (err) {
         console.error("Error checking unread support messages:", err);
       }
@@ -204,16 +216,23 @@ export default function App() {
         schema: 'public', 
         table: 'support_messages' 
       }, (payload) => {
-        const isAdmin = currentUser.runClubRole === 'Admin';
-        const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
-        const adminId = adminRunner ? adminRunner.id : 'usr-1';
         const isAr = language === 'ar';
 
         if (payload.eventType === 'INSERT') {
           const msg = payload.new;
-          const isTarget = isAdmin 
-            ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
-            : (msg.receiver_id === currentUser.id);
+          let isTarget = false;
+
+          if (currentUser) {
+            const isAdmin = currentUser.runClubRole === 'Admin';
+            const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+            const adminId = adminRunner ? adminRunner.id : 'usr-1';
+
+            isTarget = isAdmin 
+              ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
+              : (msg.receiver_id === currentUser.id);
+          } else if (guestId) {
+            isTarget = (msg.receiver_id === guestId);
+          }
 
           if (isTarget && !msg.read) {
             setUnreadSupportCount(prev => prev + 1);
@@ -235,9 +254,19 @@ export default function App() {
           // If a message was marked read, decrement count
           if (payload.new.read && !payload.old.read) {
             const msg = payload.new;
-            const isTarget = isAdmin 
-              ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
-              : (msg.receiver_id === currentUser.id);
+            let isTarget = false;
+
+            if (currentUser) {
+              const isAdmin = currentUser.runClubRole === 'Admin';
+              const adminRunner = runners.find(r => r.runClubRole === 'Admin') || runners.find(r => r.id === 'usr-1');
+              const adminId = adminRunner ? adminRunner.id : 'usr-1';
+
+              isTarget = isAdmin 
+                ? (msg.receiver_id === adminId && msg.sender_id !== currentUser.id)
+                : (msg.receiver_id === currentUser.id);
+            } else if (guestId) {
+              isTarget = (msg.receiver_id === guestId);
+            }
             
             if (isTarget) {
               setUnreadSupportCount(prev => Math.max(0, prev - 1));
@@ -254,7 +283,7 @@ export default function App() {
         const isAr = language === 'ar';
 
         // Notify if message is sent by someone else
-        if (msg && msg.sender_id !== currentUser.id) {
+        if (currentUser && msg && msg.sender_id !== currentUser.id) {
           playMessageChime();
           triggerPhoneNotification(
             isAr ? `👥 محادثة النادي: ${msg.sender_name || 'عضو'}` : `👥 Chat Club: ${msg.sender_name || 'Membre'}`,
@@ -277,7 +306,7 @@ export default function App() {
         const isAr = language === 'ar';
 
         // Notify if announcement is created by someone else
-        if (ann && ann.author_name !== currentUser.name) {
+        if (currentUser && ann && ann.author_name !== currentUser.name) {
           playAnnouncementChime();
           triggerPhoneNotification(
             isAr ? `🚨 إعلان جديد من ${ann.author_name || 'المدرب'}` : `🚨 Nouvelle annonce de ${ann.author_name || 'Coach'}`,
@@ -1098,6 +1127,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
               setLanguage={setLanguage}
               girlMode={girlMode}
               setGirlMode={handleSetGirlMode}
+              unreadSupportCount={unreadSupportCount}
             />
           )}
         </>
@@ -1144,8 +1174,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                       setActiveTab={setActiveTab}
                       language={language || 'fr'}
                       onOpenSupportChat={() => {
-                        setActiveTab('help');
-                        setIsSupportChatOpen(true);
+                        setActiveTab('messagerie');
                       }}
                     />
                   )}
@@ -1254,110 +1283,6 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                         girlMode={girlMode}
                         setGirlMode={handleSetGirlMode}
                       />
-
-
-                    </div>
-                  )}
-
-                  {/* TAB 8: HELP & EMERGENCY SUPPORT WORKSPACE */}
-                  {activeTab === 'help' && (
-                    <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-3xs space-y-6 animate-fade-in">
-                      <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                        <HelpCircle className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-base font-black text-[#1034A6] font-serif italic">Aide, Support & Guides de Survie</h3>
-                      </div>
-
-                      {!isSupportChatOpen ? (
-                        <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 leading-relaxed text-xs">
-                            {/* Emergency kit card details */}
-                            <div className="p-5 bg-rose-50/50 border border-rose-100 rounded-2xl space-y-2">
-                              <h4 className="font-bold text-xs text-rose-800 flex items-center gap-1.5 font-serif italic">
-                                🚨 URGENCE : QUE FAIRE EN CAS D'INCIDENT ?
-                              </h4>
-                              <p className="text-[11px] text-slate-600 leading-relaxed">
-                                Durant les sorties du club Mosta Run, le respect de la chaîne de secours est primordial. Si un coureur se blesse :
-                              </p>
-                              <ol className="list-decimal pl-4 space-y-1 text-[11.5px] text-slate-700">
-                                <li>Sécurisez immédiatement le lieu et signalez l'arrêt à l'admin ou au coach de queue.</li>
-                                <li>Identifiez la victime et le groupe sanguin mentionné sur sa fiche d'athlète (onglet Roster/Membres!).</li>
-                                <li>Contactez le numéro d'urgence disponible sur sa fiche personnelle.</li>
-                              </ol>
-                            </div>
-
-                            {/* Survival guidelines rules */}
-                            <div className="p-5 bg-blue-50/40 border border-blue-100/30 rounded-2xl space-y-2">
-                              <h4 className="font-bold text-xs text-blue-800 flex items-center gap-1.5 font-serif italic">
-                                🎒 VESTIAIRE ET MAILLOTS OFFICIELS
-                              </h4>
-                              <p className="text-[11px] text-slate-600 leading-relaxed">
-                                Nous courons aux couleurs de la wilaya de Mostaganem. Le port du maillot de course bleu roi ou blanc oficialisé par MRC est exigé.
-                              </p>
-                              <ul className="list-disc pl-4 space-y-1 text-[11.5px] text-slate-700">
-                                <li>Tours de ville : Maillot officiel exigé.</li>
-                                <li>Trails Hors Wilaya (Ex: Alger, Oran) : Maillot officiel exigé.</li>
-                                <li>Hydratation : Emportez au moins 1.5L d'eau pour toute sortie dépassant 15 KMs.</li>
-                              </ul>
-                            </div>
-                          </div>
-
-                          {/* Beautiful Interactive Support Chat Trigger Card */}
-                          <div className="bg-gradient-to-br from-[#1034A6] via-[#1E56A0] to-[#2F89FC] text-white p-6 sm:p-8 rounded-[2rem] border border-white/10 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="absolute -right-12 -top-12 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-                            <div className="relative z-10 space-y-3.5 flex-1 max-w-xl">
-                              <div className="flex items-center gap-2 bg-white/15 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase backdrop-blur-xs w-fit">
-                                <Headphones className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                                <span>{language === 'ar' ? 'مساعدة فورية' : 'Support Live MRC'}</span>
-                              </div>
-                              <h4 className="text-lg sm:text-xl font-serif italic font-black leading-tight">
-                                {language === 'ar' ? 'هل لديك أي سؤال أو واجهتك مشكلة؟' : "Besoin d'aide technique ou de conseils sur le Club ?"}
-                              </h4>
-                              <p className="text-white/85 text-[11px] sm:text-xs leading-relaxed font-medium">
-                                {language === 'ar' 
-                                  ? 'تواصل مباشرة مع الكابتن عبدو الزايتي وطاقم المشرفين لحل مشاكلك في الحساب، العضوية، أو الاستفسار عن التجهيزات.'
-                                  : "Démarrez une session d'assistance privée avec le Captain Abdou Zaiti. Signalez un bug, posez vos questions sur les cotisations, maillots ou sorties."
-                                }
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse border-2 border-white/35"></span>
-                                <span className="text-[10px] text-white/90 font-mono font-bold">
-                                  {language === 'ar' ? 'المدير عبدو الزايتي متصل حالياً' : "Abdou Zaiti (Fondateur) est disponible en ligne"}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => setIsSupportChatOpen(true)}
-                              className="relative z-10 px-6 py-3.5 bg-white text-[#1034A6] hover:bg-slate-50 active:scale-[0.98] transition font-black text-xs sm:text-sm rounded-2xl flex items-center gap-2 shadow-md cursor-pointer whitespace-nowrap"
-                            >
-                              <MessageSquare className="w-4 h-4 shrink-0" />
-                              <span>{language === 'ar' ? 'بدء محادثة الدعم' : 'Démarrer le Chat de Secours'}</span>
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Back to Guides Trigger */}
-                          <div className="flex items-center justify-between">
-                            <button
-                              onClick={() => setIsSupportChatOpen(false)}
-                              className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#1034A6] transition bg-slate-50 hover:bg-blue-50 border border-slate-150 rounded-xl px-4 py-2 cursor-pointer"
-                            >
-                              <ArrowLeft className="w-3.5 h-3.5" />
-                              <span>{language === 'ar' ? 'رجوع إلى دليل المساعدة' : 'Retour aux Guides'}</span>
-                            </button>
-                            <span className="text-[10px] font-mono text-slate-400 font-bold bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
-                              🎟️ Ticket ID: SUPPORT-{currentUser.id.toUpperCase()}
-                            </span>
-                          </div>
-
-                          {/* Admin support live tchat window */}
-                          <AdminSupportChat 
-                            currentUser={currentUser} 
-                            runners={runners} 
-                            language={language || 'fr'} 
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </main>

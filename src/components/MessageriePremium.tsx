@@ -289,7 +289,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const supportChannels = React.useMemo<ChatChannel[]>(() => {
     if (isPrivileged) {
       // Admin and Coaches see a channel for every other runner (so they can chat with them)
-      return runners
+      const runnerChans = runners
         .filter(r => r.id !== currentUser.id)
         .map(runner => {
           const userMessages = supportMessages.filter(
@@ -320,6 +320,45 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
             membersCount: 2
           };
         });
+
+      // Find any guest IDs (e.g. from the login support chat)
+      const guestIds = Array.from(new Set(
+        supportMessages
+          .filter(msg => {
+            const isGuestSender = msg.senderId.startsWith('guest-') || (!runners.some(r => r.id === msg.senderId) && msg.senderId !== adminId);
+            const isGuestReceiver = msg.receiverId.startsWith('guest-') || (!runners.some(r => r.id === msg.receiverId) && msg.receiverId !== adminId && msg.receiverId !== 'all' && msg.receiverId !== 'default');
+            return isGuestSender || isGuestReceiver;
+          })
+          .map(msg => msg.senderId.startsWith('guest-') || !runners.some(r => r.id === msg.senderId) ? msg.senderId : msg.receiverId)
+          .filter(id => id !== adminId && id !== 'all' && id !== 'default' && id !== currentUser.id)
+      ));
+
+      const guestChans = guestIds.map(gId => {
+        const guestMessages = supportMessages.filter(
+          msg => (msg.senderId === gId && msg.receiverId === currentUser.id) || 
+                 (msg.senderId === currentUser.id && msg.receiverId === gId)
+        );
+        const lastMsg = guestMessages[guestMessages.length - 1];
+        const unreadCount = guestMessages.filter(msg => msg.senderId === gId && !msg.read).length;
+        
+        // Find guest name from messages
+        const guestMsg = supportMessages.find(msg => msg.senderId === gId);
+        const guestName = guestMsg ? guestMsg.senderName : (isRtl ? `زائر (${gId.substring(6,10)})` : `Visiteur (${gId.substring(6,10)})`);
+
+        return {
+          id: `support-user-${gId}`,
+          name: `${guestName} (Guest)`,
+          isGroup: false,
+          pinned: false,
+          unreadCount,
+          lastMessage: lastMsg ? lastMsg.text : (isRtl ? 'لا توجد رسائل بعد' : 'Aucun message support'),
+          lastMessageTime: lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          avatarUrl: undefined,
+          membersCount: 2
+        };
+      });
+
+      return [...runnerChans, ...guestChans];
     } else {
       // Regular user sees a single "Support & Assistance" channel (Abdou) and then channels for Coaches only
       const userMessages = supportMessages.filter(

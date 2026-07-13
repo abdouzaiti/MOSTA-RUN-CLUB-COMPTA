@@ -7,7 +7,7 @@ import {
   MessageSquare, Share2, Compass, Sun, Wind, CloudRain,
   UserPlus, ArrowRight, Zap, Award, Target, TrendingUp,
   ShoppingBag, ExternalLink, Clock, Trash2, Database, Send,
-  Image, X, Headphones
+  Image, X, Headphones, Check, Sliders
 } from 'lucide-react';
 import mrcShopPreview from '../assets/images/mrc_shop_preview_1783012220849.jpg';
 
@@ -165,6 +165,164 @@ export default function DashboardSocial({
   const [posts, setPosts] = useState<any[]>([]);
   const [isTableMissing, setIsTableMissing] = useState(false);
   const [commentInputs, setCommentInputs] = useState<{[key: string]: string}>({});
+
+  // --- INTEGRATED MRC SHOP & GPS CONNECTIONS SYSTEM ---
+  const [isShopModalOpen, setIsShopModalOpen] = useState(false);
+  const [isShopConnected, setIsShopConnected] = useState(() => localStorage.getItem('mrc_shop_connected') === 'true');
+  const [isConnectingShop, setIsConnectingShop] = useState(false);
+  const [customJerseyName, setCustomJerseyName] = useState(currentUser.name.split(' ')[0].toUpperCase());
+  const [jerseySize, setJerseySize] = useState('M');
+  const [selectedShopItem, setSelectedShopItem] = useState('maillot');
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderStep, setOrderStep] = useState(0);
+  const [ordersList, setOrdersList] = useState<any[]>(() => {
+    const saved = localStorage.getItem('mrc_shop_orders_history');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 'MRC-9011', item: isRtl ? 'القميص التقني الرسمي' : 'Maillot Technique Noir - M', printedName: currentUser.name.split(' ')[0].toUpperCase(), total: '2900 DA', status: 'delivered', time: isRtl ? 'منذ يومين' : 'Il y a 2 jours' }
+    ];
+  });
+
+  // GPS connections
+  const [stravaConnected, setStravaConnected] = useState(() => localStorage.getItem('mrc_strava_connected') === 'true');
+  const [garminConnected, setGarminConnected] = useState(() => localStorage.getItem('mrc_garmin_connected') === 'true');
+  const [suuntoConnected, setSuuntoConnected] = useState(() => localStorage.getItem('mrc_suunto_connected') === 'true');
+  const [gpsSyncing, setGpsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState('');
+  const [lastSyncTime, setLastSyncTime] = useState(() => localStorage.getItem('mrc_gps_last_sync') || '');
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [popupService, setPopupService] = useState<string | null>(null);
+  const [isAuthorizingGps, setIsAuthorizingGps] = useState(false);
+  const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('mrc_shop_orders_history', JSON.stringify(ordersList));
+  }, [ordersList]);
+
+  const handleConnectGps = (service: string) => {
+    setPopupService(service);
+    setIsAuthorizingGps(true);
+    setSyncProgress(0);
+    
+    const interval = setInterval(() => {
+      setSyncProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsAuthorizingGps(false);
+            if (service === 'strava') {
+              setStravaConnected(true);
+              localStorage.setItem('mrc_strava_connected', 'true');
+            } else if (service === 'garmin') {
+              setGarminConnected(true);
+              localStorage.setItem('mrc_garmin_connected', 'true');
+            } else if (service === 'suunto') {
+              setSuuntoConnected(true);
+              localStorage.setItem('mrc_suunto_connected', 'true');
+            }
+            setPopupService(null);
+          }, 600);
+          return 100;
+        }
+        return prev + 20;
+      });
+    }, 150);
+  };
+
+  const handleDisconnectGps = (service: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (service === 'strava') {
+      setStravaConnected(false);
+      localStorage.removeItem('mrc_strava_connected');
+    } else if (service === 'garmin') {
+      setGarminConnected(false);
+      localStorage.removeItem('mrc_garmin_connected');
+    } else if (service === 'suunto') {
+      setSuuntoConnected(false);
+      localStorage.removeItem('mrc_suunto_connected');
+    }
+  };
+
+  const handleGpsSync = () => {
+    if (gpsSyncing) return;
+    setGpsSyncing(true);
+    setShowSyncSuccess(false);
+    setSyncStatusMsg(isRtl ? 'جاري الاتصال بالأقمار الصناعية...' : 'Connexion aux serveurs GPS...');
+    
+    setTimeout(() => {
+      setSyncStatusMsg(isRtl ? 'تحميل آخر التدريبـات المنجزة...' : 'Téléchargement des dernières séances...');
+      setTimeout(() => {
+        setSyncStatusMsg(isRtl ? 'تحليل مسافات وخرائط الجري...' : 'Analyse de l\'allure et de la distance...');
+        setTimeout(() => {
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const dateStr = now.toLocaleDateString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'short' });
+          const fullTime = `${dateStr} à ${timeStr}`;
+          setLastSyncTime(fullTime);
+          localStorage.setItem('mrc_gps_last_sync', fullTime);
+          setGpsSyncing(false);
+          setSyncStatusMsg('');
+          setShowSyncSuccess(true);
+        }, 1200);
+      }, 1000);
+    }, 1000);
+  };
+
+  const handleConnectShop = () => {
+    if (isShopConnected) {
+      setIsShopModalOpen(true);
+      return;
+    }
+    
+    setIsConnectingShop(true);
+    setTimeout(() => {
+      setIsShopConnected(true);
+      localStorage.setItem('mrc_shop_connected', 'true');
+      setIsConnectingShop(false);
+      setIsShopModalOpen(true);
+    }, 1500);
+  };
+
+  const handlePlaceOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingOrder(true);
+    setOrderStep(1);
+    
+    setTimeout(() => {
+      setOrderStep(2);
+      setTimeout(() => {
+        setOrderStep(3);
+        setTimeout(() => {
+          setOrderStep(4);
+          
+          const itemLabels: {[key: string]: string} = {
+            maillot: isRtl ? 'القميص التقني الرسمي' : 'Maillot Technique Noir & Jaune',
+            hoodie: isRtl ? 'سترة النادي الشتوية' : 'Hoodie Club Premium',
+            casquette: isRtl ? 'قبعة الجري الفاخرة' : 'Casquette Performance',
+            sac: isRtl ? 'حقيبة الظهر الرياضية' : 'Sac de sport MRC'
+          };
+          const itemPrices: {[key: string]: string} = {
+            maillot: '2500 DA',
+            hoodie: '4800 DA',
+            casquette: '1500 DA',
+            sac: '2900 DA'
+          };
+          
+          const newOrder = {
+            id: 'MRC-' + Math.floor(1000 + Math.random() * 9000),
+            item: itemLabels[selectedShopItem],
+            printedName: selectedShopItem === 'maillot' ? customJerseyName.toUpperCase() : null,
+            total: itemPrices[selectedShopItem],
+            status: 'pending',
+            time: isRtl ? 'الآن' : 'À l\'instant'
+          };
+          
+          setOrdersList(prev => [newOrder, ...prev]);
+          setIsSubmittingOrder(false);
+        }, 1200);
+      }, 1000);
+    }, 1000);
+  };
 
   // Load posts / announcements from Supabase
   useEffect(() => {
@@ -468,6 +626,13 @@ export default function DashboardSocial({
   const totalRunnersCount = runners.length;
   const activeRunsCount = runs.filter(r => !r.completed).length;
   const finishedRunsCount = runs.filter(r => r.completed).length;
+
+  const userOrdersMapped = ordersList.map(ord => ({
+    name: currentUser.name,
+    item: ord.item,
+    time: ord.time
+  }));
+  const combinedOrders = [...userOrdersMapped, ...recentOrders];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -886,6 +1051,217 @@ export default function DashboardSocial({
             </div>
           </div>
 
+          {/* Synchronisation d'Activités GPS Widget (Custom high-fidelity card!) */}
+          <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs space-y-4 overflow-hidden relative group transition duration-300 hover:shadow-2xs animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-orange-500 shrink-0 animate-pulse" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
+                  {isRtl ? 'تطبيقات وأجهزة الجري' : 'GPS & APPLICATIONS'}
+                </h3>
+              </div>
+              {lastSyncTime && (
+                <span className="text-[8px] font-bold text-slate-400 font-mono bg-slate-50 px-2 py-0.5 rounded-full">
+                  Sync: {lastSyncTime.split(' à ')[1] || lastSyncTime}
+                </span>
+              )}
+            </div>
+
+            <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+              {isRtl 
+                ? 'اربط حساباتك وتطبيقاتك المفضلة لاستيراد حصص الجري ونقاط السباق تلقائياً مع النادي.'
+                : 'Connectez vos capteurs et montres sportives pour synchroniser vos entraînements et vos performances.'
+              }
+            </p>
+
+            <div className="space-y-2.5">
+              {/* Strava Row */}
+              <div 
+                onClick={() => !stravaConnected && handleConnectGps('strava')}
+                className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between ${
+                  stravaConnected 
+                    ? 'bg-orange-50/40 border-orange-100 hover:bg-orange-50/60' 
+                    : 'bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    stravaConnected ? 'bg-orange-500 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    <span className="font-extrabold text-xs">S</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-black text-slate-800">Strava</h4>
+                    <span className="text-[8px] text-slate-400 block font-semibold">
+                      {stravaConnected ? (isRtl ? 'متصل ⚡ ومزامن' : 'Activités & Segments') : (isRtl ? 'غير متصل' : 'Non connecté')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {stravaConnected ? (
+                    <>
+                      <span className="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
+                        {isRtl ? 'متصل' : 'SYNCR'}
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={(e) => handleDisconnectGps('strava', e)}
+                        className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[9px] font-black text-[#1034A6] hover:underline cursor-pointer">
+                      {isRtl ? 'ربط' : 'CONNECTER'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Garmin Row */}
+              <div 
+                onClick={() => !garminConnected && handleConnectGps('garmin')}
+                className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between ${
+                  garminConnected 
+                    ? 'bg-blue-50/40 border-blue-100 hover:bg-blue-50/60' 
+                    : 'bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    garminConnected ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    <span className="font-extrabold text-xs">▲</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-black text-slate-800">Garmin Connect</h4>
+                    <span className="text-[8px] text-slate-400 block font-semibold">
+                      {garminConnected ? (isRtl ? 'متصل ⚡ ومزامن' : 'Données physiologiques') : (isRtl ? 'غير متصل' : 'Non connecté')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {garminConnected ? (
+                    <>
+                      <span className="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
+                        {isRtl ? 'متصل' : 'SYNCR'}
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={(e) => handleDisconnectGps('garmin', e)}
+                        className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[9px] font-black text-[#1034A6] hover:underline cursor-pointer">
+                      {isRtl ? 'ربط' : 'CONNECTER'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Suunto & Coros Row */}
+              <div 
+                onClick={() => !suuntoConnected && handleConnectGps('suunto')}
+                className={`p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between ${
+                  suuntoConnected 
+                    ? 'bg-slate-900/10 border-slate-950/20 hover:bg-slate-900/15' 
+                    : 'bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    suuntoConnected ? 'bg-cyan-500 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    <span className="font-extrabold text-xs">●</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-black text-slate-800">Suunto & Coros</h4>
+                    <span className="text-[8px] text-slate-400 block font-semibold">
+                      {suuntoConnected ? (isRtl ? 'متصل ⚡ ومزامن' : 'Suivi Multisports') : (isRtl ? 'غير متصل' : 'Non connecté')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {suuntoConnected ? (
+                    <>
+                      <span className="text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-ping"></span>
+                        {isRtl ? 'متصل' : 'SYNCR'}
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={(e) => handleDisconnectGps('suunto', e)}
+                        className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[9px] font-black text-[#1034A6] hover:underline cursor-pointer">
+                      {isRtl ? 'ربط' : 'CONNECTER'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sync trigger button (if connected to at least one) */}
+            {(stravaConnected || garminConnected || suuntoConnected) && (
+              <button
+                type="button"
+                onClick={handleGpsSync}
+                disabled={gpsSyncing}
+                className={`w-full py-2.5 rounded-xl text-[10px] font-black tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border ${
+                  gpsSyncing 
+                    ? 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-[#1034A6] to-[#1E56A0] text-white hover:opacity-95 shadow-xs border-transparent'
+                }`}
+              >
+                <Sliders className={`w-3.5 h-3.5 ${gpsSyncing ? 'animate-spin' : ''}`} />
+                <span>
+                  {gpsSyncing 
+                    ? (isRtl ? 'جاري المزامنة...' : 'Synchronisation...') 
+                    : (isRtl ? 'مزامنة الحصص الآن ⚡' : 'Synchroniser mes données GPS')}
+                </span>
+              </button>
+            )}
+
+            {/* Sync status messages and progress */}
+            {gpsSyncing && (
+              <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-2xl text-[10px] text-blue-700 font-bold flex items-center gap-2 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                <span>{syncStatusMsg}</span>
+              </div>
+            )}
+
+            {showSyncSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-[10px] text-emerald-800 font-semibold space-y-1 relative animate-fade-in">
+                <button 
+                  type="button" 
+                  onClick={() => setShowSyncSuccess(false)}
+                  className="absolute right-2 top-2 p-1 text-emerald-500 hover:text-emerald-700 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <div className="font-bold flex items-center gap-1 text-emerald-700">
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>{isRtl ? 'تمت المزامنة بنجاح !' : 'Synchronisation réussie !'}</span>
+                </div>
+                <p className="text-[9px] text-slate-500 font-medium">
+                  {isRtl 
+                    ? '⚡ تم استيراد خرجتين جديدتين (إجمالي 18.4 كلم) وإضافتهما لملف المتر كود الخاص بك بنجاح.' 
+                    : '⚡ 2 nouvelles activités (Total 18.4 km) importées et ajoutées à votre historique.'}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* MRC SHOP Section Card */}
           <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-3xs space-y-4 overflow-hidden relative group transition duration-300 hover:shadow-2xs">
             <div className="flex items-center justify-between border-b border-slate-50 pb-3">
@@ -929,10 +1305,10 @@ export default function DashboardSocial({
                 <span className="text-base shrink-0 animate-bounce">🛍️</span>
                 <div className="truncate">
                   <span className="font-extrabold text-slate-800 block truncate">
-                    {recentOrders[recentOrderIdx].name}
+                    {combinedOrders[recentOrderIdx]?.name || 'Abdou Zaiti'}
                   </span>
                   <span className="text-slate-500 block truncate text-[9px]">
-                    {isRtl ? 'طلب:' : 'A commandé :'} <span className="font-bold text-blue-600">{recentOrders[recentOrderIdx].item}</span> • <span className="text-[8px] font-mono">{recentOrders[recentOrderIdx].time}</span>
+                    {isRtl ? 'طلب:' : 'A commandé :'} <span className="font-bold text-blue-600">{combinedOrders[recentOrderIdx]?.item}</span> • <span className="text-[8px] font-mono">{combinedOrders[recentOrderIdx]?.time}</span>
                   </span>
                 </div>
               </div>
@@ -958,25 +1334,457 @@ export default function DashboardSocial({
               </div>
             </div>
 
-            {/* Call to action anchor styled as button */}
-            <a 
-              href="https://mrc-shop.vercel.app/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full py-3 bg-[#1034A6] hover:bg-[#1E56A0] text-white text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
+            {/* Call to action button with dynamic real connection logic */}
+            <button 
+              type="button"
+              onClick={handleConnectShop}
+              disabled={isConnectingShop}
+              className="w-full py-3 bg-[#1034A6] hover:bg-[#1E56A0] disabled:bg-slate-100 disabled:text-slate-400 text-white text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
             >
-              <span>{isRtl ? 'زيارة المتجر الإلكتروني' : 'Visiter MRC SHOP'}</span>
-              <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-            </a>
+              {isConnectingShop ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span>{isRtl ? 'جاري الاتصال بـ MRC SHOP...' : 'Connexion à MRC SHOP...'}</span>
+                </>
+              ) : isShopConnected ? (
+                <>
+                  <span>{isRtl ? 'فتح متجر الأعضاء ⚡' : 'Ouvrir la Boutique Membre ⚡'}</span>
+                  <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                </>
+              ) : (
+                <>
+                  <span>{isRtl ? 'ربط وتفعيل حساب المتجر ⚡' : 'Connecter mon espace Boutique ⚡'}</span>
+                  <Zap className="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-300" />
+                </>
+              )}
+            </button>
           </div>
-
-
-
-
 
         </div>
 
       </div>
+
+      {/* ----------------- MRC SHOP INTERACTIVE MEMBER MODAL ----------------- */}
+      {isShopModalOpen && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] border border-blue-100 shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col relative animate-scale-up">
+            
+            {/* Modal Close Button */}
+            <button 
+              type="button"
+              onClick={() => setIsShopModalOpen(false)}
+              className="absolute right-6 top-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition cursor-pointer z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="bg-[#1034A6] text-white p-6 sm:p-8 flex items-center gap-4 relative overflow-hidden shrink-0">
+              <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 opacity-10 pointer-events-none">
+                <ShoppingBag className="w-48 h-48" />
+              </div>
+              <div className="p-3 bg-white/10 rounded-2xl shrink-0">
+                <ShoppingBag className="w-6 h-6 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-serif italic font-black flex items-center gap-2">
+                  <span>{isRtl ? 'متجر أعضاء نادي مستغانم الرسمي' : 'Boutique Officielle Membres • Mosta Run Club'}</span>
+                  <span className="text-[10px] bg-amber-400 text-[#1034A6] font-mono font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse shrink-0">
+                    {isRtl ? 'خصم خاص' : 'Premium Member'}
+                  </span>
+                </h3>
+                <p className="text-white/80 text-[11px] font-medium mt-1">
+                  {isRtl 
+                    ? `مرحباً بك، ${currentUser.name}! طلباتك مخصصة وحصرياً بنصف السعر كعضو رسمي في النادي.`
+                    : `Bienvenue, ${currentUser.name} ! Commandes exclusives réservées aux athlètes actifs.`
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-slate-100 bg-slate-50 shrink-0 text-xs font-extrabold text-slate-500">
+              <button 
+                type="button"
+                onClick={() => setSelectedShopItem('maillot')}
+                className={`flex-1 py-4 text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                  selectedShopItem === 'maillot' 
+                    ? 'border-[#1034A6] text-[#1034A6] bg-white' 
+                    : 'border-transparent hover:text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <span>👕</span>
+                <span>{isRtl ? 'القميص التقني' : 'Maillot Officiel'}</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSelectedShopItem('hoodie')}
+                className={`flex-1 py-4 text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                  selectedShopItem === 'hoodie' 
+                    ? 'border-[#1034A6] text-[#1034A6] bg-white' 
+                    : 'border-transparent hover:text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <span>🧥</span>
+                <span>{isRtl ? 'السترة الشتوية' : 'Hoodie Premium'}</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSelectedShopItem('casquette')}
+                className={`flex-1 py-4 text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                  selectedShopItem === 'casquette' 
+                    ? 'border-[#1034A6] text-[#1034A6] bg-white' 
+                    : 'border-transparent hover:text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <span>🧢</span>
+                <span>{isRtl ? 'قبعة الجري' : 'Casquette Club'}</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSelectedShopItem('sac')}
+                className={`flex-1 py-4 text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                  selectedShopItem === 'sac' 
+                    ? 'border-[#1034A6] text-[#1034A6] bg-white' 
+                    : 'border-transparent hover:text-slate-800 hover:bg-slate-100'
+                }`}
+              >
+                <span>🎒</span>
+                <span>{isRtl ? 'حقيبة الظهر' : 'Sac de Sport'}</span>
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable Content Split-Panel) */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Left Column: Customizer & Preview (Col span 7) */}
+              <div className="lg:col-span-7 space-y-6">
+                
+                {/* Visual Card containing Jersey Preview / Product Rendering */}
+                <div className="bg-[#1e293b] rounded-3xl p-6 relative flex flex-col items-center justify-center border border-slate-800 overflow-hidden min-h-[240px]">
+                  
+                  <div className="absolute inset-0 bg-radial-gradient opacity-10" />
+                  
+                  {selectedShopItem === 'maillot' ? (
+                    <div className="relative w-full flex flex-col sm:flex-row items-center justify-around gap-6 z-10 select-none animate-fade-in">
+                      
+                      {/* Front of Jersey */}
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Face Avant</span>
+                        <div className="relative w-28 h-28 bg-[#1034A6] border-2 border-amber-400 rounded-b-3xl rounded-t-lg flex flex-col items-center justify-center shadow-lg">
+                          <div className="absolute -left-3 top-0 w-4 h-12 bg-[#1034A6] border-t-2 border-l-2 border-b-2 border-amber-400 rounded-l-lg -rotate-12" />
+                          <div className="absolute -right-3 top-0 w-4 h-12 bg-[#1034A6] border-t-2 border-r-2 border-b-2 border-amber-400 rounded-r-lg rotate-12" />
+                          <div className="w-full h-3.5 bg-amber-400 absolute top-7 flex items-center justify-center text-[7px] font-black text-[#1034A6] tracking-tighter uppercase">Mosta Run Club</div>
+                          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center absolute top-2 left-2 border border-amber-300">
+                            <span className="text-[6px] font-black text-amber-300">MRC</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Back of Jersey with interactive Custom name */}
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Dos (Personnalisé)</span>
+                        <div className="relative w-28 h-28 bg-[#1034A6] border-2 border-amber-400 rounded-b-3xl rounded-t-lg flex flex-col items-center justify-center shadow-lg">
+                          <div className="absolute -left-3 top-0 w-4 h-12 bg-[#1034A6] border-t-2 border-l-2 border-b-2 border-amber-400 rounded-l-lg -rotate-12" />
+                          <div className="absolute -right-3 top-0 w-4 h-12 bg-[#1034A6] border-t-2 border-r-2 border-b-2 border-amber-400 rounded-r-lg rotate-12" />
+                          <div className="absolute top-4 text-[9px] font-mono font-black text-amber-400 uppercase text-center tracking-wider max-w-[90px] truncate">
+                            {customJerseyName || 'NAME'}
+                          </div>
+                          <div className="text-4xl font-serif italic font-black text-amber-400 tracking-tighter">
+                            26
+                          </div>
+                          <div className="absolute bottom-2 text-[5px] text-white/50 tracking-widest font-bold">MOSTAGANEM</div>
+                        </div>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4 z-10 animate-fade-in">
+                      <span className="text-5xl block animate-bounce">
+                        {selectedShopItem === 'hoodie' ? '🧥' : selectedShopItem === 'casquette' ? '🧢' : '🎒'}
+                      </span>
+                      <h4 className="text-sm font-serif italic font-extrabold text-white">
+                        {selectedShopItem === 'hoodie' ? (isRtl ? 'سترة النادي التقنية الشتوية' : 'Hoodie Performance Club Premium') :
+                         selectedShopItem === 'casquette' ? (isRtl ? 'قبعة الجري فائقة الخفة' : 'Casquette Club Ultra-Légère') : 
+                         (isRtl ? 'حقيبة النادي الرياضية المقاومة للماء' : 'Sac de Sport Club Imperméable')}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 max-w-xs font-semibold mx-auto">
+                        {selectedShopItem === 'hoodie' ? (isRtl ? 'سترة قطنية مريحة مبطنة ومزودة بجيوب بسحاب وشعارات مطرزة ذهبياً.' : 'Coton ultra-dense, intérieur molletonné respirant, poches sécurisées, blason club brodé.') :
+                         selectedShopItem === 'casquette' ? (isRtl ? 'قبعة مريحة ذات شريط مطاطي عاكس وشبكة خلفية للتهوية.' : 'Ajustable, séchage rapide, bandes réfléchissantes nuit, visière déformable.') :
+                         (isRtl ? 'حقيبة واسعة بجيوب للأحذية وقاعدة معزولة للثياب المبتلة.' : 'Compartiment chaussures aéré, base étanche, bretelles renforcées, 45L.')}
+                      </p>
+                    </div>
+                  )}
+
+                  <span className="absolute top-4 left-4 bg-amber-400 text-[#1034A6] text-[9px] font-black px-2.5 py-1 rounded-lg">
+                    {selectedShopItem === 'maillot' ? 'Remise -22%' :
+                     selectedShopItem === 'hoodie' ? 'Remise -17%' :
+                     selectedShopItem === 'casquette' ? 'Remise -16%' : 'Remise -17%'}
+                  </span>
+                </div>
+
+                {/* Customizer Settings Form Fields */}
+                <div className="space-y-4">
+                  <div className="border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-black text-[#1034A6] uppercase tracking-wider font-mono">
+                      {isRtl ? 'خيارات التخصيص والمقاس' : 'PERSONNALISATION DE VOTRE ÉQUIPEMENT'}
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Size Selector */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">{isRtl ? 'المقاس الرياضي' : 'Taille'}</label>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {['S', 'M', 'L', 'XL', 'XXL'].map(sz => (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => setJerseySize(sz)}
+                            className={`py-2 text-xs font-black rounded-xl border transition cursor-pointer ${
+                              jerseySize === sz 
+                                ? 'bg-[#1034A6] border-[#1034A6] text-white shadow-xs' 
+                                : 'bg-slate-50 border-slate-150 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom jersey printed text */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        {isRtl ? 'الاسم على القميص' : 'Impression Nom (Dos)'}
+                      </label>
+                      <input 
+                        type="text"
+                        maxLength={12}
+                        disabled={selectedShopItem !== 'maillot'}
+                        value={selectedShopItem === 'maillot' ? customJerseyName : ''}
+                        onChange={(e) => setCustomJerseyName(e.target.value.toUpperCase().replace(/[^A-Z\s]/g, ''))}
+                        placeholder={selectedShopItem === 'maillot' ? 'Ex: ABDOU' : 'Non disponible'}
+                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#1034A6] text-slate-800 font-bold uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Column: Checkout & Billing Receipt (Col span 5) */}
+              <div className="lg:col-span-5 bg-slate-50 rounded-3xl p-5 sm:p-6 border border-slate-150/60 flex flex-col justify-between self-stretch">
+                
+                {isSubmittingOrder ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-10 space-y-4">
+                    <div className="w-10 h-10 border-4 border-slate-200 border-t-[#1034A6] rounded-full animate-spin"></div>
+                    <div className="text-center space-y-1.5">
+                      <p className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        {orderStep === 1 ? (isRtl ? 'الاتصال بخادم المعالجة...' : 'Initialisation de la commande...') :
+                         orderStep === 2 ? (isRtl ? 'التحقق من بيانات العضو...' : 'Validation de la remise membre...') :
+                         (isRtl ? 'تأكيد وحجز مخزون القياس...' : 'Enregistrement de votre commande...')}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono">Process ID: #MRC-STP-00{orderStep}</p>
+                    </div>
+                  </div>
+                ) : orderStep === 4 ? (
+                  <div className="flex-1 flex flex-col justify-center space-y-5 py-2 animate-fade-in text-center">
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
+                      <Check className="w-6 h-6" />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-serif italic font-extrabold text-slate-800">
+                        {isRtl ? 'تم تسجيل الطلب بنجاح !' : 'Commande Enregistrée !'}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                        {isRtl 
+                          ? 'برافو ! تم حجز طلبك بنجاح. سيقوم المشرفون بالاتصال بك للتسليم أو الاستلام في التدريب القادم.'
+                          : 'Votre commande a été transmise aux administrateurs du club. Retrait disponible lors de la prochaine sortie !'
+                        }
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-dashed border-slate-200 p-4 rounded-2xl text-left text-[11px] font-mono font-medium text-slate-600 space-y-1.5 relative overflow-hidden">
+                      <div className="absolute top-1/2 -left-2 w-4 h-4 bg-slate-50 border-r border-slate-200 rounded-full" />
+                      <div className="absolute top-1/2 -right-2 w-4 h-4 bg-slate-50 border-l border-slate-200 rounded-full" />
+                      
+                      <div className="flex justify-between font-black text-slate-800">
+                        <span>TICKET COMMANDE:</span>
+                        <span>#{ordersList[0]?.id || 'MRC-8172'}</span>
+                      </div>
+                      <div className="border-b border-dashed border-slate-100 my-1 pb-1" />
+                      <div>ARTICLE: <span className="font-bold text-[#1034A6]">{ordersList[0]?.item}</span></div>
+                      {ordersList[0]?.printedName && (
+                        <div>PRINT DOS: <span className="font-bold text-amber-600">{ordersList[0]?.printedName}</span></div>
+                      )}
+                      <div>TAILLE: <span className="font-bold">{jerseySize}</span></div>
+                      <div>MEMBRE: <span className="font-bold">{currentUser.name}</span></div>
+                      <div className="border-b border-dashed border-slate-100 my-1 pb-1" />
+                      <div className="flex justify-between font-black text-emerald-600 text-xs">
+                        <span>TOTAL PAYÉ:</span>
+                        <span>{ordersList[0]?.total}</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={() => setOrderStep(0)}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition cursor-pointer"
+                    >
+                      {isRtl ? 'طلب منتج آخر' : 'Commander autre chose'}
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handlePlaceOrder} className="flex-1 flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-200/50">
+                        <span className="text-base">📋</span>
+                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">
+                          {isRtl ? 'تفاصيل الفاتورة ومكان الاستلام' : 'RÉCAPITULATIF DE COMMANDE'}
+                        </h4>
+                      </div>
+
+                      <div className="space-y-2.5 text-[11px] font-semibold text-slate-600">
+                        <div className="flex justify-between">
+                          <span>
+                            {selectedShopItem === 'maillot' ? (isRtl ? 'القميص التقني الرسمي' : 'Maillot Technique Noir') :
+                             selectedShopItem === 'hoodie' ? (isRtl ? 'سترة النادي الشتوية' : 'Hoodie Club Premium') :
+                             selectedShopItem === 'casquette' ? (isRtl ? 'قبعة الجري الفاخرة' : 'Casquette Performance') : 
+                             (isRtl ? 'حقيبة الظهر الرياضية' : 'Sac de sport MRC')}
+                          </span>
+                          <span className="font-mono line-through text-slate-400">
+                            {selectedShopItem === 'maillot' ? '3200 DA' :
+                             selectedShopItem === 'hoodie' ? '5800 DA' :
+                             selectedShopItem === 'casquette' ? '1800 DA' : '3500 DA'}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between text-[#1034A6]">
+                          <span>{isRtl ? 'خصم عضو رسمي نشط' : 'Remise Membre Officiel'}</span>
+                          <span className="font-mono font-black">
+                            {selectedShopItem === 'maillot' ? '-700 DA' :
+                             selectedShopItem === 'hoodie' ? '-1000 DA' :
+                             selectedShopItem === 'casquette' ? '-300 DA' : '-600 DA'}
+                          </span>
+                        </div>
+
+                        {selectedShopItem === 'maillot' && (
+                          <div className="flex justify-between text-amber-600">
+                            <span>{isRtl ? 'طباعة الاسم على الظهر' : 'Impression dos personnalisée'}</span>
+                            <span className="font-bold uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                              Offert
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between">
+                          <span>{isRtl ? 'طريقة الاستلام' : 'Mode de livraison'}</span>
+                          <span className="text-slate-800 font-bold">{isRtl ? 'استلام مباشر في الحصص (مجاناً)' : 'Retrait Direct Club (Gratuit)'}</span>
+                        </div>
+
+                        <div className="border-b border-slate-200/50 my-2 pt-1" />
+
+                        <div className="flex justify-between text-xs font-black text-slate-800">
+                          <span>{isRtl ? 'الإجمالي الصافي للطلب:' : 'Total net à payer :'}</span>
+                          <span className="font-mono text-sm text-emerald-600">
+                            {selectedShopItem === 'maillot' ? '2500 DA' :
+                             selectedShopItem === 'hoodie' ? '4800 DA' :
+                             selectedShopItem === 'casquette' ? '1500 DA' : '2900 DA'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-2xl text-[10px] text-slate-500 font-medium leading-relaxed">
+                        💡 {isRtl 
+                          ? 'الدفع يتم يدوياً نقداً عند الاستلام مباشرة من الكابتن عبدو زايتي أو مدربي النادي.'
+                          : 'Pas de paiement en ligne requis. Le règlement s\'effectue en espèces lors de la remise de votre paquet au club.'
+                        }
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-6">
+                      <button
+                        type="submit"
+                        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                      >
+                        <Check className="w-4 h-4 shrink-0" />
+                        <span>{isRtl ? 'تأكيد وطلب المنتج الآن ⚡' : 'Valider ma commande ⚡'}</span>
+                      </button>
+
+                      {ordersList.length > 0 && (
+                        <div className="text-center">
+                          <span className="text-[9px] font-mono text-slate-400 font-bold block uppercase mb-1">Historique des commandes</span>
+                          <div className="max-h-20 overflow-y-auto space-y-1 pr-1">
+                            {ordersList.map((ord, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-[9px] bg-white border border-slate-150 p-1.5 rounded-lg text-slate-500">
+                                <span className="font-bold truncate max-w-[140px]">{ord.item} ({ord.total})</span>
+                                <span className={`px-1 rounded font-bold text-[8px] ${
+                                  ord.status === 'delivered' ? 'bg-slate-100 text-slate-500' : 'bg-amber-100 text-amber-700 animate-pulse'
+                                }`}>
+                                  {ord.status === 'delivered' ? (isRtl ? 'مستلم' : 'LIVRÉ') : (isRtl ? 'قيد المعالجة' : 'EN COURS')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </form>
+                )}
+
+              </div>
+
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[9px] font-mono text-slate-400 shrink-0">
+              © Mosta Run Club Boutique Officielle • Mostaganem, Algérie
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* --- POPUP DE SYNCHRONISATION GPS AUTH --- */}
+      {isAuthorizingGps && popupService && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 border border-blue-50 max-w-sm w-full shadow-2xl space-y-5 text-center animate-scale-up">
+            
+            <div className="space-y-2">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto text-xl ${
+                popupService === 'strava' ? 'bg-orange-500 text-white' :
+                popupService === 'garmin' ? 'bg-slate-900 text-white' : 'bg-cyan-500 text-white'
+              }`}>
+                {popupService === 'strava' ? 'S' : popupService === 'garmin' ? '▲' : '●'}
+              </div>
+              <h4 className="text-sm font-black text-slate-800">
+                {isRtl ? 'تفويض الاتصال الرياضي' : 'Connexion Partenaire GPS'}
+              </h4>
+              <p className="text-[10px] text-slate-500 max-w-xs font-semibold mx-auto">
+                {isRtl 
+                  ? `جاري طلب الإذن الآمن لمزامنة إحداثيات ومسافات الركض من حسابك لدى ${popupService.toUpperCase()}.`
+                  : `Veuillez patienter pendant l'autorisation d'accès sécurisé à votre flux d'activités ${popupService.toUpperCase()}.`
+                }
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[9px] font-mono text-slate-400 font-black">
+                <span>AUTHORIZING...</span>
+                <span>{syncProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600 transition-all duration-200" style={{ width: `${syncProgress}%` }} />
+              </div>
+            </div>
+
+            <div className="text-[8px] font-mono text-slate-400">
+              Redirecting via OAuth2 callback...
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

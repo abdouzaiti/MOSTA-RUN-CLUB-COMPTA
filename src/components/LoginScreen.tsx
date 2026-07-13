@@ -12,9 +12,19 @@ interface LoginScreenProps {
   setLanguage: (lang: Language) => void;
   girlMode?: boolean;
   setGirlMode?: (mode: boolean) => void;
+  unreadSupportCount?: number;
 }
 
-export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, language, setLanguage, girlMode, setGirlMode }: LoginScreenProps) {
+export default function LoginScreen({ 
+  runners, 
+  onLoginSuccess, 
+  onUpdateRunner, 
+  language, 
+  setLanguage, 
+  girlMode, 
+  setGirlMode,
+  unreadSupportCount = 0
+}: LoginScreenProps) {
   const t = (key: string) => (translations[language] as any)[key] || (translations['fr'] as any)[key] || key;
   
   // Authentication states
@@ -458,10 +468,15 @@ export default function LoginScreen({ runners, onLoginSuccess, onUpdateRunner, l
               type="button"
               id="admin-chat-trigger"
               onClick={() => setIsChatModalOpen(true)}
-              className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] hover:from-[#1E56A0] hover:to-[#2F89FC] text-white text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all duration-200"
+              className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-[#1034A6] to-[#1E56A0] hover:from-[#1E56A0] hover:to-[#2F89FC] text-white text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all duration-200 relative"
             >
               <MessageSquare className="w-3.5 h-3.5 shrink-0 text-amber-300 animate-pulse" />
               <span>{language === 'ar' ? 'تحدث مباشرة مع الكابتن عبدو' : "Chat Live avec l'Admin"}</span>
+              {unreadSupportCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md animate-bounce border border-white">
+                  {unreadSupportCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

@@ -272,18 +272,30 @@ export default function AdminSupportChat({ currentUser, runners, language }: Adm
 
   // Handle marking messages as read
   useEffect(() => {
-    if (!activeThreadUserId || !isAdmin) return;
-    
-    const unreadMessages = messages.filter(
-      msg => msg.senderId === activeThreadUserId && msg.receiverId === currentUser.id && !msg.read
-    );
+    if (!isAdmin) {
+      const unreadMessages = messages.filter(
+        msg => msg.senderId === adminId && msg.receiverId === currentUser.id && !msg.read
+      );
 
-    if (unreadMessages.length > 0) {
-      unreadMessages.forEach(msg => {
-        dbService.markSupportMessageAsRead(msg.id);
-      });
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(msg => {
+          dbService.markSupportMessageAsRead(msg.id);
+        });
+      }
+    } else {
+      if (!activeThreadUserId) return;
+      
+      const unreadMessages = messages.filter(
+        msg => msg.senderId === activeThreadUserId && msg.receiverId === currentUser.id && !msg.read
+      );
+
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach(msg => {
+          dbService.markSupportMessageAsRead(msg.id);
+        });
+      }
     }
-  }, [messages, activeThreadUserId, currentUser.id, isAdmin]);
+  }, [messages, activeThreadUserId, currentUser.id, isAdmin, adminId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
