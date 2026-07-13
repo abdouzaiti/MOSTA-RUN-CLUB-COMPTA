@@ -3474,7 +3474,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
                   </h4>
                   <button
                     onClick={() => {
-                      const sqlCode = `-- 1. Créer la table des messages de la Postagang\ncreate table if not exists public.mrc_messages (\n  id text primary key,\n  sender_id text not null,\n  sender_name text not null,\n  sender_role text not null,\n  avatar_url text,\n  text text,\n  time text not null,\n  type text not null default 'text',\n  media_url text,\n  file_size text,\n  duration text,\n  reply_to jsonb,\n  reactions jsonb default '{}'::jsonb,\n  read boolean default false,\n  created_at timestamp with time zone default timezone('utc'::text, now()) not null\n);\n\n-- 2. Activer la sécurité au niveau des lignes (RLS)\nalter table public.mrc_messages enable row level security;\n\n-- 3. Créer une règle d'accès publique pour tester (lecture/écriture pour tous)\ncreate policy "Accès public complet" on public.mrc_messages\n  for all using (true) with check (true);\n\n-- 4. Activer la réplication Realtime pour cette table afin de recevoir les messages en direct !\nalter publication supabase_realtime add table public.mrc_messages;`;
+                      const sqlCode = `-- 1. Créer la table des messages de la MRC-COMMUNITY\ncreate table if not exists public.mrc_messages (\n  id text primary key,\n  sender_id text not null,\n  sender_name text not null,\n  sender_role text not null,\n  avatar_url text,\n  text text,\n  time text not null,\n  type text not null default 'text',\n  media_url text,\n  file_size text,\n  duration text,\n  reply_to jsonb,\n  reactions jsonb default '{}'::jsonb,\n  read boolean default false,\n  created_at timestamp with time zone default timezone('utc'::text, now()) not null\n);\n\n-- 2. Activer la sécurité au niveau des lignes (RLS)\nalter table public.mrc_messages enable row level security;\n\n-- 3. Créer une règle d'accès publique pour tester (lecture/écriture pour tous)\ncreate policy "Accès public complet" on public.mrc_messages\n  for all using (true) with check (true);\n\n-- 4. Activer la réplication Realtime pour cette table afin de recevoir les messages en direct !\nalter publication supabase_realtime add table public.mrc_messages;`;
                       navigator.clipboard.writeText(sqlCode);
                       setCopiedSql(true);
                       setTimeout(() => setCopiedSql(false), 2000);
@@ -3493,7 +3493,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
 
                 <div className="relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-950 p-4">
                   <pre className="text-[10px] sm:text-xs font-mono text-slate-300 overflow-x-auto max-h-48 leading-relaxed">
-{`-- 1. Créer la table des messages de la Postagang
+{`-- 1. Créer la table des messages de la MRC-COMMUNITY
 create table if not exists public.mrc_messages (
   id text primary key,
   sender_id text not null,

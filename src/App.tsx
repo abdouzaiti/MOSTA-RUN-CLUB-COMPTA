@@ -1070,7 +1070,7 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
             <div className="flex-1 min-w-0 space-y-0.5">
               <div className="flex items-center justify-between">
                 <span className="text-[9px] font-black text-blue-600 tracking-wider uppercase">
-                  {activeBanner.type === 'announcement' ? 'PostaGang Annonce' : activeBanner.type === 'support' ? 'PostaGang Support' : 'PostaGang Chat'}
+                  {activeBanner.type === 'announcement' ? 'MRC-COMMUNITY Annonce' : activeBanner.type === 'support' ? 'MRC-COMMUNITY Support' : 'MRC-COMMUNITY Chat'}
                 </span>
                 <span className="text-[9px] font-bold text-slate-400">
                   {language === 'ar' ? 'الآن' : 'maintenant'}
