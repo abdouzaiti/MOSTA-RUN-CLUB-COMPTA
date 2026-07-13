@@ -1,6 +1,6 @@
 {
   "name": "Mosta Run Club",
-  "description": "Plateforme de gestion du club de running de Mostaganem (Mosta Run Club) - Planning des sorties, système d'inscription et rapports de courses.",
+  "description": "E-Community du club de running de Mostaganem (Mosta Run Club) - Planning des sorties, système d'inscription et rapports de courses.",
   "requestFramePermissions": [
     "camera",
     "microphone"

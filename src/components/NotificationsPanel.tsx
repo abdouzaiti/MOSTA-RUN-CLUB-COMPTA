@@ -60,7 +60,7 @@ export default function NotificationsPanel({ currentUser, language }: Notificati
     
     // Send browser native notification
     triggerPhoneNotification(
-      isRtl ? "مرحباً بك في PostaGang ! 🏃‍♂️" : "Bienvenue sur PostaGang ! 🏃‍♂️",
+      isRtl ? "مرحباً بك في MRC-COMMUNITY ! 🏃‍♂️" : "Bienvenue sur MRC-COMMUNITY ! 🏃‍♂️",
       isRtl 
         ? "لقد قمت بتفعيل إشعارات الهاتف بنجاح للرسائل والإعلانات." 
         : "Vous avez activé avec succès les notifications sur votre téléphone pour les messages et annonces."
@@ -103,7 +103,7 @@ export default function NotificationsPanel({ currentUser, language }: Notificati
               {isRtl ? 'مركز التنبيهات' : 'Centre d\'Alertes & Actu'}
             </h3>
             <p className="text-[10px] sm:text-xs font-semibold text-slate-400">
-              {isRtl ? 'ابق على اطلاع بخرجات ومستجدات النادي' : 'Restez informé de la vie de la PostaGang.'}
+              {isRtl ? 'ابق على اطلاع بخرجات ومستجدات النادي' : 'Restez informé de la vie de MRC.'}
             </p>
           </div>
         </div>
