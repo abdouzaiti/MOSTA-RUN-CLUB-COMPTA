@@ -482,6 +482,7 @@ export default function DashboardSocial({
         text: shareText,
       }).catch(console.error);
     } else {
+      console.log('Setting attached activity and showShareModal', activity);
       setNewPostText(shareText);
       setAttachedActivity(activity);
       setShowShareModal(true);
@@ -1988,7 +1989,7 @@ export default function DashboardSocial({
             {/* Call to action button with dynamic real connection logic */}
             <button 
               type="button"
-              onClick={handleConnectShop}
+              onClick={() => window.open('https://mrc-shop.vercel.app/', '_blank')}
               disabled={isConnectingShop}
               className="w-full py-3 bg-[#1034A6] hover:bg-[#1E56A0] disabled:bg-slate-100 disabled:text-slate-400 text-white text-xs font-black rounded-2xl flex items-center justify-center gap-1.5 shadow-sm transition-all duration-300 transform group-hover:translate-y-[-2px] cursor-pointer"
             >

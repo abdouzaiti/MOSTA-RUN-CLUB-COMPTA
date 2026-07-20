@@ -36,19 +36,6 @@ export default function ShareCard({ activity, onClose }: ShareCardProps) {
           <div className="text-slate-400 font-semibold uppercase tracking-wider text-sm">Temps</div>
           <div className="text-5xl font-extrabold">{timeStr}</div>
         </div>
-
-        {positions.length > 0 && (
-          <div className="h-48 w-full mt-8 rounded-xl overflow-hidden">
-            <MapContainer
-              bounds={[[Math.min(...positions.map(p => p[0])), Math.min(...positions.map(p => p[1]))], [Math.max(...positions.map(p => p[0])), Math.max(...positions.map(p => p[1]))]]}
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-              attributionControl={false}
-            >
-              <Polyline positions={positions} pathOptions={{ color: '#0070f3', weight: 4 }} />
-            </MapContainer>
-          </div>
-        )}
         
         <div className="text-4xl font-extrabold text-[#0070f3] mt-8">MRC</div>
       </div>
