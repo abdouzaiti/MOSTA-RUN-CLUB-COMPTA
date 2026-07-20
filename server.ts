@@ -2,6 +2,13 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import { 
+  uploadFileToDrive, 
+  deleteFileFromDrive, 
+  getFileFromDrive,
+  getIsGoogleConfigured
+} from "./server/driveService";
+
 
 dotenv.config();
 
@@ -245,6 +252,137 @@ async function startServer() {
           </body>
         </html>
       `);
+    }
+  });
+
+  // --- GOOGLE DRIVE STORAGE PROXY API ---
+
+  // Map of pending file IDs -> creation timestamp
+  const pendingFiles = new Map<string, number>();
+
+  // Interval to automatically clean up unconfirmed/orphaned files
+  setInterval(async () => {
+    const now = Date.now();
+    const fiveMinutesAgo = now - 5 * 60 * 1000;
+    for (const [fileId, createdAt] of pendingFiles.entries()) {
+      if (createdAt < fiveMinutesAgo) {
+        console.log(`[Storage Cleanup] Deleting unconfirmed file: ${fileId}`);
+        pendingFiles.delete(fileId);
+        try {
+          await deleteFileFromDrive(fileId);
+        } catch (err: any) {
+          console.error(`[Storage Cleanup] Failed to delete ${fileId}:`, err.message || err);
+        }
+      }
+    }
+  }, 60 * 1000);
+
+  // 1. Upload file (Base64) to Google Drive (or local fallback)
+  app.post("/api/storage/upload", async (req, res) => {
+    const { fileData, fileName, folderPath } = req.body;
+    if (!fileData) {
+      return res.status(400).json({ success: false, message: "Missing fileData" });
+    }
+
+    try {
+      let mimeType = "application/octet-stream";
+      let base64Content = fileData;
+      
+      if (fileData.startsWith("data:")) {
+        const parts = fileData.split(";base64,");
+        mimeType = parts[0].split(":")[1];
+        base64Content = parts[1];
+      }
+
+      const buffer = Buffer.from(base64Content, "base64");
+      const name = fileName || `file_${Date.now()}`;
+      
+      // Determine folder path if not provided
+      let finalFolderPath = folderPath || "Documents";
+      if (!folderPath) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes("voice_") || mimeType.startsWith("audio/")) {
+          finalFolderPath = "VoiceMessages";
+        } else if (nameLower.includes("mrc_") || nameLower.includes("support_")) {
+          finalFolderPath = "ChatMedia";
+        } else if (nameLower.includes("report_")) {
+          finalFolderPath = "Reports";
+        } else if (nameLower.includes("certificate_")) {
+          finalFolderPath = "Certificates";
+        } else if (mimeType.startsWith("video/")) {
+          finalFolderPath = "Events/Default/Videos";
+        } else if (mimeType.startsWith("image/")) {
+          finalFolderPath = "Events/Default/Images";
+        }
+      }
+
+      console.log(`Uploading file '${name}' to '${finalFolderPath}'...`);
+      const fileInfo = await uploadFileToDrive(buffer, name, mimeType, finalFolderPath);
+      
+      // Register file in pending files list (unconfirmed)
+      pendingFiles.set(fileInfo.id, Date.now());
+
+      // Generate the secure proxy file access URL
+      const secureUrl = `/api/storage/file/${fileInfo.id}`;
+
+      res.json({
+        success: true,
+        fileId: fileInfo.id,
+        url: secureUrl,
+        name: fileInfo.name,
+        mimeType: fileInfo.mimeType
+      });
+    } catch (error: any) {
+      console.error("Storage upload handler failed:", error.message || error);
+      res.status(500).json({ success: false, message: error.message || "Upload failed" });
+    }
+  });
+
+  // 2. Confirm file upload (DB write succeeded)
+  app.post("/api/storage/confirm", (req, res) => {
+    const { fileIds } = req.body;
+    if (!Array.isArray(fileIds)) {
+      return res.status(400).json({ success: false, message: "fileIds must be an array" });
+    }
+
+    console.log(`Confirming file uploads:`, fileIds);
+    for (const id of fileIds) {
+      pendingFiles.delete(id);
+    }
+
+    res.json({ success: true });
+  });
+
+  // 3. Delete files from Google Drive / local fallback
+  app.post("/api/storage/delete", async (req, res) => {
+    const { fileIds } = req.body;
+    if (!Array.isArray(fileIds)) {
+      return res.status(400).json({ success: false, message: "fileIds must be an array" });
+    }
+
+    console.log(`Deleting files:`, fileIds);
+    try {
+      for (const id of fileIds) {
+        pendingFiles.delete(id);
+        await deleteFileFromDrive(id);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message || "Deletion failed" });
+    }
+  });
+
+  // 4. Stream secure file content to the client
+  app.get("/api/storage/file/:fileId", async (req, res) => {
+    const { fileId } = req.params;
+    try {
+      const { stream, mimeType } = await getFileFromDrive(fileId);
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=31536000"); // 1 year cache
+      stream.pipe(res);
+    } catch (err: any) {
+      console.error(`Error streaming file ${fileId}:`, err.message || err);
+      res.status(404).send("File not found");
     }
   });
 

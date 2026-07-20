@@ -435,7 +435,21 @@ export const dbService = {
 
   async upsertRunner(runner: Runner): Promise<void> {
     if (!supabase) return;
-    const dbRunner = mapRunnerToDb(runner);
+    const runnerCopy = { ...runner };
+    if (runnerCopy.avatarUrl && runnerCopy.avatarUrl.startsWith('data:')) {
+      try {
+        const ext = runnerCopy.avatarUrl.split(';base64,')[0].split('/')[1] || 'jpg';
+        const publicUrl = await this.uploadMediaFile(runnerCopy.avatarUrl, `avatar_${runnerCopy.id}.${ext}`, `Members/${runnerCopy.id}`);
+        if (publicUrl) {
+          runnerCopy.avatarUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading runner avatar:", err);
+      }
+    }
+
+    const fileIds = extractFileIds(runnerCopy);
+    const dbRunner = mapRunnerToDb(runnerCopy);
     const { error } = await supabase
       .from('runners')
       .upsert(dbRunner);
@@ -444,10 +458,25 @@ export const dbService = {
       console.error('Error upserting runner:', error.message);
       throw error;
     }
+    await confirmFiles(fileIds);
   },
 
   async deleteRunner(id: string): Promise<void> {
     if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('runners')
+        .select('avatar_url')
+        .eq('id', id)
+        .single();
+      if (data && data.avatar_url) {
+        const fileIds = extractFileIds(data.avatar_url);
+        await deleteDriveFilesFromServer(fileIds);
+      }
+    } catch (e) {
+      console.error("Failed to delete runner avatar:", e);
+    }
+
     const { error } = await supabase
       .from('runners')
       .delete()
@@ -527,7 +556,31 @@ export const dbService = {
 
   async upsertReport(report: RunReport): Promise<void> {
     if (!supabase) return;
-    const dbReport = mapReportToDb(report);
+    const reportCopy = { ...report };
+    
+    // Upload any base64 images in gallery
+    if (reportCopy.galleryUrls && reportCopy.galleryUrls.length > 0) {
+      const uploadedGallery: string[] = [];
+      for (let i = 0; i < reportCopy.galleryUrls.length; i++) {
+        const url = reportCopy.galleryUrls[i];
+        if (url && url.startsWith('data:')) {
+          try {
+            const ext = url.split(';base64,')[0].split('/')[1] || 'jpg';
+            const publicUrl = await this.uploadMediaFile(url, `report_${reportCopy.id}_img_${i}.${ext}`, "Reports");
+            uploadedGallery.push(publicUrl || url);
+          } catch (err) {
+            console.error("Error uploading report gallery image:", err);
+            uploadedGallery.push(url);
+          }
+        } else {
+          uploadedGallery.push(url);
+        }
+      }
+      reportCopy.galleryUrls = uploadedGallery;
+    }
+
+    const fileIds = extractFileIds(reportCopy);
+    const dbReport = mapReportToDb(reportCopy);
     const { error } = await supabase
       .from('reports')
       .upsert(dbReport);
@@ -536,10 +589,25 @@ export const dbService = {
       console.error('Error upserting report:', error.message);
       throw error;
     }
+    await confirmFiles(fileIds);
   },
 
   async deleteReport(id: string): Promise<void> {
     if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('reports')
+        .select('gallery_urls')
+        .eq('id', id)
+        .single();
+      if (data && data.gallery_urls) {
+        const fileIds = extractFileIds(data.gallery_urls);
+        await deleteDriveFilesFromServer(fileIds);
+      }
+    } catch (e) {
+      console.error("Failed to delete report media:", e);
+    }
+
     const { error } = await supabase
       .from('reports')
       .delete()
@@ -624,8 +692,24 @@ export const dbService = {
 
   async upsertAnnouncement(announcement: Announcement): Promise<void> {
     if (!supabase) return;
+    const announcementCopy = { ...announcement };
+    
+    if (announcementCopy.imageUrl && announcementCopy.imageUrl.startsWith('data:')) {
+      try {
+        const ext = announcementCopy.imageUrl.split(';base64,')[0].split('/')[1] || 'jpg';
+        const folderPath = `Events/Announcements/Images`;
+        const publicUrl = await this.uploadMediaFile(announcementCopy.imageUrl, `announcement_${announcementCopy.id}.${ext}`, folderPath);
+        if (publicUrl) {
+          announcementCopy.imageUrl = publicUrl;
+        }
+      } catch (err) {
+        console.error("Error uploading announcement image:", err);
+      }
+    }
+
+    const fileIds = extractFileIds(announcementCopy);
     try {
-      const dbAnnouncement = mapAnnouncementToDb(announcement);
+      const dbAnnouncement = mapAnnouncementToDb(announcementCopy);
       const { error } = await supabase
         .from('announcements')
         .upsert(dbAnnouncement);
@@ -638,6 +722,7 @@ export const dbService = {
         console.error('Error upserting announcement:', error.message);
         throw error;
       }
+      await confirmFiles(fileIds);
     } catch (e: any) {
       console.warn('Upsert announcement failed, table likely missing:', e?.message || e);
     }
@@ -645,6 +730,20 @@ export const dbService = {
 
   async deleteAnnouncement(id: string): Promise<void> {
     if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('announcements')
+        .select('image_url')
+        .eq('id', id)
+        .single();
+      if (data && data.image_url) {
+        const fileIds = extractFileIds(data.image_url);
+        await deleteDriveFilesFromServer(fileIds);
+      }
+    } catch (e) {
+      console.error("Failed to delete announcement image:", e);
+    }
+
     try {
       const { error } = await supabase
         .from('announcements')
@@ -713,12 +812,15 @@ export const dbService = {
 
     // Intercept and upload media if it's a base64 data URI
     const msgCopy = { ...message };
+    const fileIds = extractFileIds(msgCopy);
+
     if ((msgCopy as any).mediaUrl && (msgCopy as any).mediaUrl.startsWith('data:')) {
       try {
         const ext = (msgCopy as any).mediaUrl.split(';base64,')[0].split('/')[1] || 'bin';
-        const publicUrl = await this.uploadMediaFile((msgCopy as any).mediaUrl, `support_${msgCopy.id}.${ext}`);
+        const publicUrl = await this.uploadMediaFile((msgCopy as any).mediaUrl, `support_${msgCopy.id}.${ext}`, "ChatMedia");
         if (publicUrl) {
           (msgCopy as any).mediaUrl = publicUrl;
+          fileIds.push(...extractFileIds(publicUrl));
         }
       } catch (err) {
         console.error("Error uploading support media on send:", err);
@@ -734,6 +836,7 @@ export const dbService = {
       console.error('Error sending support message:', error.message);
       throw error;
     }
+    await confirmFiles(fileIds);
   },
 
   async markSupportMessageAsRead(id: string): Promise<void> {
@@ -764,6 +867,20 @@ export const dbService = {
 
   async deleteSupportMessage(id: string): Promise<void> {
     if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('support_messages')
+        .select('media_url')
+        .eq('id', id)
+        .single();
+      if (data && data.media_url) {
+        const fileIds = extractFileIds(data.media_url);
+        await deleteDriveFilesFromServer(fileIds);
+      }
+    } catch (e) {
+      console.error("Failed to delete support message media:", e);
+    }
+
     const { error } = await supabase
       .from('support_messages')
       .delete()
@@ -775,56 +892,38 @@ export const dbService = {
     }
   },
 
-  async uploadMediaFile(fileOrBlob: File | Blob | string, fileName?: string): Promise<string | null> {
-    if (!supabase) return null;
+  async uploadMediaFile(fileOrBlob: File | Blob | string, fileName?: string, folderPath?: string): Promise<string | null> {
     try {
-      try {
-        await supabase.storage.createBucket('chat-media', { public: true });
-      } catch (_) {}
-
-      let blob: Blob;
-      let mimeType = '';
+      let fileData = '';
       let name = fileName || `file_${Date.now()}`;
 
       if (typeof fileOrBlob === 'string') {
-        if (fileOrBlob.startsWith('data:')) {
-          blob = base64ToBlob(fileOrBlob);
-          mimeType = blob.type;
-          const ext = mimeType.split('/')[1] || 'bin';
-          if (!fileName) {
-            name = `voice_${Date.now()}.${ext}`;
-          }
-        } else {
-          return fileOrBlob;
-        }
+        fileData = fileOrBlob;
       } else {
-        blob = fileOrBlob;
-        mimeType = blob.type;
+        fileData = await blobToBase64(fileOrBlob);
         if (fileOrBlob instanceof File) {
           name = fileOrBlob.name;
         }
       }
 
-      const cleanName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `${Date.now()}_${cleanName}`;
+      const res = await fetch('/api/storage/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fileData, fileName: name, folderPath })
+      });
 
-      const { data, error } = await supabase.storage
-        .from('chat-media')
-        .upload(path, blob, {
-          contentType: mimeType,
-          upsert: true
-        });
-
-      if (error) {
-        console.error("Supabase Storage upload error:", error);
-        throw error;
+      if (!res.ok) {
+        throw new Error('Upload request failed');
       }
 
-      const { data: urlData } = supabase.storage
-        .from('chat-media')
-        .getPublicUrl(path);
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Upload failed');
+      }
 
-      return urlData?.publicUrl || null;
+      return data.url || null;
     } catch (err) {
       console.error("uploadMediaFile failed:", err);
       return null;
@@ -832,16 +931,61 @@ export const dbService = {
   }
 };
 
-function base64ToBlob(base64: string): Blob {
-  const parts = base64.split(';base64,');
-  const contentType = parts[0].split(':')[1];
-  const raw = window.atob(parts[1]);
-  const rawLength = raw.length;
-  const uInt8Array = new Uint8Array(rawLength);
-  for (let i = 0; i < rawLength; ++i) {
-    uInt8Array[i] = raw.charCodeAt(i);
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function extractFileIds(obj: any): string[] {
+  const fileIds: string[] = [];
+  const regex = /\/api\/storage\/file\/([a-zA-Z0-9_-]+)/g;
+  
+  const scan = (val: any) => {
+    if (!val) return;
+    if (typeof val === 'string') {
+      let match;
+      while ((match = regex.exec(val)) !== null) {
+        fileIds.push(match[1]);
+      }
+    } else if (Array.isArray(val)) {
+      val.forEach(scan);
+    } else if (typeof val === 'object') {
+      Object.values(val).forEach(scan);
+    }
+  };
+  
+  scan(obj);
+  return fileIds;
+}
+
+export async function confirmFiles(fileIds: string[]) {
+  if (fileIds.length === 0) return;
+  try {
+    await fetch('/api/storage/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileIds })
+    });
+  } catch (err) {
+    console.error('Error confirming file uploads:', err);
   }
-  return new Blob([uInt8Array], { type: contentType });
+}
+
+export async function deleteDriveFilesFromServer(fileIds: string[]) {
+  if (fileIds.length === 0) return;
+  try {
+    await fetch('/api/storage/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileIds })
+    });
+  } catch (err) {
+    console.error('Error deleting files from server:', err);
+  }
 }
 
 const mediaMemoryCache = new Map<string, string>();
