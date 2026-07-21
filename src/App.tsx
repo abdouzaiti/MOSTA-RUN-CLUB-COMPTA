@@ -13,6 +13,7 @@ import RunRecorder from './components/RunRecorder';
 import MessageriePremium from './components/MessageriePremium';
 import NotificationsPanel from './components/NotificationsPanel';
 import AdminSupportChat from './components/AdminSupportChat';
+import { InteractiveFolderGallery } from './components/InteractiveFolderGallery';
 import { playMessageChime, playAnnouncementChime, triggerPhoneNotification } from './utils/audioHelper';
 
 import { Run, Runner, RunReport, RunnerFeedback, CustomList } from './types';
@@ -1265,6 +1266,13 @@ CREATE POLICY "Allow public write on announcements" ON announcements FOR ALL USI
                       runners={runners}
                       language={language || 'fr'}
                     />
+                  )}
+
+                  {/* TAB 6.25: ALBUM */}
+                  {activeTab === 'album' && (
+                    <div className="flex-1 overflow-y-auto">
+                      <InteractiveFolderGallery />
+                    </div>
                   )}
 
                   {/* TAB 6.5: NOTIFICATIONS */}

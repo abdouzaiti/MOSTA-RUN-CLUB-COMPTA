@@ -123,6 +123,19 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
+  const [bgVariant, setBgVariant] = useState<number>(() => {
+    const saved = localStorage.getItem('mrc_chat_bg_variant');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+
+  const handleReloadBg = () => {
+    setBgVariant(prev => {
+      const next = (prev % 5) + 1;
+      localStorage.setItem('mrc_chat_bg_variant', String(next));
+      return next;
+    });
+  };
+
   const downloadImage = (url: string) => {
     const link = document.createElement('a');
     link.href = url;
@@ -2337,7 +2350,7 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
       {/* Main Chat Conversation Area */}
       <div className={`flex-1 flex flex-col h-full bg-white relative overflow-hidden ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
         {/* Parallax Background */}
-        <MountainVistaBackground />
+        <MountainVistaBackground variant={bgVariant} />
         
         {/* Active chat header toolbar */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between shadow-3xs bg-white/90 backdrop-blur-md relative z-10">
@@ -2385,6 +2398,13 @@ export default function MessageriePremium({ currentUser, runners, language }: Me
               title={isRtl ? 'اتصال فيديو' : 'Appel vidéo'}
             >
               <Video className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={handleReloadBg}
+              className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition cursor-pointer"
+              title={isRtl ? 'تغيير الخلفية' : 'Changer l\'arrière-plan'}
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
             </button>
             <button 
               onClick={() => setShowInfoPanel(!showInfoPanel)}

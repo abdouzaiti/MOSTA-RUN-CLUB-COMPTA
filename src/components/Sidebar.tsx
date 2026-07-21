@@ -56,6 +56,7 @@ export default function Sidebar({
     { id: 'roster', label: language === 'ar' ? 'المشاركون' : language === 'en' ? 'Participants' : 'Participants', icon: Users },
     { id: 'lists', label: language === 'ar' ? 'القوائم' : language === 'en' ? 'Lists' : 'Liste', icon: Trophy },
     { id: 'messagerie', label: language === 'ar' ? 'الرسائل والتعليقات' : language === 'en' ? 'Messaging' : 'Messagerie', icon: MessageSquare },
+    { id: 'album', label: language === 'ar' ? 'الألبوم' : language === 'en' ? 'Album' : 'Album', icon: Camera },
     { id: 'notifications', label: language === 'ar' ? 'الإشعارات' : language === 'en' ? 'Notifications' : 'Notifications', icon: Bell },
     { id: 'settings', label: language === 'ar' ? 'الإعدادات' : language === 'en' ? 'Settings' : 'Paramètres', icon: Settings },
   ];

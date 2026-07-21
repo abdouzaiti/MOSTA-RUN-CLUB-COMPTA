@@ -285,9 +285,12 @@ const Variant5 = () => {
   );
 };
 
-const MountainVistaVariations = () => {
-  const [selectedVariant, setSelectedVariant] = useState(1);
+interface MountainVistaBackgroundProps {
+  variant?: number;
+  opacity?: string;
+}
 
+const MountainVistaVariations = ({ variant = 1, opacity = "opacity-90" }: MountainVistaBackgroundProps) => {
   const variants = [
     { id: 1, component: Variant1 },
     { id: 2, component: Variant2 },
@@ -296,10 +299,10 @@ const MountainVistaVariations = () => {
     { id: 5, component: Variant5 },
   ];
 
-  const SelectedComponent = variants.find(v => v.id === selectedVariant)?.component || Variant1;
+  const SelectedComponent = variants.find(v => v.id === variant)?.component || Variant1;
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none opacity-50 z-0">
+    <div className={`absolute inset-0 w-full h-full pointer-events-none ${opacity} z-0`}>
       <SelectedComponent />
     </div>
   );
